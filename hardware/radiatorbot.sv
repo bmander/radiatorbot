@@ -5,8 +5,9 @@
 // bottom face, the radiator lies toward +x.  The bot hangs on the valve's -x side:
 //
 //   - the **wheel** turns about an axle `wheel_c` out along -x, at the handle's height.  Its
-//     pockets are the star's arms rolled through its blank (the conjugate the handle would cut
-//     if it were a gear shaper), and a 48-tooth ring on its top face is driven by the gearbox;
+//     pockets are what the handle sweeps through its blank as the two turn together, one
+//     statement: the conjugate the handle would cut if it were a gear shaper.  A 48-tooth ring on
+//     its top face is driven by the gearbox;
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
@@ -16,16 +17,17 @@
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
-// 0 to draw every gear and the wheel as blanks while the layout is worked on (the shaping takes a
-// few minutes).
+// 0 to draw every gear and the wheel as blanks while the layout is worked on (building them all
+// takes a few minutes).  The design table's requirements are claims, judged before the solve;
+// `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.
 //
 // Numbers marked "~" are estimates to check: the motor's figures (motor130.sv) and the stem's
 // travel, which no measurement has said yet.
 
 unit mm
 use std
-use std (vertical, horizontal, turns, on_u, coords)
-use radiator_valve (RadiatorValve, valve_dims, handle_dims, body_dims, pipe_dims, handle_gap)
+use std (vertical, horizontal, turns, coords, seats, raised)
+use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap)
 use radiator_valve (StarOutline, StarSizes, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
@@ -41,8 +43,7 @@ star_pitch_r := 24mm
 wheel_c := star_pitch_r * (1 + wheel_n / 4)            // the stem to the wheel's axle: 60 mm
 wheel_backlash := 0.6mm         // the chrome casting's arms against printed pockets
 stem_travel := 4mm              // ~ how far the handle drops opening the valve, closed to open
-wheel_step := 2deg              // the handle's roll between bites: scallops ~0.01 mm
-wheel_bands := 3                // the draft followed in steps, each band cut by its own section
+wheel_bands := 6                // the draft followed in steps: each over-clears it by <= 0.4 mm
 
 // The handle as measured stands closed, its top face `handle_gap` under the packing nut;
 // opening, a right-hand stem screws it down `stem_travel`.  The wheel spans the arms' depth with
@@ -69,16 +70,20 @@ ring_n := 48
 cd_s1 := m_small * (pin_n + s1_n) / 2                   // 14.4 mm, the motor to B
 cd_bd := m_small * (pin_n + big_n) / 2                  // 24 mm, B to D
 cd_fin := m_fin * (pin_n + ring_n) / 2                  // 45 mm, B to the wheel
-gear_ratio := s1_n / pin_n * (big_n / pin_n) ^ 3 * s5_n / pin_n * ring_n / pin_n     // 1536
-handle_ratio := gear_ratio * 4 / wheel_n                // 1024 motor turns a handle turn
+gear_ratio := s1_n / pin_n * (big_n / pin_n) ^ 3 * s5_n / pin_n * ring_n / pin_n
+handle_ratio := gear_ratio * 4 / wheel_n                // motor turns a handle turn
+claim handle_ratio == 1024
 
 // What it does, from the motor's figures: printed spur meshes at ~0.9, the wheel and the star
 // at ~0.8.  The current sensing trips well under the stall: at the end of the screw the torque
-// the trip allows is what seats the valve.
+// the trip allows is what seats the valve.  What the design asks of it: a stall well over what an
+// old packed valve takes to turn, and three turns of travel inside half a minute unloaded.
 drive_eff := 0.9 ^ 6 * 0.8
-handle_free_speed := motor130_free / handle_ratio       // ~11.7 rpm
-handle_stall_torque := motor130_stall_torque * handle_ratio * drive_eff      // ~2.6 N·m
-wheel_stall_torque := handle_stall_torque * wheel_n / 4 / 0.8                // ~4.9 N·m
+handle_free_speed := motor130_free / handle_ratio
+handle_stall_torque := motor130_stall_torque * handle_ratio * drive_eff
+wheel_stall_torque := handle_stall_torque * wheel_n / 4 / 0.8      // what the wheel's ring carries
+claim handle_stall_torque >= 2Nm
+claim handle_free_speed >= 6rpm
 
 // Drill rod.  The gears and the wheel turn on fixed rods; the housing holds the rods.
 axle_d := 8mm                   // the wheel's
@@ -138,14 +143,6 @@ board_cy := 9mm
 
 // == Building blocks =============================================================================
 
-// A point `z` up the world's z from `c`, a point drawn in std.top: where a part's origin is mated.
-component Station(c: point, z: Length) {
-  p := point hint((c.x, c.y, z))
-  c level(std.x) p
-  c level(std.y) p
-  c distance(z, along: std.z) p
-}
-
 // A round post about `c` (drawn in std.top) from z0 to z1.
 component Post(c: point, r: Length, z0: Length, z1: Length) {
   in std.top {
@@ -190,39 +187,48 @@ component NutX(y: Length, z: Length, af: Length, x0: Length, x1: Length) {
 // from the pinion's axle to the gear's.  Gears of one size and face are one figure, shaped once.
 component Gear(c: point, z: Length, phase: Angle, N: Int, m: Length, shift: Scalar,
                face: Length, bore: Length, step: Angle, shaped: Int) {
-  at := Station(c, z: z)
+  at := point
+  at raised(d: z, along: std.z) c
   g := ShapedSpur(N: N, m: m, phi: pa, shift: shift, thin: thin, z0: 0mm, z1: face, bore: bore,
                   step: step, shaped: shaped)
-  g.std.origin coincident at.p
-  g.std.z parallel(sense: same) std.z
-  std.x angle(phase, about: std.z) g.std.x
+  g seats(turn: phase, up: std.z, east: std.x) at
 }
 
 // == The wheel ===================================================================================
 
 // A band of the star: its section `depth` under the top face (the draft has moved each side
-// `depth tan(draft)` in), grown `grow` all round for the backlash, swept from z0 to z1 measured
-// up the stem from the top face.
-component StarSlice(top: plane, s: StarSizes, depth: Length, z0: Length, z1: Length,
-                    grow: Length) {
+// `depth tan(draft)` in), grown `grow` all round for the backlash, from z0 to z1 measured up the
+// stem from the top face.
+component StarBand(top: plane, s: StarSizes, depth: Length, z0: Length, z1: Length,
+                   grow: Length) {
   o := grow - depth * tan(s.draft)
-  sz := {span: s.span + 2 * o, waist: s.waist + 2 * o, h: s.h, tip_r: s.tip_r + o,
-         fillet_r: s.fillet_r - o, draft: s.draft, rim_r: s.rim_r, edge_r: s.edge_r,
-         stem_d: s.stem_d}
-  plan := StarOutline(top, s: sz)
+  plan := StarOutline(top, s: {span: s.span + 2 * o, waist: s.waist + 2 * o, h: s.h,
+                               tip_r: s.tip_r + o, fillet_r: s.fillet_r - o, draft: s.draft,
+                               rim_r: s.rim_r, edge_r: s.edge_r, stem_d: s.stem_d})
   construction prism := solid(plan.outline, from: z0, to: z1)
 }
 
 // The wheel conjugate to the star: a disc of radius `rim` about `c` from z_bot to z_top, less
-// everything the star passes through as it turns about `stem` and the wheel about `spindle`,
-// `n / 4` handle turns a wheel turn — the star stood at every `step` of a whole wheel turn, a band
-// at a time.  Each band is cut by the star's widest section the band ever meets: the section at
-// its top as the handle stands lowest, `travel` down from `top` (at `top_z`), or the top face's
-// own where the band reaches above that.
+// everything the star sweeps through as it turns about `stem` and the wheel about `spindle`,
+// `n / 4` handle turns a wheel turn, over a whole turn of the wheel.  The cutter is all the
+// handle occupies over its travel, following the draft in `bands` steps: each band the star's
+// widest section the band ever meets, the section at its top as the handle stands lowest
+// (`travel` down from `top`, at `top_z`), or the top face's own where the band reaches above
+// that.  The top band runs on up past the wheel, so the pockets stay open above the handle.
+//
+// (The drafted star itself, unstepped, is refused: its swept region changes shape between
+// heights, which the loft through stations can't carry.)
 component ConjugateWheel(top: plane, stem: line, spindle: line, c: point, s: StarSizes, n: Int,
                          rim: Length, z_bot: Length, z_top: Length, top_z: Length,
-                         travel: Length, bands: Int, grow: Length, step: Angle, shaped: Int) {
+                         travel: Length, bands: Int, grow: Length, shaped: Int) {
   band := (z_top - z_bot) / bands
+  construction cutter := solid()
+  repeat bands as k {
+    sl := StarBand(top, s, depth: max(0mm, top_z - travel - (z_top - k * band)),
+                   z0: z_top - (k + 1) * band - top_z - 1mm * floor((k + 1) / bands),
+                   z1: z_top - k * band - top_z + 1mm * (1 - min(k, 1)), grow: grow)
+    sl.prism union cutter
+  }
   in std.top {
     edge := radius(rim) circle(center: c)
   }
@@ -230,20 +236,11 @@ component ConjugateWheel(top: plane, stem: line, spindle: line, c: point, s: Sta
   gen_handle turns(1) stem
   gen_wheel := frame
   gen_wheel turns(-4 / n) spindle
-
-  wheel := solid()
-  repeat bands as k {
-    sl := StarSlice(top, s, depth: max(0mm, top_z - travel - (z_top - k * band)),
-                    z0: z_top - (k + 1) * band - top_z - 1mm, z1: z_top - k * band - top_z + 1mm,
-                    grow: grow)
-    layer := solid(face(edge), from: z_top - (k + 1) * band, to: z_top - k * band)
-    when shaped == 1 {
-      repeat round(360deg * n / 4 / step) as j {
-        bite := sl.prism at(under: gen_handle, seen_from: gen_wheel) (j * step)
-        bite cut layer
-      }
-    }
-    layer union wheel
+  wheel := solid(face(edge), from: z_bot, to: z_top)
+  when shaped == 1 {
+    private construction space := sweep(cutter over t in (0deg, 90deg * n), under: gen_handle,
+                                        seen_from: gen_wheel)
+    space cut wheel
   }
 }
 
@@ -253,7 +250,7 @@ component ConjugateWheel(top: plane, stem: line, spindle: line, c: point, s: Sta
 // redundant rows (the report's `implied:` lines): one makes this follow take minutes instead of
 // seconds (bmander/geomsolver#591).
 param handle_turn: Angle over (0deg, 360deg)
-valve := RadiatorValve(valve_dims, handle_turn: handle_turn)
+valve := RadiatorValve(handle_turn: handle_turn)
 
 // == The axles ===================================================================================
 // A, the wheel's, is `wheel_c` out along -x; B is the last pinion's, `cd_fin` beyond it; D stands
@@ -274,20 +271,24 @@ in std.top {
   b_a angle(-60deg) b_m
 }
 // each axle's spindle, a line up it, for the joints that show the train turning
-a_up := Station(a_c, z: 10mm)
-b_up := Station(b_c, z: 10mm)
-d_up := Station(d_c, z: 10mm)
-m_up := Station(m_c, z: 10mm)
-construction a_spindle := line(a_c, a_up.p)
-construction b_spindle := line(b_c, b_up.p)
-construction d_spindle := line(d_c, d_up.p)
-construction m_spindle := line(m_c, m_up.p)
+a_up := point
+a_up raised(d: 10mm, along: std.z) a_c
+b_up := point
+b_up raised(d: 10mm, along: std.z) b_c
+d_up := point
+d_up raised(d: 10mm, along: std.z) d_c
+m_up := point
+m_up raised(d: 10mm, along: std.z) m_c
+construction a_spindle := line(a_c, a_up)
+construction b_spindle := line(b_c, b_up)
+construction d_spindle := line(d_c, d_up)
+construction m_spindle := line(m_c, m_up)
 
 // == The wheel and its ring ======================================================================
 cw := ConjugateWheel(valve.handle_top, valve.stem_axis, a_spindle, a_c, s: handle_dims,
                      n: wheel_n, rim: wheel_rim, z_bot: wheel_bottom, z_top: wheel_top,
                      top_z: top0, travel: stem_travel, bands: wheel_bands,
-                     grow: wheel_backlash / 2, step: wheel_step, shaped: shaped)
+                     grow: wheel_backlash / 2, shaped: shaped)
 
 ring_gear := Gear(a_c, z: ring_z0, phase: 0deg + 90deg, N: ring_n, m: m_fin, shift: -pin_shift,
              face: 10mm, bore: axle_d + run, step: 2deg, shaped: shaped)
@@ -395,20 +396,15 @@ rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: lid_z1)
 // == The motor ===================================================================================
 // Face down on the lid, its boss in a recess, its pinion through the lid into stage 1; held in a
 // cradle of its own section grown by a wall, a print's clearance inside.
-motor_at := Station(m_c, z: lid_z1)
+motor_at := point
+motor_at raised(d: lid_z1, along: std.z) m_c
 motor := Motor130(motor130_dims)
-motor.std.origin coincident motor_at.p
-motor.std.z parallel(sense: same) std.z
-std.x angle(0deg, about: std.z) motor.std.x
+motor seats(turn: 0deg, up: std.z, east: std.x) motor_at
 
 cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: 0mm, z1: 18mm)
-cradle_out.std.origin coincident motor_at.p
-cradle_out.std.z parallel(sense: same) std.z
-std.x angle(0deg, about: std.z) cradle_out.std.x
+cradle_out seats(turn: 0deg, up: std.z, east: std.x) motor_at
 cradle_in := MotorCan(motor130_dims, grow: gap, z0: -1mm, z1: 19mm)
-cradle_in.std.origin coincident motor_at.p
-cradle_in.std.z parallel(sense: same) std.z
-std.x angle(0deg, about: std.z) cradle_in.std.x
+cradle_in seats(turn: 0deg, up: std.z, east: std.x) motor_at
 cradle := solid(cradle_out.body)
 cradle_in.body cut cradle
 

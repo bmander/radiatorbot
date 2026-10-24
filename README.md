@@ -46,7 +46,7 @@ Check a model, and write the printed parts:
 ```sh
 solventc hardware/radiator_valve.sv
 solventc hardware/radiatorbot.sv
-sh hardware/export.sh            # STLs into hardware/stl (several minutes)
+sh hardware/export.sh            # every printed part as STL, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.2 (`SOLVENTC_VERSION=v0.1.2` pins the installer to it).
+The models are checked with Solvent v0.1.3 (`SOLVENTC_VERSION=v0.1.3` pins the installer to it).

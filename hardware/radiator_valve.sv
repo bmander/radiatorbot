@@ -90,10 +90,6 @@ handle_dims := {
 }
 handle_gap := 1.1mm          // bare stem between the packing nut and the handle
 
-// Every table above, as the one group the assembly is drawn from.
-valve_dims := {body: body_dims, pipe: pipe_dims, bonnet: bonnet_dims, packing: packing_dims,
-               union: union_dims, spud: spud_dims, handle: handle_dims}
-
 // == Building blocks: prisms along an axis =======================================================
 // Each draws its section about `c` in the plane `c` is drawn in, and extrudes it from `z0` to
 // `z1` along that plane's normal.
@@ -257,11 +253,11 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
 }
 
 // == The assembly ================================================================================
-// The valve as it stands on the radiator, drawn from the tables in `dims` (`valve_dims`), its handle
-// turned `handle_turn` about the stem.  A model that works on the valve (the radiator bot) draws it
-// with `use radiator_valve (RadiatorValve, valve_dims)` and reads its datums and parts by name:
-// `valve.stem_axis`, `valve.handle_top`, `valve.star_handle`.
-component RadiatorValve(dims: group, handle_turn: Angle) {
+// The valve as it stands on the radiator, drawn from the tables above, its handle turned
+// `handle_turn` about the stem.  A model that works on the valve (the radiator bot) draws it with
+// `use radiator_valve (RadiatorValve)` and reads its datums and parts by name: `valve.stem_axis`,
+// `valve.handle_top`, `valve.star_handle`.
+component RadiatorValve(handle_turn: Angle) {
   // The stem's axis, which the handle turns about; the outlet's axis where it crosses the side
   // plane (x = 0), from which the outlet's parts are stationed along x; and a reference line in
   // each plane the hex parts are drawn in, their flats squared to it.
@@ -281,23 +277,23 @@ component RadiatorValve(dims: group, handle_turn: Angle) {
     length(10mm) side_ref
   }
 
-  supply_pipe := RoundBar(std.top.origin, d: dims.pipe.d,
-                          z0: dims.body.inlet_top, z1: dims.body.inlet_top + dims.pipe.len)
+  supply_pipe := RoundBar(std.top.origin, d: pipe_dims.d,
+                          z0: body_dims.inlet_top, z1: body_dims.inlet_top + pipe_dims.len)
 
-  body := ValveBody(outlet, top_ref, s: dims.body)
+  body := ValveBody(outlet, top_ref, s: body_dims)
 
-  bonnet := Bonnet(top_ref, nut_w: dims.bonnet.w, neck_d: dims.bonnet.neck_d,
-                   z_neck: dims.packing.top, z_bottom: dims.bonnet.bottom,
-                   z_top: dims.body.collar_bottom)
+  bonnet := Bonnet(top_ref, nut_w: bonnet_dims.w, neck_d: bonnet_dims.neck_d,
+                   z_neck: packing_dims.top, z_bottom: bonnet_dims.bottom,
+                   z_top: body_dims.collar_bottom)
 
-  packing_nut := HexBar(std.top.origin, top_ref, af: dims.packing.af, phase: 0deg,
-                        z0: 0mm, z1: dims.packing.top)
+  packing_nut := HexBar(std.top.origin, top_ref, af: packing_dims.af, phase: 0deg,
+                        z0: 0mm, z1: packing_dims.top)
 
-  union := OutletUnion(outlet, side_ref, nut_af: dims.union.af, tail_d: dims.union.tail_d,
-                       x0: dims.body.boss_x, x1: dims.union.x1, x_spud: dims.spud.x)
+  union := OutletUnion(outlet, side_ref, nut_af: union_dims.af, tail_d: union_dims.tail_d,
+                       x0: body_dims.boss_x, x1: union_dims.x1, x_spud: spud_dims.x)
 
-  radiator_spud := RoundBar(outlet, d: dims.spud.d,
-                            z0: dims.spud.x, z1: dims.spud.x + dims.spud.t)
+  radiator_spud := RoundBar(outlet, d: spud_dims.d,
+                            z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
 
   // The handle's joint: a frame turning about the stem's axis, standing at `handle_turn`.
   handle := frame
@@ -312,12 +308,10 @@ component RadiatorValve(dims: group, handle_turn: Angle) {
   fix(dir == (0, 1, 0)) handle_top.v
   turned_top := handle_top in handle
 
-  star_handle := StarHandle(turned_top, s: dims.handle, stem_up: handle_gap + dims.packing.top)
+  star_handle := StarHandle(turned_top, s: handle_dims, stem_up: handle_gap + packing_dims.top)
 }
 
-// Opened by itself, the valve with its handle to scrub.  (A `preview` is left out where the file
-// is used as a module, so the parameter stays this document's.)
-preview {
-  param handle_turn: Angle over (0deg, 360deg)
-  valve := RadiatorValve(valve_dims, handle_turn: handle_turn)
-}
+// The valve with its handle to scrub.  A file that uses this one as a module draws neither the
+// valve below nor the parameter.
+param handle_turn: Angle over (0deg, 360deg)
+valve := RadiatorValve(handle_turn: handle_turn)
