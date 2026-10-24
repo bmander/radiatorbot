@@ -8,9 +8,9 @@
 // is the two gears' `thin`s added, which is what an FDM print's swollen flanks need to run.
 //
 // The bites are discrete on purpose.  The continuous rack sweep (`sweep(tooth over t in (…),
-// under: rack, seen_from: blank_turn)`) exports too, but in Solvent v0.1.3 a 12-tooth pinion's
-// swept region fails to close (Q4) for some roll windows and not others, and its STL runs to
-// megabytes; the bites build a pinion in about 10 s and a 48-tooth gear in about 20.
+// under: rack, seen_from: blank_turn)`) exports exactly in Solvent v0.1.4, but takes about four
+// times as long and writes an STL ten times the size (7.6 MB for a spoked 48-tooth gear, against
+// 0.74 MB), for scallops of about 0.01 mm that no FDM printer resolves.
 //
 // A gear is drawn about its own std.origin, its axis std.z and its faces at z0 and z1, so it is
 // placed by a mate and every copy of one size is one figure.  Its solid is construction: an
