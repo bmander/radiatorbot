@@ -9,7 +9,8 @@ valve under motor control.
   - `radiatorbot.sv` — the bot: a 130 motor and a five-stage printed spur train turning the
     valve's star handle through a wheel generated as the handle's conjugate. It also has the
     gearbox, an electronics bay for an ESP32 and a motor driver on perfboard, and a split clamp
-    round the valve's inlet hex and supply pipe. `handle_turn` sets the pose.
+    round the valve's inlet hex and supply pipe. `handle_turn` scrubs the handle and the train
+    with it.
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_turn` scrubs the handle about the stem.

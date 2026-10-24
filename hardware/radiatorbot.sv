@@ -249,10 +249,10 @@ component ConjugateWheel(top: plane, stem: line, spindle: line, c: point, s: Sta
 
 // == The valve ===================================================================================
 
-// The handle's turn the bot is drawn at, an input: give it another value to see the train at
-// that pose.  (Run over an interval, the follow re-solves the whole bot at every step, which
-// takes minutes; radiator_valve.sv scrubs the handle alone.)
-param handle_turn: Angle := 0deg
+// The handle's turn, scrubbed: the wheel and the train turn with it.  Keep the drawing free of
+// redundant rows (the report's `implied:` lines): one makes this follow take minutes instead of
+// seconds (bmander/geomsolver#591).
+param handle_turn: Angle over (0deg, 360deg)
 valve := RadiatorValve(valve_dims, handle_turn: handle_turn)
 
 // == The axles ===================================================================================
