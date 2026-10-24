@@ -22,7 +22,7 @@
 // takes a few minutes).  The design table's requirements are claims, judged before the solve;
 // `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
 // `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about ten minutes more).
+// period of their mesh (about twenty minutes more).
 //
 // Numbers marked "~" are estimates to check: the motor's figures (motor130.sv) and the stem's
 // travel, which no measurement has said yet.
@@ -37,7 +37,7 @@ use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_t
 use boards (XiaoEsp32C3, Drv8874, xiao_dims, drv8874_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; minutes)
+checks := 0                    // 1: judge every clearance (needs `shaped`; ~20 minutes)
 
 // == The drive ===================================================================================
 
@@ -683,8 +683,8 @@ claim driver.board clear(1mm) cover_part
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
   repeat 7 as k {
-    handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
-    wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
+    construction handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
+    construction wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
     claim wheel_at clear(0.1mm) handle_at
   }
   claim wheel clear(0.5mm) valve.packing_nut.bar
