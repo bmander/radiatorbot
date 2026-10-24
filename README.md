@@ -15,7 +15,7 @@ valve under motor control.
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_turn` scrubs the handle about the stem.
   - `gears.sv` — printed spur gears, shaped by a rack at discrete rolls (true involutes,
-    undercut where it would be), with FDM backlash.
+    undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
