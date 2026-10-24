@@ -428,14 +428,14 @@ bridge_boss := Post(a_c, r: 9mm, z0: bridge_z0, z1: bridge_z1)
 bridge.body union base
 bridge_boss.body union base
 in std.top {
-  corner_00 := point hint((-126, -24))
-  corner_00 coords(du: box_x0 + wall + 1.6mm, dv: box_y0 + wall + 1.6mm) std.top
-  corner_10 := point hint((-39, -24))
-  corner_10 coords(du: box_x1 - wall - 1.6mm, dv: box_y0 + wall + 1.6mm) std.top
-  corner_01 := point hint((-126, 43))
-  corner_01 coords(du: box_x0 + wall + 1.6mm, dv: box_y1 - wall - 1.6mm) std.top
-  corner_11 := point hint((-39, 43))
-  corner_11 coords(du: box_x1 - wall - 1.6mm, dv: box_y1 - wall - 1.6mm) std.top
+  corner_00 := point hint((-125.6, -23.6))
+  corner_00 coords(du: box_x0 + wall + 2mm, dv: box_y0 + wall + 2mm) std.top
+  corner_10 := point hint((-39.4, -23.6))
+  corner_10 coords(du: box_x1 - wall - 2mm, dv: box_y0 + wall + 2mm) std.top
+  corner_01 := point hint((-125.6, 42.6))
+  corner_01 coords(du: box_x0 + wall + 2mm, dv: box_y1 - wall - 2mm) std.top
+  corner_11 := point hint((-39.4, 42.6))
+  corner_11 coords(du: box_x1 - wall - 2mm, dv: box_y1 - wall - 2mm) std.top
 }
 base_post_00 := Post(corner_00, r: 4mm, z0: floor_z1, z1: lid_z0)
 base_post_10 := Post(corner_10, r: 4mm, z0: floor_z1, z1: lid_z0)
@@ -486,13 +486,13 @@ in std.top {
   board_11 := point hint((-49.5, 32))
   board_11 coords(du: board_cx + 33mm, dv: board_cy + 23mm) std.top
   cover_w := point hint((-126, 9))
-  cover_w coords(du: box_x0 + wall + 1.6mm, dv: board_cy) std.top
+  cover_w coords(du: box_x0 + wall + 2mm, dv: board_cy) std.top
   cover_e := point hint((-39, 9))
-  cover_e coords(du: box_x1 - wall - 1.6mm, dv: board_cy) std.top
+  cover_e coords(du: box_x1 - wall - 2mm, dv: board_cy) std.top
   cover_s := point hint((-65, -24))
-  cover_s coords(du: -65mm, dv: box_y0 + wall + 1.6mm) std.top
+  cover_s coords(du: -65mm, dv: box_y0 + wall + 2mm) std.top
   cover_n := point hint((-65, 43))
-  cover_n coords(du: -65mm, dv: box_y1 - wall - 1.6mm) std.top
+  cover_n coords(du: -65mm, dv: box_y1 - wall - 2mm) std.top
 }
 board_post_00 := Post(board_00, r: 3mm, z0: lid_z1, z1: board_z)
 board_post_10 := Post(board_10, r: 3mm, z0: lid_z1, z1: board_z)
