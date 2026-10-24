@@ -11,9 +11,10 @@
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
-//     perfboard over the motor, the cable entries), and the spine up beside the valve to the
-//     **clamp**, a split block round the inlet hex and the supply pipe above it.  The hex takes
-//     the handle's reaction torque positively; the bolted cap closes the clamp from +x.
+//     perfboard over the motor with the ESP32 and the motor driver on it, the cable entries), and
+//     the spine up beside the valve to the **clamp**, a split block round the inlet hex and the
+//     supply pipe above it.  The hex takes the handle's reaction torque positively; the bolted
+//     cap closes the clamp from +x.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
@@ -31,6 +32,7 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
+use boards (XiaoEsp32C3, Drv8874, xiao_dims, drv8874_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
 
@@ -140,6 +142,19 @@ board_w := 70mm                 // a 5 x 7 cm perfboard
 board_h := 50mm
 board_cx := -82.5mm
 board_cy := 9mm
+board_cols := 24                // its holes, 0.1 in apart, centred on it
+board_rows := 18
+grid_x0 := board_cx - (board_cols - 1) * pitch / 2       // the first column's holes
+grid_y0 := board_cy - (board_rows - 1) * pitch / 2       // the first row's
+board_top := board_z + 1.6mm
+// The boards on the perfboard's grid (boards.sv), each at its pin field's middle: the XIAO's pins
+// in columns 0-6, rows 9 and 15, its USB out over the board's end toward the bay's end wall; the
+// driver's in columns 17 and 22, rows 0-6.
+xiao_cx := grid_x0 + 3 * pitch
+xiao_cy := grid_y0 + 12 * pitch
+drv_cx := grid_x0 + 19.5 * pitch
+drv_cy := grid_y0 + 3 * pitch
+usb_z := board_top + header_dims.body_h + xiao_dims.pcb_t + xiao_dims.usb_h / 2   // its axis
 
 // == Building blocks =============================================================================
 
@@ -481,8 +496,8 @@ in std.top {
   board_01 coords(du: board_cx - 33mm, dv: board_cy + 23mm) std.top
   board_11 := point hint((-49.5, 32))
   board_11 coords(du: board_cx + 33mm, dv: board_cy + 23mm) std.top
-  cover_w := point hint((-126, 9))
-  cover_w coords(du: box_x0 + wall + 2mm, dv: board_cy) std.top
+  cover_w := point hint((-126, -3))
+  cover_w coords(du: box_x0 + wall + 2mm, dv: -3mm) std.top                // clear of the USB plug
   cover_e := point hint((-39, 9))
   cover_e coords(du: box_x1 - wall - 2mm, dv: board_cy) std.top
   cover_s := point hint((-65, -24))
@@ -552,9 +567,12 @@ cover_pilot_s.body cut frame_part
 cover_pilot_n.body cut frame_part
 
 // the cable entries, in the bay's far end wall: a grommet for the thermostat's and the supply's
-// cable, low beside the motor, and a slot for the ESP32's USB at the board's height
+// cable, low beside the motor, and a window on the XIAO's USB-C that a cable's moulded plug
+// passes through to mate (the receptacle stands back from the wall's inside face)
 grommet := BoreX(y: 30mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm)
-usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: board_cy + 4mm, y1: board_cy + 16mm, z0: board_z + 2mm, z1: board_z + 9mm)
+usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
+                  y0: xiao_cy - xiao_dims.plug_w / 2 - gap, y1: xiao_cy + xiao_dims.plug_w / 2 + gap,
+                  z0: usb_z - xiao_dims.plug_h / 2 - gap, z1: usb_z + xiao_dims.plug_h / 2 + gap)
 grommet.body cut frame_part
 usb_slot.body cut frame_part
 
@@ -606,15 +624,41 @@ cover_hole_s.body cut cover_part
 cover_hole_n.body cut cover_part
 
 // == The electronics =============================================================================
-// Bought modules on a 5 x 7 cm perfboard, drawn as the room each takes (~ sizes):
-//   - an ESP32 dev board (DevKitC size, 55 x 28, on headers), its USB toward the end wall's slot;
-//   - a Pololu DRV8874 carrier (20.3 x 15.2): the H-bridge, and its IPROPI pin gives the motor's
-//     current as a voltage the ESP32's ADC reads, which is the end-of-travel sensing;
+// Bought boards soldered on headers to a 5 x 7 cm perfboard (boards.sv), and the room the rest
+// take (~ sizes):
+//   - a Seeed XIAO ESP32-C3, its USB-C to the end wall's window: power, programming and logs;
+//   - a Pololu DRV8874 carrier: the H-bridge, and its CS pin gives the motor's current as
+//     ~1.1 V/A, which the XIAO's ADC reads for the end-of-travel sensing;
 //   - a mini buck module (MP1584 size, 22 x 17) and a bridge rectifier, for 24 VAC off the
 //     thermostat's transformer; with a 5 V USB supply instead, neither is fitted;
 //   - a 3-way 5.08 mm screw terminal for the supply's and the thermostat's wires, by the grommet.
-perfboard := Block(x0: board_cx - board_w / 2, x1: board_cx + board_w / 2, y0: board_cy - board_h / 2, y1: board_cy + board_h / 2, z0: board_z, z1: board_z + 1.6mm)
-esp32 := Block(x0: board_cx - 34mm, x1: board_cx + 21mm, y0: board_cy - 4mm, y1: board_cy + 24mm, z0: board_z + 1.6mm, z1: board_z + 14.6mm)
-driver := Block(x0: board_cx + 12mm, x1: board_cx + 32.3mm, y0: board_cy - 23mm, y1: board_cy - 7.8mm, z0: board_z + 1.6mm, z1: board_z + 6.6mm)
-buck := Block(x0: board_cx - 12mm, x1: board_cx + 10mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_z + 1.6mm, z1: board_z + 6.6mm)
-terminal := Block(x0: board_cx - 34mm, x1: board_cx - 19mm, y0: board_cy - 23mm, y1: board_cy - 15mm, z0: board_z + 1.6mm, z1: board_z + 11.6mm)
+perfboard := Block(x0: board_cx - board_w / 2, x1: board_cx + board_w / 2, y0: board_cy - board_h / 2, y1: board_cy + board_h / 2, z0: board_z, z1: board_top)
+in std.top {
+  xiao_c := point hint((-104.1, 17.9))
+  xiao_c coords(du: xiao_cx, dv: xiao_cy) std.top
+  drv_c := point hint((-62.2, -5))
+  drv_c coords(du: drv_cx, dv: drv_cy) std.top
+}
+xiao_at := point
+xiao_at raised(d: board_top, along: std.z) xiao_c
+xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
+xiao seats(turn: 0deg, up: std.z, east: std.x) xiao_at
+drv_at := point
+drv_at raised(d: board_top, along: std.z) drv_c
+driver := Drv8874(drv8874_dims, h: header_dims)
+driver seats(turn: 0deg, up: std.z, east: std.x) drv_at
+buck := Block(x0: board_cx - 12mm, x1: board_cx + 10mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
+terminal := Block(x0: board_cx - 34mm, x1: board_cx - 19mm, y0: board_cy - 23mm, y1: board_cy - 15mm, z0: board_top, z1: board_top + 10mm)
+
+// The boards in the bay: a mated USB cable's plug through the end wall's window, and the boards,
+// their headers and the pins' tails under the perfboard clear of the frame, the motor and the
+// cover.
+claim xiao.plug clear(0.2mm) frame_part
+claim xiao.board clear(0.5mm) frame_part
+claim xiao.headers clear(0.5mm) frame_part
+claim driver.board clear(0.5mm) frame_part
+claim driver.rows.headers clear(0.5mm) frame_part
+claim xiao.headers clear(0.5mm) motor.motor
+claim driver.rows.headers clear(0.5mm) motor.motor
+claim xiao.board clear(1mm) cover_part
+claim driver.board clear(1mm) cover_part

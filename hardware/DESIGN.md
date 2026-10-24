@@ -2,12 +2,13 @@
 
 A gearmotor that clamps to the radiator valve's supply pipe and turns the star handle. A 130 motor
 drives a printed five-stage spur train, which drives a wheel conjugate to the handle. The motor's
-current says when the stem reaches either end of its screw. An ESP32 on a perfboard reads the
-thermostat and runs the motor.
+current says when the stem reaches either end of its screw. An ESP32 (a Seeed XIAO ESP32-C3) on a
+perfboard reads the thermostat and runs the motor through a Pololu DRV8874 H-bridge, whose current
+output tells it when the motor stalls.
 
 Everything is FDM-printed except the drill rod the gears turn on and the screws. The model is
 `radiatorbot.sv`. The valve it fits is `radiator_valve.sv`, and the parts libraries are
-`gears.sv` and `motor130.sv`.
+`gears.sv`, `motor130.sv` and `boards.sv` (the ESP32 and the motor driver).
 
 ## How it works
 
@@ -67,6 +68,73 @@ The current trip sets the torque that actually seats the valve. Set it with the 
 well under stall. Measure the motors in the pile (free speed and stall current at the supply
 voltage), put them in `motor130.sv`, and the figures and claims follow.
 
+## The electronics
+
+Two bought boards do the work, soldered on headers to a 5 × 7 cm perfboard over the motor. Both
+are modelled in `boards.sv` from their makers' drawings and stand on the perfboard's 0.1 in grid
+in `radiatorbot.sv`.
+
+| board | what it does | price | where |
+|---|---|---|---|
+| [Seeed XIAO ESP32-C3](https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html) (SKU 113991054) | Wi-Fi/BLE, USB-C, four ADC pins | $4.99 | Seeed, Digi-Key, Mouser |
+| [Pololu DRV8874 carrier](https://www.pololu.com/product/4035) (#4035) | H-bridge, 4.5–37 V, 2.1 A continuous, current output on CS | $11.94 | Pololu and its distributors |
+
+**Why these.**
+- The XIAO is the cheapest ESP32 board with a dimensioned drawing (Seeed publishes its outline
+  and KiCad layout). The model's pins and USB-C receptacle are taken from that layout. Cheap
+  DevKit clones differ from seller to seller.
+  - It is 21 × 17.8 mm against a DevKitC's 55 × 28.
+  - Its USB-C gives power, programming and logs. The C3's built-in USB-JTAG resets the chip
+    into the bootloader itself, so the buttons are never needed.
+  - It comes with an FPC antenna on a U.FL lead. Stick it under the bay's cover, the side away
+    from the cast iron.
+  - Digi-Key's listing says the board no longer comes with header pins. Buy two 7-pin 0.1 in
+    male headers with it, or Seeed's "pre-soldered" version.
+- The DRV8874 senses current in the chip, with no shunt resistor. Its CS pin sources 450 µA/A
+  into the carrier's 2.49 kΩ, about **1.1 V/A**.
+  - The 130's ~1.8 A stall reads about 2.0 V. That is inside the C3's ADC range at 12 dB
+    attenuation, about 0–2.5 V, which reads up to about 2.2 A.
+  - Its chopping limit is VREF / 1.1 V/A. VREF is tied to SLEEP through 10 kΩ, so with SLEEP at
+    3.3 V the limit is about 2.9 A, above stall. The hardware never cuts in before the
+    firmware's trip does.
+  - The same-sized DRV8876 carrier (#4036) is cheaper but gives 2.5 V/A, so a stall would
+    saturate the ADC. Don't substitute it.
+  - The Adafruit DRV8871 and TB6612 breakouts have no current output, so they would need an
+    INA219 as well.
+
+**Wiring**, all on the perfboard (the XIAO's pins are listed in `boards.sv`):
+
+| XIAO | DRV8874 | |
+|---|---|---|
+| D1 (GPIO3, ADC1) | CS | the motor's current, 1.1 V/A |
+| D3 (GPIO5) | EN/IN1 | PWM: speed |
+| D4 (GPIO6) | PH/IN2 | direction |
+| D5 (GPIO7) | SLEEP | high to run, low to sleep; VREF follows it |
+| D10 (GPIO10) | FAULT | open-drain: the XIAO's internal pull-up |
+| GND | GND, PMODE | **PMODE tied to GND** selects PH/EN mode. Left floating, the chip comes up as two independent half-bridges |
+| 5V | VIN | the motor's supply, 5 V off USB; or the buck's 6 V, with the XIAO's 5V pin then fed through a diode |
+| — | OUT1, OUT2 | the motor |
+
+The thermostat's optocoupler goes to D2 (GPIO4, internal pull-up). Leave D0, D8 and D9 alone:
+they are the C3's strapping pins. CS on D0, for one, would hold it low through the 2.49 kΩ at
+boot.
+
+**End of travel.** Drive until the CS reading crosses the trip current, held for some tens of
+milliseconds so the start-up surge doesn't trip it, then stop.
+- Set the trip with the valve in hand, well under stall (see *The drive*). The torque at the
+  trip is what seats the valve.
+- Ignore the first ~100 ms after each start: the inrush current is near stall.
+- Sample with the ADC's 12 dB attenuation and average a few readings. The motor's PWM ripples
+  the current.
+
+**In the bay.**
+- The XIAO stands at the board's −x end, in columns 0–6 and rows 9 and 15. Its USB-C overhangs
+  the board's end and faces a window in the bay's end wall. The window is a USB-C cable's
+  moulded plug (12.5 × 7 mm) plus the print clearance. The receptacle stands 14 mm in from the
+  wall's outside face, so a plug's overmould reaches in through the window to mate.
+- The driver stands in columns 17 and 22, rows 0–6, beside the buck module.
+- The cover's west screw boss moved to y = −3 mm, out of the plug's way.
+
 ## Printing
 
 The fits are an FDM printer's. They're set in one table at the top of `radiatorbot.sv`:
@@ -94,9 +162,13 @@ wheel as blanks while changing the layout.
 
 - `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
   a full turn, and judges the design table's claims (ratio, stall torque, free speed).
-- Clearances were judged with `claim … clear(…)` on a scratch copy. Every gear mesh runs with
-  0.14 mm between flanks. Every housing part clears the valve, except the contacts that are meant
-  to be there (the motor on its lid, the base against the frame, the clamp on the pipe).
+- The boards' fit in the bay is claimed in the model and judged on every check:
+  - a mated USB plug clears the end wall's window by 0.3 mm;
+  - the boards and their headers clear the frame and the cover;
+  - the pins' tails under the perfboard clear the motor.
+- The gears' clearances were judged with `claim … clear(…)` on a scratch copy. Every gear mesh
+  runs with 0.14 mm between flanks. Every housing part clears the valve, except the contacts that
+  are meant to be there (the motor on its lid, the base against the frame, the clamp on the pipe).
 - The wheel against the handle was checked by intersecting the two at handle turns of 0°, 15°,
   30° and 45°: no overlap at any. A control, the wheel out of step by 15°, overlaps by 529 mm³.
 - In Solvent v0.1.3, `clear` claims on the wheel come back undecided, and its pictures leave the
@@ -114,18 +186,17 @@ wheel as blanks while changing the layout.
   - M2.5 × 6, four (perfboard);
   - M3 set screw (collar).
 - **Motor:** one 130 motor from the pile. Its pinion is a press fit on the 2 mm shaft.
-- **Electronics, on a 5 × 7 cm perfboard** (no fabbed PCB):
-  - an ESP32 dev board (the bay has room for a DevKitC; a XIAO ESP32-C3 leaves more);
-  - a Pololu DRV8874 motor driver carrier: an H-bridge whose IPROPI pin outputs the motor current
-    as a voltage, read by the ESP32's ADC for the end-of-travel sensing. An Adafruit DRV8871 or
-    TB6612 breakout plus an INA219 current sensor does the same job with more parts;
+- **Electronics, on a 5 × 7 cm perfboard** (no fabbed PCB); see *The electronics*:
+  - a Seeed XIAO ESP32-C3 ($4.99), with two 7-pin 0.1 in male headers and its FPC antenna;
+  - a Pololu DRV8874 carrier (#4035, $11.94), its headers included: the H-bridge, and its CS pin
+    gives the motor's current, read by the XIAO's ADC for the end-of-travel sensing;
   - for 24 VAC off the thermostat transformer: a bridge rectifier and a buck module rated above
     40 V in and about 2.5 A out (rectified 24 VAC peaks near 34 V, beyond an MP1584's rating).
     On a 5 V USB supply instead, leave both out;
   - an optocoupler to read the thermostat's call for heat;
   - a 3-way 5.08 mm screw terminal.
 - **Cable entries** are in the bay's end wall: a grommet hole for the thermostat and supply cable,
-  and a slot for the ESP32's USB.
+  and a window on the XIAO's USB-C.
 
 ## Assembly
 
@@ -133,9 +204,13 @@ wheel as blanks while changing the layout.
 2. Stack the compounds on the rods (B3, D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
-4. Slide the bot onto the valve from −x, so the inlet hex enters the clamp's pocket, and bolt on
+4. Solder the XIAO and the driver to the perfboard on their headers, the long ends down, at the
+   grid places above, and cut the tails to 1.5 mm. Wire them as in the table, stick the XIAO's
+   antenna under the cover, and screw the perfboard to its posts with the USB-C toward the end
+   wall's window.
+5. Slide the bot onto the valve from −x, so the inlet hex enters the clamp's pocket, and bolt on
    the cap.
-5. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
+6. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
    both the handle and the last pinion. Fit the collar.
    - The star narrows downward and each of the wheel's bands is cut for the star's widest section
      at that band. So the wheel only ever gains clearance as it rises into place.
@@ -150,6 +225,9 @@ wheel as blanks while changing the layout.
   bot can stand at multiples of 60° about the stem. Check it on the valve.
 - **The thermostat's interface.** It's a 2-wire R/W dry contact, a 24 VAC R/W/C, or something
   else. That decides whether the bot can draw its power from the thermostat wiring.
-- **The motors' figures.** See *The drive* above.
+- **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
+  whether a stall reads inside the ADC's ~2.2 A.
+- **The boards' heights.** The XIAO's board thickness (taken as 1.2 mm) and the cable's plug
+  (taken as 12.5 × 7 mm) are estimates. Check the plug of the cable you'll use against the window.
 - **The ring and last pinion run open** under the base, beside the packing nut. A guard would be
   a small printed part.
