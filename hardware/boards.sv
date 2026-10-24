@@ -19,7 +19,7 @@
 
 unit mm
 use std
-use std (coords, on_u, on_v, seats)
+use std (coords, on_v, seats)
 
 pitch := 2.54mm                 // 0.1 in: every header's, and the perfboard's grid
 
@@ -88,25 +88,11 @@ drv8874_dims := {
 //   -x: VM GND EN/IN1 PH/IN2 PMODE SLEEP VREF
 //   +x: VIN GND OUT1 OUT2 IMODE FAULT CS
 
-// A box square to the body's frame: x0..x1, y0..y1, z0..z1.  Its middle is placed by its
-// ordinates, or on an axis where one is zero (a zero ordinate is a relation, not a number).
+// A box square to the body's frame: x0..x1, y0..y1, z0..z1.
 component Box(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: Length) {
-  cx := (x0 + x1) / 2
-  cy := (y0 + y1) / 2
   in std.top {
-    c := point hint((cx, cy))
-    when cx != 0mm and cy != 0mm {
-      c coords(du: cx, dv: cy) std.top
-    }
-    when cx != 0mm and cy == 0mm {
-      c on_u(d: cx) std.top
-    }
-    when cx == 0mm and cy != 0mm {
-      c on_v(d: cy) std.top
-    }
-    when cx == 0mm and cy == 0mm {
-      c coincident std.top.origin
-    }
+    c := point hint(((x0 + x1) / 2, (y0 + y1) / 2))
+    c coords(du: (x0 + x1) / 2, dv: (y0 + y1) / 2) std.top
     sq := std.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
   body := solid(face(sq.loop), from: z0, to: z1)
@@ -127,7 +113,9 @@ component HeaderRow(h: HeaderSizes, y: Length, n: Int, pcb_t: Length) {
 }
 
 // The XIAO ESP32-C3 on its headers, its USB toward -x.  `plug` is the room a mated cable's plug
-// takes, out from the receptacle's mouth along -x, for the bay's wall to clear.
+// takes, out from the receptacle's mouth along -x, for the bay's wall to clear.  It is drawn
+// facing the way the bay seats it, at `turn: 0deg`: seated a half turn on a `raised` point, it
+// comes out upside down (bmander/geomsolver#629).
 component XiaoEsp32C3(s: XiaoSizes, h: HeaderSizes) {
   z0 := h.body_h                                   // the board's underside
   z1 := z0 + s.pcb_t
