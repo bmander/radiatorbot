@@ -15,14 +15,15 @@ The bot hangs on the valve's −x side, away from the radiator.
 
 - **The wheel** turns on an 8 mm axle 60 mm from the stem, at the handle's height. It has six
   pockets. The handle's four arms are its teeth, so the handle turns 1.5× per wheel turn. The
-  pockets are not designed: Solvent cuts them by standing the measured star at every 2° of a
-  whole wheel revolution and removing everything it passes through. That is a gear shaper's
-  generating cut, done with the handle as the cutter, so the wheel is conjugate to the handle by
-  construction.
-  - The handle's arms have an 8° draft. The wheel is therefore cut in three bands, each by the
-    star's section at that band's height, offset by the draft.
-  - Each band's section is taken where the arm is widest over the stem's travel, so the mesh
-    stays clear as the handle screws down.
+  pockets are not designed. In one statement, Solvent sweeps the measured star through the blank
+  over a whole wheel turn, as the two turn together, and removes everything it passes through.
+  That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
+  conjugate to the handle by construction. The cut is exact, with no scallops.
+  - The cutter is everything the handle occupies over the stem's travel.
+  - It follows the arms' 8° draft in six steps, each the star's section where the arm is widest
+    over that band. Each step over-clears the draft by at most 0.4 mm a side.
+  - The drafted star itself, unstepped, is refused in Solvent v0.1.3: its swept region changes
+    shape between heights.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
 - **The gear train** has five stages on two fixed 5 mm rods, B and D. The motor's pinion drives
   stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the ring.
@@ -55,12 +56,16 @@ That is 1536:1 from the motor to the wheel and **1024:1 from the motor to the ha
 motor's figures are estimates for a servo's 130 at 6 V (`motor130.sv`): 12 000 rpm free and
 6 mN·m stall. With printed meshes at about 0.9 each and the wheel at 0.8, that gives:
 
-- **about 11.7 rpm free at the handle**, so three turns of travel take 20–30 s under load;
-- **about 2.6 N·m at the handle at stall**, 4.9 N·m at the wheel.
+- **11.7 rpm free at the handle**, so three turns of travel take 20–30 s under load;
+- **2.61 N·m at the handle at stall**, 4.9 N·m at the wheel.
+
+`radiatorbot.sv` states the requirements as claims, which every check judges: stall torque
+≥ 2 N·m at the handle, free speed ≥ 6 rpm, and the 1024:1 ratio. Read any figure back in its unit,
+for example `solventc hardware/radiatorbot.sv --where handle_stall_torque`.
 
 The current trip sets the torque that actually seats the valve. Set it with the valve in hand,
 well under stall. Measure the motors in the pile (free speed and stall current at the supply
-voltage) and the numbers in `radiatorbot.sv` follow.
+voltage), put them in `motor130.sv`, and the figures and claims follow.
 
 ## Printing
 
@@ -81,8 +86,22 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   those parts carry the torque.
 - Each compound gear (a gear with its pinion) prints as one part.
 
-Generate the STLs with `sh hardware/export.sh` (several minutes; `*.stl` is gitignored). Set
-`shaped := 0` in `radiatorbot.sv` to draw every gear as a blank while changing the layout.
+Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
+once; `*.stl` is gitignored. Set `shaped := 0` in `radiatorbot.sv` to draw every gear and the
+wheel as blanks while changing the layout.
+
+## How it's checked
+
+- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
+  a full turn, and judges the design table's claims (ratio, stall torque, free speed).
+- Clearances were judged with `claim … clear(…)` on a scratch copy. Every gear mesh runs with
+  0.14 mm between flanks. Every housing part clears the valve, except the contacts that are meant
+  to be there (the motor on its lid, the base against the frame, the clamp on the pipe).
+- The wheel against the handle was checked by intersecting the two at handle turns of 0°, 15°,
+  30° and 45°: no overlap at any. A control, the wheel out of step by 15°, overlaps by 529 mm³.
+- In Solvent v0.1.3, `clear` claims on the wheel come back undecided, and its pictures leave the
+  wheel out (the field mesher can't mesh it). Its STL is built exactly, agrees with the field, and
+  is a closed mesh.
 
 ## Bill of materials
 
