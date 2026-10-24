@@ -162,8 +162,10 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   gears and the ring, which carry the most torque, stay solid.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
-once; `*.stl` is gitignored. Set `shaped := 0` in `radiatorbot.sv` to draw every gear and the
-wheel as blanks while changing the layout.
+once, and every gear of one size and face once, placed for each copy; `*.stl` is gitignored. Each
+gear's teeth are the rack's exact sweep, built as one tooth sector turned round the gear; a spoked
+gear is shaped whole and its windows cut after. Set `shaped := 0` in `radiatorbot.sv` to draw every
+gear and the wheel as blanks while changing the layout.
 
 ## How it's checked
 
