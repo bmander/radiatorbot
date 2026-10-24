@@ -77,6 +77,7 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | a rod pressed into the housing | +0.05 mm (drill or ream to fit) |
 | printed faces that meet or pass | 0.3 mm |
 | each gear's teeth, thinned on the pitch circle | 0.15 mm (0.3 mm backlash a mesh) |
+| each gear's tips, chamfered 45° at both faces | 0.4 mm |
 | the wheel's pockets against the chrome handle | 0.6 mm backlash |
 | walls | 2.4 mm (six 0.4 mm perimeters) |
 
@@ -85,6 +86,12 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 - Print the wheel, the ring and stage 5 in PETG or ASA rather than PLA. A radiator is warm, and
   those parts carry the torque.
 - Each compound gear (a gear with its pinion) prints as one part.
+- The chamfers keep the first layer's squash (elephant's foot) and the top edge's burr out of the
+  mesh.
+- The 48-tooth gears of stages 2–4 (D1, B2, D2) are spoked: five spokes between a hub round the
+  pinion and a rim under the tooth roots, the windows' corners rounded. Stages 2 and 3 have
+  2.4 mm spokes and rim; stage 4, which carries about 0.5 N·m at stall, has 3 mm. The smaller
+  gears and the ring, which carry the most torque, stay solid.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
 once; `*.stl` is gitignored. Set `shaped := 0` in `radiatorbot.sv` to draw every gear and the
