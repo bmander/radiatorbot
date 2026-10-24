@@ -90,6 +90,19 @@ Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that bui
 once; `*.stl` is gitignored. Set `shaped := 0` in `radiatorbot.sv` to draw every gear and the
 wheel as blanks while changing the layout.
 
+## How it's checked
+
+- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
+  a full turn, and judges the design table's claims (ratio, stall torque, free speed).
+- Clearances were judged with `claim … clear(…)` on a scratch copy. Every gear mesh runs with
+  0.14 mm between flanks. Every housing part clears the valve, except the contacts that are meant
+  to be there (the motor on its lid, the base against the frame, the clamp on the pipe).
+- The wheel against the handle was checked by intersecting the two at handle turns of 0°, 15°,
+  30° and 45°: no overlap at any. A control, the wheel out of step by 15°, overlaps by 529 mm³.
+- In Solvent v0.1.3, `clear` claims on the wheel come back undecided, and its pictures leave the
+  wheel out (the field mesher can't mesh it). Its STL is built exactly, agrees with the field, and
+  is a closed mesh.
+
 ## Bill of materials
 
 - **Printed:** frame, base, clamp cap, cover, wheel (with ring), axle collar, motor pinion, and
