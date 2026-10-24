@@ -51,4 +51,4 @@ solventc hardware/radiatorbot.sv
 sh hardware/export.sh            # every printed part as STL, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.3 (`SOLVENTC_VERSION=v0.1.3` pins the installer to it).
+The models are checked with Solvent v0.1.4 (`SOLVENTC_VERSION=v0.1.4` pins the installer to it).

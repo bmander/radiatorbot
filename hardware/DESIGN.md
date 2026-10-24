@@ -20,11 +20,9 @@ The bot hangs on the valve's −x side, away from the radiator.
   over a whole wheel turn, as the two turn together, and removes everything it passes through.
   That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
   conjugate to the handle by construction. The cut is exact, with no scallops.
-  - The cutter is everything the handle occupies over the stem's travel.
-  - It follows the arms' 8° draft in six steps, each the star's section where the arm is widest
-    over that band. Each step over-clears the draft by at most 0.4 mm a side.
-  - The drafted star itself, unstepped, is refused in Solvent v0.1.3: its swept region changes
-    shape between heights.
+  - The cutter is everything the handle occupies over the stem's travel: the star, with its arms'
+    8° draft, where it stands closed and again where it stands open.
+  - Each pocket's walls lean with the draft, so the arm bears along its whole depth.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
 - **The gear train** has five stages on two fixed 5 mm rods, B and D. The motor's pinion drives
   stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the ring.
@@ -173,14 +171,14 @@ wheel as blanks while changing the layout.
   - a mated USB plug clears the end wall's window by 0.3 mm;
   - the boards and their headers clear the frame and the cover;
   - the pins' tails under the perfboard clear the motor.
-- The gears' clearances were judged with `claim … clear(…)` on a scratch copy. Every gear mesh
-  runs with 0.14 mm between flanks. Every housing part clears the valve, except the contacts that
-  are meant to be there (the motor on its lid, the base against the frame, the clamp on the pipe).
-- The wheel against the handle was checked by intersecting the two at handle turns of 0°, 15°,
-  30° and 45°: no overlap at any. A control, the wheel out of step by 15°, overlaps by 529 mm³.
-- In Solvent v0.1.3, `clear` claims on the wheel come back undecided, and its pictures leave the
-  wheel out (the field mesher can't mesh it). Its STL is built exactly, agrees with the field, and
-  is a closed mesh.
+- With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
+  shaped part, so it takes about ten minutes.
+  - The wheel is judged against the handle at seven rolls across a whole period of the mesh
+    (0° to 90° of the handle: one arm through one pocket). It clears by about 0.29 mm at each,
+    the backlash the cutter was grown by.
+  - Every gear mesh runs 0.14 mm clear between flanks.
+  - Every housing part clears the valve, except the contacts meant to be there (the motor on its
+    lid, the base against the frame, the clamp on the pipe).
 
 ## Bill of materials
 
