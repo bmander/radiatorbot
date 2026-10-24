@@ -175,10 +175,13 @@ wheel as blanks while changing the layout.
   - the boards and their headers clear the frame and the cover;
   - the pins' tails under the perfboard clear the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part and measures the wheel at seven poses, so it takes about twenty minutes.
+  shaped part and measures the wheel at thirteen poses, so it takes about twenty minutes.
   - The wheel is judged against the handle at seven rolls across a whole period of the mesh
-    (0° to 90° of the handle: one arm through one pocket). It clears by 0.289–0.297 mm at each,
-    the 0.3 mm the cutter was grown by.
+    (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
+    nearly open (2 mm and 3.8 mm down the stem's travel).
+  - Closed and half open, it clears by 0.357–0.361 mm, where the top face's broken edge passes
+    the pockets' straight band. Nearly open, it clears by 0.312–0.325 mm against the drafted
+    walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     lid, the base against the frame, the clamp on the pipe).
