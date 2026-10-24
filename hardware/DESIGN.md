@@ -20,9 +20,12 @@ The bot hangs on the valve's −x side, away from the radiator.
   over a whole wheel turn, as the two turn together, and removes everything it passes through.
   That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
   conjugate to the handle by construction. The cut is exact, with no scallops.
-  - The cutter is everything the handle occupies over the stem's travel: the star, with its arms'
-    8° draft, where it stands closed and again where it stands open.
-  - Each pocket's walls lean with the draft, so the arm bears along its whole depth.
+  - The cutter is everything the handle occupies over the stem's travel. The arms' 8° draft
+    leans them in toward their bottom face, so that is the star where it stands open, and above
+    it a straight prism of the star's top face, which passes every height from open up to closed.
+    The star where it stands closed lies inside them.
+  - Each pocket's walls lean with the draft below the handle's open top face and stand straight
+    above it, with no step between: the arm clears by the same 0.3 mm anywhere on its travel.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
 - **The gear train** has five stages on two fixed 5 mm rods, B and D. The motor's pinion drives
   stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the ring.
@@ -224,8 +227,8 @@ wheel as blanks while changing the layout.
 ## Open questions
 
 - **Stem travel.** The model assumes the handle as measured is closed, and that it drops 4 mm on
-  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't rise, set it to 0 and
-  the bands are cut tighter.
+  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
+  the pockets' straight band above the draft goes.
 - **The inlet hex's orientation** relative to the outlet. The model has a corner on ±x, so the
   bot can stand at multiples of 60° about the stem. Check it on the valve.
 - **The thermostat's interface.** It's a 2-wire R/W dry contact, a 24 VAC R/W/C, or something
