@@ -90,6 +90,10 @@ handle_dims := {
 }
 handle_gap := 1.1mm          // bare stem between the packing nut and the handle
 
+// Every table above, as the one group the assembly is drawn from.
+valve_dims := {body: body_dims, pipe: pipe_dims, bonnet: bonnet_dims, packing: packing_dims,
+               union: union_dims, spud: spud_dims, handle: handle_dims}
+
 // == Building blocks: prisms along an axis =======================================================
 // Each draws its section about `c` in the plane `c` is drawn in, and extrudes it from `z0` to
 // `z1` along that plane's normal.
@@ -173,14 +177,12 @@ component OutletUnion(outlet: point, ref: line, nut_af: Length, tail_d: Length,
   tailpiece := RoundBar(outlet, d: tail_d, z0: x1, z1: x_spud)
 }
 
-// The star handle and the stem it is fixed to, drawn on `top`, the plane of the handle's top
-// face: the draft's parting plane, where the outline is widest.
-//
-// In plan each arm has straight sides, a rounded tip and a fillet where it meets the next arm.
-// The outline is extruded `h` down from `top` with a draft, its sides leaning in toward the flat
-// bottom face, whose rim is rolled where the chrome turns over; the top face's edge is broken.
-// `span` and `waist` are measured over the rounds: across the tips, and across opposite fillets.
-component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
+// The star handle's outline in plan, drawn on `top` about its origin: four arms, each with straight
+// sides, a rounded tip and a fillet where it meets the next arm.  The first arm points along
+// `top`'s u.  `span` and `waist` are measured over the rounds: across the tips, and across
+// opposite fillets.  The handle below is this outline extruded; the radiator bot's wheel is cut by
+// it at the draft's sections.
+component StarOutline(top: plane, s: StarSizes) {
   in top {
     hub := point
     hub coincident top.origin
@@ -232,9 +234,20 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
                     tip_half[1], side[1], fillet[1], next_side[1], next_tip_half[1],
                     tip_half[2], side[2], fillet[2], next_side[2], next_tip_half[2],
                     tip_half[3], side[3], fillet[3], next_side[3], next_tip_half[3])
-    stem_rim := radius(s.stem_d / 2) circle(center: hub)
   }
-  star := solid(outline, from: -s.h, to: 0mm, draft: s.draft)
+}
+
+// The star handle and the stem it is fixed to, drawn on `top`, the plane of the handle's top
+// face: the draft's parting plane, where the outline is widest.
+//
+// The outline (`StarOutline`) is extruded `h` down from `top` with a draft, its sides leaning in toward the flat
+// bottom face, whose rim is rolled where the chrome turns over; the top face's edge is broken.
+component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
+  plan := StarOutline(top, s)
+  in top {
+    stem_rim := radius(s.stem_d / 2) circle(center: plan.hub)
+  }
+  star := solid(plan.outline, from: -s.h, to: 0mm, draft: s.draft)
   stem := solid(face(stem_rim), from: -s.h / 2, to: stem_up)
 
   handle := solid(star)
@@ -244,56 +257,67 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
 }
 
 // == The assembly ================================================================================
+// The valve as it stands on the radiator, drawn from the tables in `dims` (`valve_dims`), its handle
+// turned `handle_turn` about the stem.  A model that works on the valve (the radiator bot) draws it
+// with `use radiator_valve (RadiatorValve, valve_dims)` and reads its datums and parts by name:
+// `valve.stem_axis`, `valve.handle_top`, `valve.star_handle`.
+component RadiatorValve(dims: group, handle_turn: Angle) {
+  // The stem's axis, which the handle turns about; the outlet's axis where it crosses the side
+  // plane (x = 0), from which the outlet's parts are stationed along x; and a reference line in
+  // each plane the hex parts are drawn in, their flats squared to it.
+  in std.front {
+    construction stem_axis := vertical line(std.origin, hint((0, 10)))
+    length(10mm) stem_axis
+  }
+  in std.top {
+    construction top_ref := horizontal line(std.top.origin, hint((10, 0)))
+    length(10mm) top_ref
+  }
+  in std.side {
+    outlet := point hint((0, outlet_z))
+    std.side.origin level(u) outlet
+    std.side.origin distance(outlet_z, along: v) outlet
+    construction side_ref := horizontal line(outlet, hint((10, outlet_z)))
+    length(10mm) side_ref
+  }
 
-// The stem's axis, which the handle turns about; the outlet's axis where it crosses the side
-// plane (x = 0), from which the outlet's parts are stationed along x; and a reference line in
-// each plane the hex parts are drawn in, their flats squared to it.
-in std.front {
-  construction stem_axis := vertical line(std.origin, hint((0, 10)))
-  length(10mm) stem_axis
+  supply_pipe := RoundBar(std.top.origin, d: dims.pipe.d,
+                          z0: dims.body.inlet_top, z1: dims.body.inlet_top + dims.pipe.len)
+
+  body := ValveBody(outlet, top_ref, s: dims.body)
+
+  bonnet := Bonnet(top_ref, nut_w: dims.bonnet.w, neck_d: dims.bonnet.neck_d,
+                   z_neck: dims.packing.top, z_bottom: dims.bonnet.bottom,
+                   z_top: dims.body.collar_bottom)
+
+  packing_nut := HexBar(std.top.origin, top_ref, af: dims.packing.af, phase: 0deg,
+                        z0: 0mm, z1: dims.packing.top)
+
+  union := OutletUnion(outlet, side_ref, nut_af: dims.union.af, tail_d: dims.union.tail_d,
+                       x0: dims.body.boss_x, x1: dims.union.x1, x_spud: dims.spud.x)
+
+  radiator_spud := RoundBar(outlet, d: dims.spud.d,
+                            z0: dims.spud.x, z1: dims.spud.x + dims.spud.t)
+
+  // The handle's joint: a frame turning about the stem's axis, standing at `handle_turn`.
+  handle := frame
+  handle turns(1) stem_axis
+  fix(value == handle_turn) handle
+
+  // The handle's top face, square to the stem `handle_gap` below the packing nut, and that plane
+  // where the joint's turn puts it.
+  handle_top := plane
+  fix(origin == (0mm, 0mm, -handle_gap)) handle_top
+  fix(dir == (1, 0, 0)) handle_top.u
+  fix(dir == (0, 1, 0)) handle_top.v
+  turned_top := handle_top in handle
+
+  star_handle := StarHandle(turned_top, s: dims.handle, stem_up: handle_gap + dims.packing.top)
 }
-in std.top {
-  construction top_ref := horizontal line(std.top.origin, hint((10, 0)))
-  length(10mm) top_ref
+
+// Opened by itself, the valve with its handle to scrub.  (A `preview` is left out where the file
+// is used as a module, so the parameter stays this document's.)
+preview {
+  param handle_turn: Angle over (0deg, 360deg)
+  valve := RadiatorValve(valve_dims, handle_turn: handle_turn)
 }
-in std.side {
-  outlet := point hint((0, outlet_z))
-  std.side.origin level(u) outlet
-  std.side.origin distance(outlet_z, along: v) outlet
-  construction side_ref := horizontal line(outlet, hint((10, outlet_z)))
-  length(10mm) side_ref
-}
-
-supply_pipe := RoundBar(std.top.origin, d: pipe_dims.d,
-                        z0: body_dims.inlet_top, z1: body_dims.inlet_top + pipe_dims.len)
-
-body := ValveBody(outlet, top_ref, s: body_dims)
-
-bonnet := Bonnet(top_ref, nut_w: bonnet_dims.w, neck_d: bonnet_dims.neck_d,
-                 z_neck: packing_dims.top, z_bottom: bonnet_dims.bottom,
-                 z_top: body_dims.collar_bottom)
-
-packing_nut := HexBar(std.top.origin, top_ref, af: packing_dims.af, phase: 0deg,
-                      z0: 0mm, z1: packing_dims.top)
-
-union := OutletUnion(outlet, side_ref, nut_af: union_dims.af, tail_d: union_dims.tail_d,
-                     x0: body_dims.boss_x, x1: union_dims.x1, x_spud: spud_dims.x)
-
-radiator_spud := RoundBar(outlet, d: spud_dims.d,
-                          z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
-
-// The handle's joint: a frame turning about the stem's axis, standing at `handle_turn`.
-param handle_turn: Angle over (0deg, 360deg)
-handle := frame
-handle turns(1) stem_axis
-fix(value == handle_turn) handle
-
-// The handle's top face, square to the stem `handle_gap` below the packing nut, and that plane
-// where the joint's turn puts it.
-handle_top := plane
-fix(origin == (0mm, 0mm, -handle_gap)) handle_top
-fix(dir == (1, 0, 0)) handle_top.u
-fix(dir == (0, 1, 0)) handle_top.v
-turned_top := handle_top in handle
-
-star_handle := StarHandle(turned_top, s: handle_dims, stem_up: handle_gap + packing_dims.top)
