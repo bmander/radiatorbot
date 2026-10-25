@@ -20,9 +20,12 @@ The bot hangs on the valve's −x side, away from the radiator.
   over a whole wheel turn, as the two turn together, and removes everything it passes through.
   That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
   conjugate to the handle by construction. The cut is exact, with no scallops.
-  - The cutter is everything the handle occupies over the stem's travel: the star, with its arms'
-    8° draft, where it stands closed and again where it stands open.
-  - Each pocket's walls lean with the draft, so the arm bears along its whole depth.
+  - The cutter is everything the handle occupies over the stem's travel. The arms' 8° draft
+    leans them in toward their bottom face, so that is the star where it stands open, and above
+    it a straight prism of the star's top face, which passes every height from open up to closed.
+    The star where it stands closed lies inside them.
+  - Each pocket's walls lean with the draft below the handle's open top face and stand straight
+    above it, with no step between: the arm clears by the same 0.3 mm anywhere on its travel.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
 - **The gear train** has five stages on two fixed 5 mm rods, B and D. The motor's pinion drives
   stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the ring.
@@ -193,7 +196,10 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   gears and the ring, which carry the most torque, stay solid.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
-once, and every gear of one size and face once, placed for each copy; `*.stl` is gitignored. Each
+once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are
+gitignored. The same run writes `radiatorbot.step`, the whole bot as one STEP assembly for a CAD
+system: a part for each object (the valve as measured, the bought parts as their outlines and the
+printed parts), each placed where it stands, the valve's and the boards' grouped under them. Each
 gear's teeth are the rack's exact sweep, built as one tooth sector turned round the gear; a spoked
 gear is shaped whole and its windows cut after. Set `shaped := 0` in `radiatorbot.sv` to draw every
 gear and the wheel as blanks while changing the layout.
@@ -207,10 +213,13 @@ gear and the wheel as blanks while changing the layout.
   - the boards and their headers clear the frame, the cover, one another and the buck modules;
   - the pins' tails under the perfboard clear the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part, so it takes about ten minutes.
+  shaped part and measures the wheel at thirteen poses, so it takes about four minutes.
   - The wheel is judged against the handle at seven rolls across a whole period of the mesh
-    (0° to 90° of the handle: one arm through one pocket). It clears by about 0.29 mm at each,
-    the backlash the cutter was grown by.
+    (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
+    nearly open (2 mm and 3.8 mm down the stem's travel).
+  - Closed and half open, it clears by 0.353–0.361 mm, where the top face's broken edge passes
+    the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
+    walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     lid, the base against the frame, the clamp on the pipe).
@@ -263,8 +272,8 @@ gear and the wheel as blanks while changing the layout.
 ## Open questions
 
 - **Stem travel.** The model assumes the handle as measured is closed, and that it drops 4 mm on
-  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't rise, set it to 0 and
-  the bands are cut tighter.
+  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
+  the pockets' straight band above the draft goes.
 - **The inlet hex's orientation** relative to the outlet. The model has a corner on ±x, so the
   bot can stand at multiples of 60° about the stem. Check it on the valve.
 - **The thermostat's interface.** It's a 2-wire R/W dry contact, a 24 VAC R/W/C, or something

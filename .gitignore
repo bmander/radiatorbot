@@ -2,3 +2,4 @@
 *.stl
 firmware/.pio/
 firmware/host_test/build/
+*.step

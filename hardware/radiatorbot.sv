@@ -22,7 +22,7 @@
 // takes a few minutes).  The design table's requirements are claims, judged before the solve;
 // `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
 // `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about ten minutes more).
+// period of their mesh (about four minutes more).
 //
 // Numbers marked "~" are estimates to check: the motor's figures (motor130.sv) and the stem's
 // travel, which no measurement has said yet.
@@ -37,7 +37,7 @@ use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_t
 use boards (XiaoEsp32C3, Drv8871, Ina219, xiao_dims, drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; minutes)
+checks := 0                    // 1: judge every clearance (needs `shaped`; ~4 minutes)
 
 // == The drive ===================================================================================
 
@@ -222,24 +222,23 @@ component Gear(c: point, z: Length, phase: Angle, N: Int, m: Length, shift: Scal
 // The wheel conjugate to the star: a disc of radius `rim` about `c` from z_bot to z_top, less
 // everything the handle sweeps through as it turns about `stem` and the wheel about `spindle`,
 // `n / 4` handle turns a wheel turn, over a whole turn of the wheel.  The cutter is all the
-// handle occupies over its travel: the drafted star grown by `grow` where it stands closed (its
-// top face on `top`), its top face's section carried on up past the wheel so the pockets stay
-// open above it, and the drafted star again where it stands open (its top face on `open_top`).
-// The draft makes the lower star's section hold the upper's at every height, so the union is
-// exactly the handle swept down its travel.
-component ConjugateWheel(top: plane, open_top: plane, stem: line, spindle: line, c: point,
-                         s: StarSizes, n: Int, rim: Length, z_bot: Length, z_top: Length,
-                         top_z: Length, grow: Length, shaped: Int) {
+// handle, grown by `grow`, occupies over its travel `travel` down from where it stands closed
+// (its top face `top_z` up): the draft leans its sides in toward the bottom face, so at every
+// height the widest section of it is the one nearest its top face.  Below the top face where
+// it stands open (on `open_top`) that is the open star's own; above it, up to the closed top
+// face and on up past the wheel so the pockets stay open, it is the top face's, which passes
+// through every height in between.  The cutter is the open star and that prism; the star where
+// it stands closed lies inside them.
+component ConjugateWheel(open_top: plane, stem: line, spindle: line, c: point, s: StarSizes,
+                         n: Int, rim: Length, z_bot: Length, z_top: Length, top_z: Length,
+                         travel: Length, grow: Length, shaped: Int) {
   grown := {span: s.span + 2 * grow, waist: s.waist + 2 * grow, h: s.h, tip_r: s.tip_r + grow,
             fillet_r: s.fillet_r - grow, draft: s.draft, rim_r: s.rim_r, edge_r: s.edge_r,
             stem_d: s.stem_d}
-  closed := StarOutline(top, s: grown)
   opened := StarOutline(open_top, s: grown)
-  construction cutter := solid(closed.outline, from: -s.h, to: 0mm, draft: s.draft)
-  crown := solid(closed.outline, from: 0mm, to: z_top - top_z + 1mm)
-  lowered := solid(opened.outline, from: -s.h, to: 0mm, draft: s.draft)
+  construction cutter := solid(opened.outline, from: -s.h, to: 0mm, draft: s.draft)
+  crown := solid(opened.outline, from: 0mm, to: z_top - (top_z - travel) + 1mm)
   crown union cutter
-  lowered union cutter
 
   in std.top {
     edge := radius(rim) circle(center: c)
@@ -302,9 +301,9 @@ open_top := plane
 fix(origin == (0mm, 0mm, top0 - stem_travel)) open_top
 fix(dir == (1, 0, 0)) open_top.u
 fix(dir == (0, 1, 0)) open_top.v
-cw := ConjugateWheel(valve.handle_top, open_top, valve.stem_axis, a_spindle, a_c,
-                     s: handle_dims, n: wheel_n, rim: wheel_rim, z_bot: wheel_bottom,
-                     z_top: wheel_top, top_z: top0, grow: wheel_backlash / 2, shaped: shaped)
+cw := ConjugateWheel(open_top, valve.stem_axis, a_spindle, a_c, s: handle_dims, n: wheel_n,
+                     rim: wheel_rim, z_bot: wheel_bottom, z_top: wheel_top, top_z: top0,
+                     travel: stem_travel, grow: wheel_backlash / 2, shaped: shaped)
 
 ring_gear := Gear(a_c, z: ring_z0, phase: 0deg + 90deg, N: ring_n, m: m_fin, shift: -pin_shift,
              face: 10mm, bore: axle_d + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
@@ -688,16 +687,36 @@ claim xiao.board clear(0.5mm) regulator.body
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel
-// is judged against the handle at rest as cut, both read at rolls of the pair's generating motion
-// across a whole period of the mesh (90deg of the handle: one arm through one pocket).  Gears in
-// mesh run 0.15 mm clear a flank; parts that rest on one another (the motor on its lid, the base
-// on the frame) are not claimed clear.
+// is judged against the handle closed, half open and nearly open, both read at rolls of the
+// pair's generating motion across a whole period of the mesh (90deg of the handle: one arm
+// through one pocket).  Gears in mesh run 0.15 mm clear a flank; parts that rest on one another
+// (the motor on its lid, the base on the frame) are not claimed clear.
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
   repeat 7 as k {
-    handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
-    wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
+    construction handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
+    construction wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
     claim wheel_at clear(0.1mm) handle_at
+  }
+  // and partway down its travel, half open and nearly open, where the pockets' walls turn from
+  // the top face's section to the open star's draft
+  half_top := plane
+  fix(origin == (0mm, 0mm, top0 - stem_travel / 2)) half_top
+  fix(dir == (1, 0, 0)) half_top.u
+  fix(dir == (0, 1, 0)) half_top.v
+  near_top := plane
+  fix(origin == (0mm, 0mm, top0 - 0.95 * stem_travel)) near_top
+  fix(dir == (1, 0, 0)) near_top.u
+  fix(dir == (0, 1, 0)) near_top.v
+  half_handle := StarHandle(half_top, s: handle_dims, stem_up: 1mm)
+  near_handle := StarHandle(near_top, s: handle_dims, stem_up: 1mm)
+  repeat 3 as k {
+    construction half_at := half_handle.handle at(under: cw.gen_handle) (k * 30deg)
+    construction near_at := near_handle.handle at(under: cw.gen_handle) (k * 30deg + 15deg)
+    construction wheel_half := wheel_part at(under: cw.gen_wheel) (k * 30deg)
+    construction wheel_near := wheel_part at(under: cw.gen_wheel) (k * 30deg + 15deg)
+    claim wheel_half clear(0.1mm) half_at
+    claim wheel_near clear(0.1mm) near_at
   }
   claim wheel clear(0.5mm) valve.packing_nut.bar
   claim wheel clear(0.3mm) base
