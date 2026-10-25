@@ -231,7 +231,7 @@ gear and the wheel as blanks while changing the layout.
     the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
     walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
-  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 11.5.
+  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 12.4.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     lid, the base against the frame, the clamp on the pipe).
 
