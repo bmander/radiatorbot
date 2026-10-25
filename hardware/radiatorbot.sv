@@ -124,7 +124,7 @@ lid_z0 := s1_z0 + 5.5mm
 lid_z1 := lid_z0 + 3mm
 bridge_z0 := s5_z0              // the wheel's axle held in a bridge across the base, over the ring
 bridge_z1 := s5_z0 + 6mm
-board_z := lid_z1 + motor130_dims.len + 3mm             // the perfboard's underside, over the motor
+board_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm  // the perfboard's underside
 bay_z1 := board_z + 1.6mm + 14mm                        // room for the modules on their headers
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
 clamp_z1 := clamp_z0 + 31.7mm
@@ -733,6 +733,8 @@ when checks == 1 {
   claim compound_b1 clear(0.2mm) frame_part
   claim compound_d1 clear(0.2mm) frame_part
   claim pinion clear(0.2mm) frame_part
+  claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
+  claim compound_d1 clear(0.2mm) motor.motor
   claim frame_part clear(0.05mm) valve.supply_pipe.bar
   claim cap_part clear(0.05mm) valve.supply_pipe.bar
   claim frame_part clear(0.15mm) valve.body.casting
