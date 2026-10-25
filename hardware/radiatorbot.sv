@@ -11,10 +11,10 @@
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
-//     perfboard over the motor with the ESP32 and the motor driver on it, the cable entries), and
-//     the spine up beside the valve to the **clamp**, a split block round the inlet hex and the
-//     supply pipe above it.  The hex takes the handle's reaction torque positively; the bolted
-//     cap closes the clamp from +x.
+//     perfboard over the motor with the ESP32, the motor driver and its current monitor on it, the
+//     cable entries), and the spine up beside the valve to the **clamp**, a split block round the
+//     inlet hex and the supply pipe above it.  The hex takes the handle's reaction torque
+//     positively; the bolted cap closes the clamp from +x.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
@@ -34,7 +34,7 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (XiaoEsp32C3, Drv8874, xiao_dims, drv8874_dims, header_dims, pitch)
+use boards (XiaoEsp32C3, Drv8871, Ina219, xiao_dims, drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~20 minutes)
@@ -152,11 +152,14 @@ grid_y0 := board_cy - (board_rows - 1) * pitch / 2       // the first row's
 board_top := board_z + 1.6mm
 // The boards on the perfboard's grid (boards.sv), each at its pin field's middle: the XIAO's pins
 // in columns 0-6, rows 9 and 15, its USB out over the board's end toward the bay's end wall; the
-// driver's in columns 17 and 22, rows 0-6.
+// driver's in column 15, rows 2-5, its terminals toward +x; the current monitor's in columns
+// 15-20, row 11, its board toward +y.
 xiao_cx := grid_x0 + 3 * pitch
 xiao_cy := grid_y0 + 12 * pitch
-drv_cx := grid_x0 + 19.5 * pitch
-drv_cy := grid_y0 + 3 * pitch
+drv_cx := grid_x0 + 15 * pitch
+drv_cy := grid_y0 + 3.5 * pitch
+ina_cx := grid_x0 + 17.5 * pitch
+ina_cy := grid_y0 + 11 * pitch
 usb_z := board_top + header_dims.body_h + xiao_dims.pcb_t + xiao_dims.usb_h / 2   // its axis
 
 // == Building blocks =============================================================================
@@ -200,19 +203,17 @@ component NutX(y: Length, z: Length, af: Length, x0: Length, x1: Length) {
 
 // A printed gear seated on an axle: its figure (gears.sv) with its origin `z` up the axle from
 // `c`, its axis up the world's z, turned `phase` about it.  A driving gear has a tooth on the line
-// of centres and the gear it drives a space: with the bites' space on +v, a pinion turned
+// of centres and the gear it drives a space: with the cut space on +v, a pinion turned
 // `bearing - 90deg - 180deg / N` and its gear `bearing + 90deg`, `bearing` the line of centres'
 // from the pinion's axle to the gear's.  Gears of one size and face are one figure, shaped once.
 // A large gear is spoked to save material: `spokes` of them, `web` wide, between a hub of radius
 // `hub` (clear of the pinion it carries) and a rim `web` thick under its roots; 0 spokes, solid.
 component Gear(c: point, z: Length, phase: Angle, N: Int, m: Length, shift: Scalar,
-               face: Length, bore: Length, step: Angle, shaped: Int, spokes: Int, hub: Length,
-               web: Length) {
+               face: Length, bore: Length, shaped: Int, spokes: Int, hub: Length, web: Length) {
   at := point
   at raised(d: z, along: std.z) c
   g := ShapedSpur(N: N, m: m, phi: pa, shift: shift, thin: thin, z0: 0mm, z1: face, bore: bore,
-                  step: step, shaped: shaped, chamfer: chamfer, spokes: spokes, hub: hub,
-                  web: web)
+                  shaped: shaped, chamfer: chamfer, spokes: spokes, hub: hub, web: web)
   g seats(turn: phase, up: std.z, east: std.x) at
 }
 
@@ -305,8 +306,7 @@ cw := ConjugateWheel(open_top, valve.stem_axis, a_spindle, a_c, s: handle_dims, 
                      travel: stem_travel, grow: wheel_backlash / 2, shaped: shaped)
 
 ring_gear := Gear(a_c, z: ring_z0, phase: 0deg + 90deg, N: ring_n, m: m_fin, shift: -pin_shift,
-             face: 10mm, bore: axle_d + run, step: 2deg, shaped: shaped,
-             spokes: 0, hub: 0mm, web: 0mm)
+             face: 10mm, bore: axle_d + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 
 web := Post(a_c, r: 33mm, z0: wheel_top, z1: ring_z0 + 0.25mm)
 wheel_bore := Post(a_c, r: (axle_d + run) / 2, z0: wheel_bottom - 1mm, z1: ring_z0 + 11mm)
@@ -332,41 +332,36 @@ collar_screw.body cut collar_part
 // stage 1: the motor's pinion, pressed on its shaft, into B's first compound's gear
 motor_pin := Gear(m_c, z: s1_z0 + 0.5mm, phase: 120deg - 90deg - 15deg, N: pin_n, m: m_small,
                   shift: pin_shift, face: 4.75mm, bore: motor130_dims.shaft_d - 0.1mm,
-                  step: 3deg, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
+                  shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 // B's first compound: stage 1's gear over stage 2's pinion
 b1_gear := Gear(b_c, z: s1_z0, phase: 120deg + 90deg, N: s1_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 0, hub: 0mm, web: 0mm)
+                face: 5mm, bore: rod_b + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 b1_pin := Gear(b_c, z: s2_z0, phase: 75deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // D's first: stage 2's gear over stage 3's pinion
 d1_gear := Gear(d_c, z: s2_z0, phase: 75deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_d + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 8mm, web: 2.4mm)
+                face: 5mm, bore: rod_d + run, shaped: shaped, spokes: 5, hub: 8mm, web: 2.4mm)
 d1_pin := Gear(d_c, z: s3_z0, phase: 255deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_d + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_d + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // B's second: stage 3's gear over stage 4's pinion
 b2_gear := Gear(b_c, z: s3_z0, phase: 255deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 8mm, web: 2.4mm)
+                face: 5mm, bore: rod_b + run, shaped: shaped, spokes: 5, hub: 8mm, web: 2.4mm)
 b2_pin := Gear(b_c, z: s4_z0, phase: 75deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // D's second: stage 4's gear over stage 5's pinion, at module 1
 d2_gear := Gear(d_c, z: s4_z0, phase: 75deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_d + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 9mm, web: 3mm)
+                face: 5mm, bore: rod_d + run, shaped: shaped, spokes: 5, hub: 9mm, web: 3mm)
 d2_pin := Gear(d_c, z: s5_z0, phase: 255deg - 90deg - 15deg, N: pin_n, m: m_s5,
-               shift: pin_shift, face: 6.75mm, bore: rod_d + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 6.75mm, bore: rod_d + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // B's third: stage 5's gear over the last pinion, which drives the wheel's ring
 b3_gear := Gear(b_c, z: s5_z0, phase: 255deg + 90deg, N: s5_n, m: m_s5, shift: -pin_shift,
-                face: 6mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 0, hub: 0mm, web: 0mm)
+                face: 6mm, bore: rod_b + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 b3_pin := Gear(b_c, z: fin_z0, phase: 0deg - 90deg - 15deg, N: pin_n, m: m_fin,
-               shift: pin_shift, face: 10.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 10.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 
 construction motor_pinion := solid(motor_pin.g.gear)
@@ -637,17 +632,21 @@ cover_hole_n.body cut cover_part
 // Bought boards soldered on headers to a 5 x 7 cm perfboard (boards.sv), and the room the rest
 // take (~ sizes):
 //   - a Seeed XIAO ESP32-C3, its USB-C to the end wall's window: power, programming and logs;
-//   - a Pololu DRV8874 carrier: the H-bridge, and its CS pin gives the motor's current as
-//     ~1.1 V/A, which the XIAO's ADC reads for the end-of-travel sensing;
-//   - a mini buck module (MP1584 size, 22 x 17) and a bridge rectifier, for 24 VAC off the
-//     thermostat's transformer; with a 5 V USB supply instead, neither is fitted;
+//   - an Adafruit DRV8871 breakout: the H-bridge, its terminals toward the bay's +x wall;
+//   - an Adafruit INA219 breakout in the driver's supply: the motor's current over I2C, which the
+//     XIAO reads for the end-of-travel sensing;
+//   - a buck module (22 x 17) and a bridge rectifier: the motor's 7.5 V, off 24 VAC from the
+//     thermostat's transformer or a DC adapter (the DRV8871 wants 6.5 V at least);
+//   - a mini buck module (Mini-360 size, 17 x 11) taking the 7.5 V down to the XIAO's 5 V;
 //   - a 3-way 5.08 mm screw terminal for the supply's and the thermostat's wires, by the grommet.
 perfboard := Block(x0: board_cx - board_w / 2, x1: board_cx + board_w / 2, y0: board_cy - board_h / 2, y1: board_cy + board_h / 2, z0: board_z, z1: board_top)
 in std.top {
   xiao_c := point hint((-104.1, 17.9))
   xiao_c coords(du: xiao_cx, dv: xiao_cy) std.top
-  drv_c := point hint((-62.2, -5))
+  drv_c := point hint((-73.6, -3.7))
   drv_c coords(du: drv_cx, dv: drv_cy) std.top
+  ina_c := point hint((-67.3, 15.4))
+  ina_c coords(du: ina_cx, dv: ina_cy) std.top
 }
 xiao_at := point
 xiao_at raised(d: board_top, along: std.z) xiao_c
@@ -655,23 +654,36 @@ xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
 xiao seats(turn: 0deg, up: std.z, east: std.x) xiao_at
 drv_at := point
 drv_at raised(d: board_top, along: std.z) drv_c
-driver := Drv8874(drv8874_dims, h: header_dims)
-driver seats(turn: 0deg, up: std.z, east: std.x) drv_at
-buck := Block(x0: board_cx - 12mm, x1: board_cx + 10mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
+driver := Drv8871(drv8871_dims, h: header_dims)
+driver seats(turn: -90deg, up: std.z, east: std.x) drv_at
+ina_at := point
+ina_at raised(d: board_top, along: std.z) ina_c
+monitor := Ina219(ina219_dims, h: header_dims)
+monitor seats(turn: 0deg, up: std.z, east: std.x) ina_at
+buck := Block(x0: board_cx - 16.5mm, x1: board_cx + 5.5mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
+regulator := Block(x0: board_cx - 10mm, x1: board_cx + 1.1mm, y0: board_cy + 5mm, y1: board_cy + 22.3mm, z0: board_top, z1: board_top + 4.5mm)
 terminal := Block(x0: board_cx - 34mm, x1: board_cx - 19mm, y0: board_cy - 23mm, y1: board_cy - 15mm, z0: board_top, z1: board_top + 10mm)
 
 // The boards in the bay: a mated USB cable's plug through the end wall's window, and the boards,
 // their headers and the pins' tails under the perfboard clear of the frame, the motor and the
-// cover.
+// cover, and of one another and the buck modules' room.
 claim xiao.plug clear(0.2mm) frame_part
 claim xiao.board clear(0.5mm) frame_part
 claim xiao.headers clear(0.5mm) frame_part
 claim driver.board clear(0.5mm) frame_part
-claim driver.rows.headers clear(0.5mm) frame_part
+claim driver.headers clear(0.5mm) frame_part
+claim monitor.board clear(0.5mm) frame_part
+claim monitor.headers clear(0.5mm) frame_part
 claim xiao.headers clear(0.5mm) motor.motor
-claim driver.rows.headers clear(0.5mm) motor.motor
+claim driver.headers clear(0.5mm) motor.motor
+claim monitor.headers clear(0.5mm) motor.motor
 claim xiao.board clear(1mm) cover_part
 claim driver.board clear(1mm) cover_part
+claim monitor.board clear(1mm) cover_part
+claim driver.board clear(0.5mm) monitor.board
+claim driver.board clear(0.5mm) buck.body
+claim monitor.board clear(0.5mm) regulator.body
+claim xiao.board clear(0.5mm) regulator.body
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel

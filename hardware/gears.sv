@@ -1,16 +1,18 @@
 // Spur gears for the radiator bot's gearbox, as a module.
 //
 // Every gear is printed, so every gear is **shaped**: its blank is cut by the basic rack's tooth
-// stood at a run of instants of the rack rolling on the gear's pitch circle, as a gear shaper or a
-// hob cuts one.  Nothing states an involute; the flanks the bites leave are one, and a small pinion
-// is undercut where a real one would be.  The rack's tooth is drawn `thin` wider than the basic
+// swept through the roll of the rack on the gear's pitch circle, as a gear shaper or a hob cuts
+// one, in one statement (`sweep(tooth over t in (…), under: rack, seen_from: blank_turn)`).
+// Nothing states an involute; the flanks the sweep leaves are one, exactly, and a small pinion is
+// undercut where a real one would be.  The rack's tooth is drawn `thin` wider than the basic
 // rack's, so the printed tooth comes out that much thinner on its pitch circle: a pair's backlash
 // is the two gears' `thin`s added, which is what an FDM print's swollen flanks need to run.
 //
-// The bites are discrete on purpose.  The continuous rack sweep (`sweep(tooth over t in (…),
-// under: rack, seen_from: blank_turn)`) exports exactly in Solvent v0.1.4, but takes about four
-// times as long and writes an STL ten times the size (7.6 MB for a spoked 48-tooth gear, against
-// 0.74 MB), for scallops of about 0.01 mm that no FDM printer resolves.
+// The cut is the exact envelope of the rack's tooth, not a run of bites at discrete rolls: no
+// scallops, quicker to build than the bites were, and a smaller STL (a few faces, each meshed
+// along its rulings).  A gear's tooth spaces are one space turned a pitch at a time, so the
+// kernel builds one sector and turns it; a spoked gear is shaped whole first and its windows cut
+// after, since the windows do not turn by a pitch.
 //
 // A gear is drawn about its own std.origin, its axis std.z and its faces at z0 and z1, so it is
 // placed by a mate and every copy of one size is one figure.  Its solid is construction: an
@@ -28,10 +30,9 @@ use std (vertical, turns, slides, coords, on_v, raised, seats)
 // A shaped spur gear: N teeth of module m and pressure angle phi, its rack drawn `shift` modules
 // out from the pitch circle (a profile shift; a pinion under 17 teeth wants about (17 - N) / 17 to
 // lose its undercut, and the wheel it runs with the same taken off, so the centre distance stays
-// m (N1 + N2) / 2).  `step` is the roll between bites: the scallops it leaves on a flank are about
-// (R step)^2 / 8 rho deep, rho the involute's radius of curvature there.
+// m (N1 + N2) / 2).
 //
-// The bites cut one tooth space, the one centred on +v (std.y); the others are that space turned
+// The sweep cuts one tooth space, the one centred on +v (std.y); the others are that space turned
 // a pitch at a time about the axis, so a tooth is centred 180deg / N on from +v.  With `shaped`
 // 0 the gear is its blank, its tip cylinder: quick to draw while the layout is worked on.
 //
@@ -39,8 +40,8 @@ use std (vertical, turns, slides, coords, on_v, raised, seats)
 // is opened between a hub of radius `hub` and a rim `web` thick under the tooth roots, leaving
 // that many spokes `web` wide, a window centred on -v.
 component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length, z0: Length,
-                     z1: Length, bore: Length, step: Angle, shaped: Int, chamfer: Length,
-                     spokes: Int, hub: Length, web: Length) {
+                     z1: Length, bore: Length, shaped: Int, chamfer: Length, spokes: Int,
+                     hub: Length, web: Length) {
   R := m * N / 2                         // the pitch circle
   Rp := R + shift * m                    // where the rack's pitch line stands off the axis
   Rt := Rp + m                           // the tip: an addendum off the rack's pitch line
@@ -96,7 +97,10 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
   index := frame
   index turns(1) spindle
 
-  construction gear := solid(face(tip, holes: hole), from: z0, to: z1)
+  // the blank, chamfered and shaped: a solid of revolution but for its tooth spaces, then the
+  // gear, that less its windows
+  private construction shaped_blank := solid(face(tip, holes: hole), from: z0, to: z1)
+  construction gear := solid(shaped_blank)
 
   // the chamfers: the gear kept inside two 45deg cones, each through the tips' edge at a face
   top_q := point
@@ -108,7 +112,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     bottom_cone := std.ConeThrough(spindle, bottom_q, lean: 45deg)
     bicone := { p | p inside top_cone; p inside bottom_cone }
     private construction chamfers := solid(bicone)
-    chamfers common gear
+    chamfers common shaped_blank
   }
 
   // The spokes: the web cut away in `spokes` windows, the hub to the rim between neighbouring
@@ -184,26 +188,21 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     }
   }
   when shaped == 1 {
-    private construction space := solid()
-    repeat round(2 * window / step) + 1 as k {
-      bite := tooth at(under: rack, seen_from: blank_turn) (-window + k * step)
-      bite union space
-    }
-    space cut gear
+    private construction space := sweep(tooth over t in (-window, window), under: rack,
+                                        seen_from: blank_turn)
+    space cut shaped_blank
     repeat N - 1 as j {
       turned := space at(under: index) ((j + 1) * 360deg / N)
-      turned cut gear
+      turned cut shaped_blank
     }
   }
 }
 
 preview {
   pinion := ShapedSpur(N: 12, m: 1.5mm, phi: 20deg, shift: 0.3, thin: 0.15mm, z0: 0mm, z1: 10mm,
-                       bore: 6.35mm, step: 3deg, shaped: 1, chamfer: 0.6mm, spokes: 0, hub: 0mm,
-                       web: 0mm)
+                       bore: 6.35mm, shaped: 1, chamfer: 0.6mm, spokes: 0, hub: 0mm, web: 0mm)
   wheel := ShapedSpur(N: 48, m: 0.8mm, phi: 20deg, shift: -0.3, thin: 0.15mm, z0: 0mm, z1: 5mm,
-                      bore: 5.35mm, step: 2deg, shaped: 1, chamfer: 0.3mm, spokes: 5, hub: 7.5mm,
-                      web: 2.4mm)
+                      bore: 5.35mm, shaped: 1, chamfer: 0.3mm, spokes: 5, hub: 7.5mm, web: 2.4mm)
   wheel_at := point
   wheel_at raised(d: 40mm, along: std.x) std.origin
   wheel seats(turn: 0deg, up: std.z, east: std.x) wheel_at
