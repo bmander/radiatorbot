@@ -14,10 +14,11 @@ Everything is FDM-printed except the drill rod the gears turn on and the screws.
 
 The bot hangs on the valve's −x side, away from the radiator.
 
-- **The wheel** turns on an 8 mm axle 60 mm from the stem, at the handle's height. It has six
-  pockets. The handle's four arms are its teeth, so the handle turns 1.5× per wheel turn. The
-  pockets are not designed. In one statement, Solvent sweeps the measured star through the blank
-  over a whole wheel turn, as the two turn together, and removes everything it passes through.
+- **The wheel** turns on a ½ in axle 60 mm from the stem, at the handle's height. A collar on
+  the axle under it and another over it keep it in place. It has six pockets. The handle's four
+  arms are its teeth, so the handle turns 1.5× per wheel turn. The pockets are not designed. In
+  one statement, Solvent sweeps the measured star through the blank over a whole wheel turn, as
+  the two turn together, and removes everything it passes through.
   That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
   conjugate to the handle by construction. The cut is exact, with no scallops.
   - The cutter is everything the handle occupies over the stem's travel. The arms' 8° draft
@@ -27,8 +28,9 @@ The bot hangs on the valve's −x side, away from the radiator.
   - Each pocket's walls lean with the draft below the handle's open top face and stand straight
     above it, with no step between: the arm clears by the same 0.3 mm anywhere on its travel.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
-- **The gear train** has five stages on two fixed 5 mm rods, B and D. The motor's pinion drives
-  stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the ring.
+- **The gear train** has five stages on two fixed 0.311 in rods, B and D. The motor's pinion
+  drives stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the
+  ring.
 - **The frame** is one print: the gearbox lid, the electronics bay standing on it, and a spine
   up beside the valve to the **clamp**.
   - The clamp is a block split at the stem, round the valve's inlet hex and the supply pipe above
@@ -37,22 +39,29 @@ The bot hangs on the valve's −x side, away from the radiator.
     a round pipe.
   - The cap bolts on from the radiator side with four M4 bolts.
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
-  the ring, and a bridge across it holds the wheel's axle just above the ring.
+  the ring, and a bridge across it holds the wheel's axle, standing on the upper collar just
+  above the ring.
 
 ## The drive
 
 | stage | teeth | module | axles | ratio |
 |---|---|---|---|---|
 | 1 | 12 → 24 | 0.8 | motor → B | 2 |
-| 2 | 12 → 48 | 0.8 | B → D | 4 |
-| 3 | 12 → 48 | 0.8 | D → B | 4 |
-| 4 | 12 → 48 | 0.8 | B → D | 4 |
-| 5 | 12 → 36 | 1.0 | D → B | 3 |
+| 2 | 16 → 64 | 0.8 | B → D | 4 |
+| 3 | 16 → 64 | 0.8 | D → B | 4 |
+| 4 | 16 → 64 | 0.8 | B → D | 4 |
+| 5 | 16 → 48 | 1.0 | D → B | 3 |
 | ring | 12 → 48 | 1.5 | B → wheel | 4 |
 | handle | 6 → 4 | — | wheel → handle | ⅔ |
 
-Every 12-tooth pinion is profile-shifted +0.3 against undercut, and its gear −0.3, so the
-centre distances stay nominal: B–D is 24 mm and B–wheel is 45 mm.
+Every pinion is profile-shifted +0.3 against undercut, and its gear −0.3, so the centre
+distances stay nominal: B–D is 32 mm and B–wheel is 45 mm.
+
+The pinions on the rods have 16 teeth. A 12-tooth pinion at module 0.8 has its roots on an
+8.1 mm circle, inside the 8.25 mm bore a 0.311 in rod needs. At 16 teeth the roots stand 1.5 mm
+clear of the bore; `radiatorbot.sv` claims that wall, so a change of rod or pinion that thins it
+fails the check. Each stage keeps its ratio, so the gears grow to 64 and 48 teeth, and the
+gearbox grows to hold them: 101 × 93 mm in plan, up from 95 × 75.
 
 That is 1536:1 from the motor to the wheel and **1024:1 from the motor to the handle**. The
 motor's figures are estimates for a servo's 130 at 6 V (`motor130.sv`): 12 000 rpm free and
@@ -161,7 +170,7 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
   moulded plug (12.5 × 7 mm) plus the print clearance. The receptacle stands 14 mm in from the
   wall's outside face, so a plug's overmould reaches in through the window to mate.
 - The driver stands in column 15, rows 2–5, beside the 7.5 V buck. Its screw terminals face the
-  bay's +x wall, with 17 mm of room for the motor's leads.
+  bay's +x wall, with about 23 mm of room for the motor's leads.
 - The INA219 stands in columns 15–20, row 11, its board out toward +y, beside the Mini-360.
 - Each Adafruit board stands on one row of pins, with the rest of it held out over the
   perfboard. A dab of hot glue under its far end stops it rocking.
@@ -190,7 +199,7 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 - Each compound gear (a gear with its pinion) prints as one part.
 - The chamfers keep the first layer's squash (elephant's foot) and the top edge's burr out of the
   mesh.
-- The 48-tooth gears of stages 2–4 (D1, B2, D2) are spoked: five spokes between a hub round the
+- The 64-tooth gears of stages 2–4 (D1, B2, D2) are spoked: five spokes between a hub round the
   pinion and a rim under the tooth roots, the windows' corners rounded. Stages 2 and 3 have
   2.4 mm spokes and rim; stage 4, which carries about 0.5 N·m at stall, has 3 mm. The smaller
   gears and the ring, which carry the most torque, stay solid.
@@ -207,7 +216,8 @@ gear and the wheel as blanks while changing the layout.
 ## How it's checked
 
 - `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
-  a full turn, and judges the design table's claims (ratio, stall torque, free speed).
+  a full turn, and judges the design table's claims (ratio, stall torque, free speed, and the
+  pinions' walls round their bores).
 - The boards' fit in the bay is claimed in the model and judged on every check:
   - a mated USB plug clears the end wall's window by 0.3 mm;
   - the boards and their headers clear the frame, the cover, one another and the buck modules;
@@ -221,20 +231,20 @@ gear and the wheel as blanks while changing the layout.
     the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
     walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
-  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 11.5.
+  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 12.4.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     lid, the base against the frame, the clamp on the pipe).
 
 ## Bill of materials
 
-- **Printed:** frame, base, clamp cap, cover, wheel (with ring), axle collar, motor pinion, and
-  compounds B1, B2, B3, D1, D2.
-- **Drill rod:** 8 mm × 67 mm (wheel axle); 5 mm × 46 mm, two of them (B and D).
+- **Printed:** frame, base, clamp cap, cover, wheel (with ring), two axle collars (one STL,
+  `collar_part`), motor pinion, and compounds B1, B2, B3, D1, D2.
+- **Drill rod:** ½ in × 68 mm (wheel axle); 0.311 in × 45 mm, two of them (B and D).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (base to lid, cover);
   - M2.5 × 6, four (perfboard);
-  - M3 set screw (collar).
+  - M3 set screws, two (collars).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. Its pinion is a press fit on the 2 mm shaft, which runs on
   8.3 mm past the pinion, beside stage 2.
@@ -256,7 +266,9 @@ gear and the wheel as blanks while changing the layout.
 
 ## Assembly
 
-1. Press the B and D rods into the base's floor and the 8 mm axle into the base's bridge.
+1. Press the B and D rods into the base's floor and the ½ in axle into the base's bridge.
+   Slide the upper collar up the axle from below, against the bridge, and tighten its set
+   screw.
 2. Stack the compounds on the rods (B3, D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
@@ -267,7 +279,7 @@ gear and the wheel as blanks while changing the layout.
 5. Slide the bot onto the valve from −x, so the inlet hex enters the clamp's pocket, and bolt on
    the cap.
 6. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
-   both the handle and the last pinion. Fit the collar.
+   both the handle and the last pinion, up against the upper collar. Fit the lower collar.
    - The star narrows downward and each of the wheel's bands is cut for the star's widest section
      at that band. So the wheel only ever gains clearance as it rises into place.
    - Going in sideways, by contrast, is not assured.

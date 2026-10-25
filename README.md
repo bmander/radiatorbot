@@ -54,6 +54,8 @@ solventc hardware/radiatorbot.sv
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.6 (`SOLVENTC_VERSION=v0.1.6` pins the installer to it),
-which solves the bot in about ten seconds and exports it in under a minute and a half. Every gear
-is its rack's exact sweep, and the printed parts' STLs come to 4.2 MB.
+The models are checked with Solvent v0.1.7 (`SOLVENTC_VERSION=v0.1.7` pins the installer to it),
+which solves the bot in about ten seconds and exports it in about two minutes. Every gear is its
+rack's exact sweep; the printed parts' STLs come to 4.7 MB and the assembly's STEP to 36 MB.
+v0.1.6 wrote the 16-tooth pinions' straight tip edges as dense B-splines, doubling the STEP
+(bmander/geomsolver#644).
