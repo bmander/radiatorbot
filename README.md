@@ -21,7 +21,7 @@ valve under motor control.
     motor driver and an Adafruit INA219 current monitor (which senses the stall), on their headers.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
-  - `export.sh` — writes every printed part as STL.
+  - `export.sh` — writes every printed part as STL, and the whole bot as one STEP assembly.
 - `firmware/` — the XIAO ESP32-C3's firmware, a PlatformIO project: it opens the valve while the
   thermostat calls for heat and closes it after, finding each end of travel by the motor's
   current, with a USB serial console for setting it up. See [firmware/README.md](firmware/README.md).
@@ -46,15 +46,14 @@ beside the binary (`~/.local/bin/solvent-primer.md`) matching the version you in
 in the repo at
 [docs/solvent-primer.md](https://github.com/bmander/geomsolver/blob/main/docs/solvent-primer.md).
 
-Check a model, and write the printed parts:
+Check a model, and write the printed parts and the assembly:
 
 ```sh
 solventc hardware/radiator_valve.sv
 solventc hardware/radiatorbot.sv
-sh hardware/export.sh            # every printed part as STL, into hardware/stl
+sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.4 (`SOLVENTC_VERSION=v0.1.4` pins the installer to it).
-The gears are cut by their exact rack sweeps, which v0.1.4 builds slowly; geomsolver's faster
-swept-cut build (`make solventc` on its `main` once it lands, or a release after v0.1.4) exports
-the whole bot in under a minute, its STLs smaller than the bites' were (4.2 MB against 8.4).
+The models are checked with Solvent v0.1.6 (`SOLVENTC_VERSION=v0.1.6` pins the installer to it),
+which solves the bot in about ten seconds and exports it in under a minute and a half. Every gear
+is its rack's exact sweep, and the printed parts' STLs come to 4.2 MB.

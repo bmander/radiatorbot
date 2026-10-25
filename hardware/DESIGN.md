@@ -196,7 +196,10 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   gears and the ring, which carry the most torque, stay solid.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
-once, and every gear of one size and face once, placed for each copy; `*.stl` is gitignored. Each
+once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are
+gitignored. The same run writes `radiatorbot.step`, the whole bot as one STEP assembly for a CAD
+system: a part for each object (the valve as measured, the bought parts as their outlines and the
+printed parts), each placed where it stands, the valve's and the boards' grouped under them. Each
 gear's teeth are the rack's exact sweep, built as one tooth sector turned round the gear; a spoked
 gear is shaped whole and its windows cut after. Set `shaped := 0` in `radiatorbot.sv` to draw every
 gear and the wheel as blanks while changing the layout.
