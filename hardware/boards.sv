@@ -13,9 +13,18 @@
 //     14 castellated pins in two rows 0.6 in apart.  Its outline, its pins and its USB-C
 //     receptacle are from Seeed's KiCad layout (XIAO ESP32C3 v1.3).  It wants the FPC antenna it
 //     comes with on its U.FL connector.
-//   - **Pololu DRV8874 carrier** (Pololu #4035, $11.94): an H-bridge for one brushed motor,
-//     4.5-37 V, 2.1 A continuous; its CS pin gives the motor's current as ~1.1 V/A across
-//     2.49 kOhm.  0.6 x 0.7 in, 14 pins in two rows 0.5 in apart, from Pololu's dimension drawing.
+//   - **Adafruit DRV8871 breakout** (Adafruit #3190, $7.50): an H-bridge for one brushed motor,
+//     6.5-45 V, its current held under ~2.1 A by the 30 kOhm on ILIM.  20.3 x 24.1 mm, one row of
+//     4 pins and two 2-way 3.5 mm screw terminals (the motor's, and the supply's) at the far end.
+//     It has no current output.
+//   - **Adafruit INA219 breakout** (Adafruit #904, ~$10): a high-side current and voltage monitor
+//     on I2C, across a 0.1 Ohm shunt: +-3.2 A at 0.8 mA.  25.4 x 20.3 mm, one row of 6 pins, a
+//     STEMMA QT socket at each end.
+//
+// The Adafruit boards' outlines, pins and parts are from Adafruit's Eagle layouts
+// (github.com/adafruit/Adafruit-DRV8871-Breakout-PCB, .../Adafruit-INA219-Current-Sensor-PCB,
+// the STEMMA QT revision); their corners, rounded 2.54 mm, are drawn square.  Each stands on its
+// one row of pins, the rest of it held out over the perfboard.
 
 unit mm
 use std
@@ -69,24 +78,69 @@ xiao_dims := {
 //   +y: 5V GND 3V3 D10 D9 D8 D7
 // D0-D2 are ADC1 (A0-A2); D0, D8 and D9 are strapping pins.
 
-interface DriverSizes {
-  len: Length, w: Length, pcb_t: Length, rows: Length, n: Int
-  parts_w: Length, parts_len: Length, parts_h: Length
+interface Drv8871Sizes {
+  w: Length, len: Length, back: Length, pcb_t: Length, n: Int
+  chip_w: Length, chip_len: Length, chip_x: Length, chip_y: Length, chip_h: Length
+  cap: Length, cap_x: Length, cap_y: Length, cap_h: Length
+  block_w: Length, block_d: Length, block_x: Length, block_y: Length, block_h: Length
 }
-drv8874_dims := {
-  len: 17.78mm,                 // 0.7 in, along the rows
-  w: 15.24mm,                   // 0.6 in
+drv8871_dims := {
+  w: 20.32mm,                   // 0.8 in, along its row of pins
+  len: 24.13mm,                 // 0.95 in, away from it
+  back: 2.54mm,                 // the board behind the pins' line
   pcb_t: 1.6mm,                 // ~
-  rows: 12.7mm,                 // 0.5 in apart
-  n: 7,
-  parts_w: 10mm,                // ~ the chip and its capacitors, between the rows
-  parts_len: 16mm,
-  parts_h: 1.7mm,               // ~ the tallest, the bulk capacitors
+  n: 4,
+  chip_w: 5mm,                  // the DRV8871, an HSOP-8, across its leads
+  chip_len: 6.2mm,
+  chip_x: -5.46mm,
+  chip_y: 8.38mm,
+  chip_h: 1.7mm,                // ~
+  cap: 6.6mm,                   // the 22 uF 63 V electrolytic's square base
+  cap_x: 4.32mm,
+  cap_y: 8.64mm,
+  cap_h: 7.7mm,                 // ~ a 6.3 x 7.7 mm can
+  block_w: 7mm,                 // each 2-way 3.5 mm screw terminal: the motor's at -x, the supply's
+  block_d: 7mm,                 // at +x, their wires entering from the board's far end
+  block_x: 4.32mm,
+  block_y: 17.88mm,
+  block_h: 8.5mm,               // ~
 }
 
-// The DRV8874's pins, in a row from +y; looking down on its parts:
-//   -x: VM GND EN/IN1 PH/IN2 PMODE SLEEP VREF
-//   +x: VIN GND OUT1 OUT2 IMODE FAULT CS
+// The DRV8871's pins, looking down on its parts with its terminals toward +y, from -x:
+//   IN2 IN1 VM GND
+// and its terminals so: OUT2 OUT1, then VM GND (the supply's, the pins' VM and GND again).  IN1
+// and IN2 are pulled down on the chip: both low coasts the motor, and sleeps it after 1 ms.
+
+interface Ina219Sizes {
+  w: Length, len: Length, back: Length, pcb_t: Length, n: Int
+  shunt_w: Length, shunt_len: Length, shunt_y: Length, shunt_h: Length
+  chip: Length, chip_y: Length, chip_h: Length
+  qt_w: Length, qt_len: Length, qt_x: Length, qt_y: Length, qt_h: Length
+}
+ina219_dims := {
+  w: 25.4mm,                    // 1.0 in, along its row of pins
+  len: 20.32mm,                 // 0.8 in, away from it
+  back: 2.54mm,
+  pcb_t: 1.6mm,                 // ~
+  n: 6,
+  shunt_w: 6.4mm,               // the 0.1 Ohm shunt, a 2512
+  shunt_len: 3.2mm,
+  shunt_y: 8.64mm,
+  shunt_h: 0.7mm,
+  chip: 3mm,                    // the INA219, an SOT23-8
+  chip_y: 4.45mm,
+  chip_h: 1.45mm,
+  qt_w: 4.3mm,                  // each STEMMA QT socket, a side-entry JST SH, its mouth to the
+  qt_len: 6.1mm,                // board's end
+  qt_x: 10.11mm,
+  qt_y: 7.67mm,
+  qt_h: 2.95mm,
+}
+
+// The INA219's pins, looking down on its parts with its far end toward +y, from -x:
+//   VCC GND SCL SDA VIN- VIN+
+// VIN+ to VIN- is the shunt; the 3.5 mm terminal at the far end is the same two nets, and isn't
+// fitted.  SCL and SDA are pulled up to VCC (10 kOhm) on the board; the address is 0x40.
 
 // A box square to the body's frame: x0..x1, y0..y1, z0..z1.  Its middle is placed by its
 // ordinates, or on an axis where one is zero (a zero ordinate is a relation, not a number).
@@ -157,37 +211,67 @@ component XiaoEsp32C3(s: XiaoSizes, h: HeaderSizes) {
   construction plug := solid(plug_room.body)
 }
 
-// The Pololu DRV8874 carrier on its headers, its rows along y.
-component Drv8874(s: DriverSizes, h: HeaderSizes) {
+// The Adafruit DRV8871 breakout on its row of pins along x, its terminals toward +y.
+component Drv8871(s: Drv8871Sizes, h: HeaderSizes) {
   z0 := h.body_h
   z1 := z0 + s.pcb_t
-  pcb := Box(x0: -s.w / 2, x1: s.w / 2, y0: -s.len / 2, y1: s.len / 2, z0: z0, z1: z1)
-  parts := Box(x0: -s.parts_w / 2, x1: s.parts_w / 2, y0: -s.parts_len / 2, y1: s.parts_len / 2,
-               z0: z1, z1: z1 + s.parts_h)
-  board := solid(pcb.body)
-  parts.body union board
+  pcb := Box(x0: -s.w / 2, x1: s.w / 2, y0: -s.back, y1: s.len - s.back, z0: z0, z1: z1)
+  chip := Box(x0: s.chip_x - s.chip_w / 2, x1: s.chip_x + s.chip_w / 2,
+              y0: s.chip_y - s.chip_len / 2, y1: s.chip_y + s.chip_len / 2,
+              z0: z1, z1: z1 + s.chip_h)
+  cap := Box(x0: s.cap_x - s.cap / 2, x1: s.cap_x + s.cap / 2, y0: s.cap_y - s.cap / 2,
+             y1: s.cap_y + s.cap / 2, z0: z1, z1: z1 + s.cap_h)
+  motor_block := Box(x0: -s.block_x - s.block_w / 2, x1: -s.block_x + s.block_w / 2,
+                     y0: s.block_y - s.block_d / 2, y1: s.block_y + s.block_d / 2,
+                     z0: z1, z1: z1 + s.block_h)
+  supply_block := Box(x0: s.block_x - s.block_w / 2, x1: s.block_x + s.block_w / 2,
+                      y0: s.block_y - s.block_d / 2, y1: s.block_y + s.block_d / 2,
+                      z0: z1, z1: z1 + s.block_h)
+  row := HeaderRow(h, y: 0mm, n: s.n, pcb_t: s.pcb_t)
 
-  // the rows drawn along x and turned a quarter onto y
-  rows := HeaderPair(h, rows: s.rows, n: s.n, pcb_t: s.pcb_t)
-  rows seats(turn: 90deg, up: std.z, east: std.x) std.origin
+  board := solid(pcb.body)
+  chip.body union board
+  cap.body union board
+  motor_block.body union board
+  supply_block.body union board
+  headers := solid(row.plastic.body)
+  row.pins union headers
 }
 
-// Two header rows `rows` apart, about the origin.
-component HeaderPair(h: HeaderSizes, rows: Length, n: Int, pcb_t: Length) {
-  row_a := HeaderRow(h, y: -rows / 2, n: n, pcb_t: pcb_t)
-  row_b := HeaderRow(h, y: rows / 2, n: n, pcb_t: pcb_t)
-  headers := solid(row_a.plastic.body)
-  row_b.plastic.body union headers
-  row_a.pins union headers
-  row_b.pins union headers
+// The Adafruit INA219 breakout on its row of pins along x, its far end toward +y.
+component Ina219(s: Ina219Sizes, h: HeaderSizes) {
+  z0 := h.body_h
+  z1 := z0 + s.pcb_t
+  pcb := Box(x0: -s.w / 2, x1: s.w / 2, y0: -s.back, y1: s.len - s.back, z0: z0, z1: z1)
+  shunt := Box(x0: -s.shunt_w / 2, x1: s.shunt_w / 2, y0: s.shunt_y - s.shunt_len / 2,
+               y1: s.shunt_y + s.shunt_len / 2, z0: z1, z1: z1 + s.shunt_h)
+  chip := Box(x0: -s.chip / 2, x1: s.chip / 2, y0: s.chip_y - s.chip / 2, y1: s.chip_y + s.chip / 2,
+              z0: z1, z1: z1 + s.chip_h)
+  qt_w := Box(x0: -s.qt_x - s.qt_w / 2, x1: -s.qt_x + s.qt_w / 2, y0: s.qt_y - s.qt_len / 2,
+              y1: s.qt_y + s.qt_len / 2, z0: z1, z1: z1 + s.qt_h)
+  qt_e := Box(x0: s.qt_x - s.qt_w / 2, x1: s.qt_x + s.qt_w / 2, y0: s.qt_y - s.qt_len / 2,
+              y1: s.qt_y + s.qt_len / 2, z0: z1, z1: z1 + s.qt_h)
+  row := HeaderRow(h, y: 0mm, n: s.n, pcb_t: s.pcb_t)
+
+  board := solid(pcb.body)
+  shunt.body union board
+  chip.body union board
+  qt_w.body union board
+  qt_e.body union board
+  headers := solid(row.plastic.body)
+  row.pins union headers
 }
 
 preview {
   xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
   in std.top {
-    drv_at := point hint((0, 25))
-    drv_at on_v(d: 25mm) std.top
+    drv_at := point hint((0, 15))
+    drv_at on_v(d: 15mm) std.top
+    ina_at := point hint((30, 0))
+    ina_at on_u(d: 30mm) std.top
   }
-  drv := Drv8874(drv8874_dims, h: header_dims)
+  drv := Drv8871(drv8871_dims, h: header_dims)
   drv seats(turn: 0deg, up: std.z, east: std.x) drv_at
+  ina := Ina219(ina219_dims, h: header_dims)
+  ina seats(turn: 0deg, up: std.z, east: std.x) ina_at
 }

@@ -11,10 +11,10 @@
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
-//     perfboard over the motor with the ESP32 and the motor driver on it, the cable entries), and
-//     the spine up beside the valve to the **clamp**, a split block round the inlet hex and the
-//     supply pipe above it.  The hex takes the handle's reaction torque positively; the bolted
-//     cap closes the clamp from +x.
+//     perfboard over the motor with the ESP32, the motor driver and its current monitor on it, the
+//     cable entries), and the spine up beside the valve to the **clamp**, a split block round the
+//     inlet hex and the supply pipe above it.  The hex takes the handle's reaction torque
+//     positively; the bolted cap closes the clamp from +x.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
@@ -34,7 +34,7 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (XiaoEsp32C3, Drv8874, xiao_dims, drv8874_dims, header_dims, pitch)
+use boards (XiaoEsp32C3, Drv8871, Ina219, xiao_dims, drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; minutes)
@@ -152,11 +152,14 @@ grid_y0 := board_cy - (board_rows - 1) * pitch / 2       // the first row's
 board_top := board_z + 1.6mm
 // The boards on the perfboard's grid (boards.sv), each at its pin field's middle: the XIAO's pins
 // in columns 0-6, rows 9 and 15, its USB out over the board's end toward the bay's end wall; the
-// driver's in columns 17 and 22, rows 0-6.
+// driver's in column 15, rows 2-5, its terminals toward +x; the current monitor's in columns
+// 15-20, row 11, its board toward +y.
 xiao_cx := grid_x0 + 3 * pitch
 xiao_cy := grid_y0 + 12 * pitch
-drv_cx := grid_x0 + 19.5 * pitch
-drv_cy := grid_y0 + 3 * pitch
+drv_cx := grid_x0 + 15 * pitch
+drv_cy := grid_y0 + 3.5 * pitch
+ina_cx := grid_x0 + 17.5 * pitch
+ina_cy := grid_y0 + 11 * pitch
 usb_z := board_top + header_dims.body_h + xiao_dims.pcb_t + xiao_dims.usb_h / 2   // its axis
 
 // == Building blocks =============================================================================
@@ -638,17 +641,21 @@ cover_hole_n.body cut cover_part
 // Bought boards soldered on headers to a 5 x 7 cm perfboard (boards.sv), and the room the rest
 // take (~ sizes):
 //   - a Seeed XIAO ESP32-C3, its USB-C to the end wall's window: power, programming and logs;
-//   - a Pololu DRV8874 carrier: the H-bridge, and its CS pin gives the motor's current as
-//     ~1.1 V/A, which the XIAO's ADC reads for the end-of-travel sensing;
-//   - a mini buck module (MP1584 size, 22 x 17) and a bridge rectifier, for 24 VAC off the
-//     thermostat's transformer; with a 5 V USB supply instead, neither is fitted;
+//   - an Adafruit DRV8871 breakout: the H-bridge, its terminals toward the bay's +x wall;
+//   - an Adafruit INA219 breakout in the driver's supply: the motor's current over I2C, which the
+//     XIAO reads for the end-of-travel sensing;
+//   - a buck module (22 x 17) and a bridge rectifier: the motor's 7.5 V, off 24 VAC from the
+//     thermostat's transformer or a DC adapter (the DRV8871 wants 6.5 V at least);
+//   - a mini buck module (Mini-360 size, 17 x 11) taking the 7.5 V down to the XIAO's 5 V;
 //   - a 3-way 5.08 mm screw terminal for the supply's and the thermostat's wires, by the grommet.
 perfboard := Block(x0: board_cx - board_w / 2, x1: board_cx + board_w / 2, y0: board_cy - board_h / 2, y1: board_cy + board_h / 2, z0: board_z, z1: board_top)
 in std.top {
   xiao_c := point hint((-104.1, 17.9))
   xiao_c coords(du: xiao_cx, dv: xiao_cy) std.top
-  drv_c := point hint((-62.2, -5))
+  drv_c := point hint((-73.6, -3.7))
   drv_c coords(du: drv_cx, dv: drv_cy) std.top
+  ina_c := point hint((-67.3, 15.4))
+  ina_c coords(du: ina_cx, dv: ina_cy) std.top
 }
 xiao_at := point
 xiao_at raised(d: board_top, along: std.z) xiao_c
@@ -656,23 +663,36 @@ xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
 xiao seats(turn: 0deg, up: std.z, east: std.x) xiao_at
 drv_at := point
 drv_at raised(d: board_top, along: std.z) drv_c
-driver := Drv8874(drv8874_dims, h: header_dims)
-driver seats(turn: 0deg, up: std.z, east: std.x) drv_at
-buck := Block(x0: board_cx - 12mm, x1: board_cx + 10mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
+driver := Drv8871(drv8871_dims, h: header_dims)
+driver seats(turn: -90deg, up: std.z, east: std.x) drv_at
+ina_at := point
+ina_at raised(d: board_top, along: std.z) ina_c
+monitor := Ina219(ina219_dims, h: header_dims)
+monitor seats(turn: 0deg, up: std.z, east: std.x) ina_at
+buck := Block(x0: board_cx - 16.5mm, x1: board_cx + 5.5mm, y0: board_cy - 23mm, y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
+regulator := Block(x0: board_cx - 10mm, x1: board_cx + 1.1mm, y0: board_cy + 5mm, y1: board_cy + 22.3mm, z0: board_top, z1: board_top + 4.5mm)
 terminal := Block(x0: board_cx - 34mm, x1: board_cx - 19mm, y0: board_cy - 23mm, y1: board_cy - 15mm, z0: board_top, z1: board_top + 10mm)
 
 // The boards in the bay: a mated USB cable's plug through the end wall's window, and the boards,
 // their headers and the pins' tails under the perfboard clear of the frame, the motor and the
-// cover.
+// cover, and of one another and the buck modules' room.
 claim xiao.plug clear(0.2mm) frame_part
 claim xiao.board clear(0.5mm) frame_part
 claim xiao.headers clear(0.5mm) frame_part
 claim driver.board clear(0.5mm) frame_part
-claim driver.rows.headers clear(0.5mm) frame_part
+claim driver.headers clear(0.5mm) frame_part
+claim monitor.board clear(0.5mm) frame_part
+claim monitor.headers clear(0.5mm) frame_part
 claim xiao.headers clear(0.5mm) motor.motor
-claim driver.rows.headers clear(0.5mm) motor.motor
+claim driver.headers clear(0.5mm) motor.motor
+claim monitor.headers clear(0.5mm) motor.motor
 claim xiao.board clear(1mm) cover_part
 claim driver.board clear(1mm) cover_part
+claim monitor.board clear(1mm) cover_part
+claim driver.board clear(0.5mm) monitor.board
+claim driver.board clear(0.5mm) buck.body
+claim monitor.board clear(0.5mm) regulator.body
+claim xiao.board clear(0.5mm) regulator.body
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel

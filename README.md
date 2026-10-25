@@ -8,17 +8,17 @@ valve under motor control.
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
   - `radiatorbot.sv` — the bot: a 130 motor and a five-stage printed spur train turning the
     valve's star handle through a wheel generated as the handle's conjugate. It also has the
-    gearbox, an electronics bay with the ESP32 and the motor driver on perfboard, and a split clamp
-    round the valve's inlet hex and supply pipe. `handle_turn` scrubs the handle and the train
-    with it.
+    gearbox, an electronics bay with the ESP32, the motor driver and its current monitor on
+    perfboard, and a split clamp round the valve's inlet hex and supply pipe. `handle_turn`
+    scrubs the handle and the train with it.
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_turn` scrubs the handle about the stem.
   - `gears.sv` — printed spur gears, shaped by a rack at discrete rolls (true involutes,
     undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
-  - `boards.sv` — the bought boards on the perfboard: a Seeed XIAO ESP32-C3 and a Pololu DRV8874
-    motor driver (whose current output senses the stall), on their headers.
+  - `boards.sv` — the bought boards on the perfboard: a Seeed XIAO ESP32-C3, an Adafruit DRV8871
+    motor driver and an Adafruit INA219 current monitor (which senses the stall), on their headers.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
   - `export.sh` — writes every printed part as STL.
