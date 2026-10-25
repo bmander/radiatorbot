@@ -3,12 +3,12 @@
 A gearmotor that clamps to the radiator valve's supply pipe and turns the star handle. A 130 motor
 drives a printed five-stage spur train, which drives a wheel conjugate to the handle. The motor's
 current says when the stem reaches either end of its screw. An ESP32 (a Seeed XIAO ESP32-C3) on a
-perfboard reads the thermostat and runs the motor through a Pololu DRV8874 H-bridge, whose current
-output tells it when the motor stalls.
+perfboard reads the thermostat and runs the motor through an Adafruit DRV8871 H-bridge. An INA219
+current monitor in the driver's supply tells it when the motor stalls.
 
 Everything is FDM-printed except the drill rod the gears turn on and the screws. The model is
 `radiatorbot.sv`. The valve it fits is `radiator_valve.sv`, and the parts libraries are
-`gears.sv`, `motor130.sv` and `boards.sv` (the ESP32 and the motor driver).
+`gears.sv`, `motor130.sv` and `boards.sv` (the ESP32, the motor driver and the current monitor).
 
 ## How it works
 
@@ -68,14 +68,15 @@ voltage), put them in `motor130.sv`, and the figures and claims follow.
 
 ## The electronics
 
-Two bought boards do the work, soldered on headers to a 5 × 7 cm perfboard over the motor. Both
-are modelled in `boards.sv` from their makers' drawings and stand on the perfboard's 0.1 in grid
-in `radiatorbot.sv`.
+Three bought boards do the work, soldered on headers to a 5 × 7 cm perfboard over the motor. All
+three are modelled in `boards.sv` from their makers' layouts and stand on the perfboard's 0.1 in
+grid in `radiatorbot.sv`.
 
 | board | what it does | price | where |
 |---|---|---|---|
 | [Seeed XIAO ESP32-C3](https://www.seeedstudio.com/Seeed-XIAO-ESP32C3-p-5431.html) (SKU 113991054) | Wi-Fi/BLE, USB-C, four ADC pins | $4.99 | Seeed, Digi-Key, Mouser |
-| [Pololu DRV8874 carrier](https://www.pololu.com/product/4035) (#4035) | H-bridge, 4.5–37 V, 2.1 A continuous, current output on CS | $11.94 | Pololu and its distributors |
+| [Adafruit DRV8871 breakout](https://www.adafruit.com/product/3190) (#3190) | H-bridge, 6.5–45 V, current limited at ~2.1 A | $7.50 | Adafruit, Digi-Key |
+| [Adafruit INA219 breakout](https://www.adafruit.com/product/904) (#904) | high-side current and voltage over I2C, 0.1 Ω shunt, ±3.2 A | ~$10 | Adafruit, Digi-Key |
 
 **Why these.**
 - The XIAO is the cheapest ESP32 board with a dimensioned drawing (Seeed publishes its outline
@@ -88,49 +89,81 @@ in `radiatorbot.sv`.
     from the cast iron.
   - Digi-Key's listing says the board no longer comes with header pins. Buy two 7-pin 0.1 in
     male headers with it, or Seeed's "pre-soldered" version.
-- The DRV8874 senses current in the chip, with no shunt resistor. Its CS pin sources 450 µA/A
-  into the carrier's 2.49 kΩ, about **1.1 V/A**.
-  - The 130's ~1.8 A stall reads about 2.0 V. That is inside the C3's ADC range at 12 dB
-    attenuation, about 0–2.5 V, which reads up to about 2.2 A.
-  - Its chopping limit is VREF / 1.1 V/A. VREF is tied to SLEEP through 10 kΩ, so with SLEEP at
-    3.3 V the limit is about 2.9 A, above stall. The hardware never cuts in before the
-    firmware's trip does.
-  - The same-sized DRV8876 carrier (#4036) is cheaper but gives 2.5 V/A, so a stall would
-    saturate the ADC. Don't substitute it.
-  - The Adafruit DRV8871 and TB6612 breakouts have no current output, so they would need an
-    INA219 as well.
+- The DRV8871 is the H-bridge. Adafruit publishes its Eagle layout, which the model is taken
+  from: a 20.3 × 24.1 mm board on one row of four pins, with two 3.5 mm screw terminals at the
+  far end.
+  - **It needs 6.5 V or more** and locks out below about 6.4 V, so USB's 5 V can't run the motor.
+    The motor's supply is a buck module set to 7.5 V. The 130 is rated for 6 V, so the firmware
+    caps the PWM at 80 %. The motor then sees 6 V on average, and its stall current is 6 V's.
+  - The 30 kΩ on its ILIM pin limits the current to about 2.1 A, above the 130's ~1.8 A stall.
+    The hardware never cuts in before the firmware's trip does.
+  - It has no current output. That's what the INA219 is for.
+  - Its inputs are pulled down on the chip, so the motor stays off while the XIAO boots. Both
+    inputs low coasts the motor and puts the chip to sleep after 1 ms. There is no sleep pin or
+    fault pin to wire.
+- The INA219 sits in the driver's supply, on the high side. It reads the current through its
+  0.1 Ω shunt over I2C, ±3.2 A at 0.8 mA a count.
+  - Reading on the high side keeps the driver's ground the XIAO's.
+  - It reads the rail's voltage as well, so the firmware can tell a sagging supply from a stall.
+  - A 12-bit conversion takes 532 µs, which averages over many periods of a 20 kHz PWM.
+  - It carries the driver's whole draw: the motor's current while the bridge drives, plus the
+    chip's few mA. Under PWM that reads about the duty times the motor's current, so a stall at
+    the 80 % cap reads about 1.4 A.
+  - Its STEMMA QT sockets go unused, and so does its screw terminal: VIN+ and VIN− are on its
+    pins too.
+- The Pololu DRV8874 carrier (#4035) the bot had before reads its own current on a CS pin and
+  runs from 5 V, at $11.94. The DRV8871 and the INA219 together cost about $17.50 and need the
+  7.5 V supply.
 
-**Wiring**, all on the perfboard (the XIAO's pins are listed in `boards.sv`):
+**Power.** A bridge rectifier and a buck module take 24 VAC off the thermostat's transformer, or a
+9–24 V DC adapter, to 7.5 V for the motor. A Mini-360 buck module takes that 7.5 V down to 5.3 V,
+and a Schottky diode drops it to the XIAO's 5V pin. A USB cable in the XIAO powers the XIAO alone,
+for programming and logs; the motor waits for the supply.
 
-| XIAO | DRV8874 | |
+**Wiring**, all on the perfboard (each board's pins are listed in `boards.sv`):
+
+| from | to | |
 |---|---|---|
-| D1 (GPIO3, ADC1) | CS | the motor's current, 1.1 V/A |
-| D3 (GPIO5) | EN/IN1 | PWM: speed |
-| D4 (GPIO6) | PH/IN2 | direction |
-| D5 (GPIO7) | SLEEP | high to run, low to sleep; VREF follows it |
-| D10 (GPIO10) | FAULT | open-drain: the XIAO's internal pull-up |
-| GND | GND, PMODE | **PMODE tied to GND** selects PH/EN mode. Left floating, the chip comes up as two independent half-bridges |
-| 5V | VIN | the motor's supply, 5 V off USB; or the buck's 6 V, with the XIAO's 5V pin then fed through a diode |
-| — | OUT1, OUT2 | the motor |
+| XIAO D3 (GPIO5) | DRV8871 IN1 | PWM: one way |
+| XIAO D10 (GPIO10) | DRV8871 IN2 | PWM: the other way |
+| XIAO D4 (GPIO6, SDA) | INA219 SDA | I2C, pulled up to 3.3 V on the INA219; address 0x40 |
+| XIAO D5 (GPIO7, SCL) | INA219 SCL | |
+| XIAO 3V3 | INA219 VCC | |
+| XIAO GND | DRV8871 GND, INA219 GND | one ground with the supply's |
+| the 7.5 V buck's output | INA219 VIN+, the Mini-360's input | |
+| INA219 VIN− | DRV8871 VM | the driver's supply, through the shunt |
+| the Mini-360's output (5.3 V) | XIAO 5V | through a Schottky diode (1N5819) |
+| DRV8871 OUT1, OUT2 | the motor | the driver's motor terminal |
+
+To drive, hold one input high and pull the other low for the duty (slow decay). The bridge brakes
+through the off-time, so the motor's speed follows the duty, and the supply carries the motor's
+current only while the bridge drives. Which input is held high sets the direction. Both inputs low
+coasts.
 
 The thermostat's optocoupler goes to D2 (GPIO4, internal pull-up). Leave D0, D8 and D9 alone:
-they are the C3's strapping pins. CS on D0, for one, would hold it low through the 2.49 kΩ at
-boot.
+they are the C3's strapping pins.
 
-**End of travel.** Drive until the CS reading crosses the trip current, held for some tens of
-milliseconds so the start-up surge doesn't trip it, then stop.
-- Set the trip with the valve in hand, well under stall (see *The drive*). The torque at the
-  trip is what seats the valve.
+**End of travel.** Drive until the INA219's current crosses the trip current, held for some tens
+of milliseconds so the start-up surge doesn't trip it, then stop.
+- Set the trip with the valve in hand, well under stall (see *The drive*), at the duty the
+  firmware runs at. The current the INA219 reads scales with the duty. The torque at the trip is
+  what seats the valve.
 - Ignore the first ~100 ms after each start: the inrush current is near stall.
-- Sample with the ADC's 12 dB attenuation and average a few readings. The motor's PWM ripples
-  the current.
+- Read the INA219 at 12 bits, or average a few readings with its own averaging. The motor's PWM
+  ripples the current.
 
 **In the bay.**
 - The XIAO stands at the board's −x end, in columns 0–6 and rows 9 and 15. Its USB-C overhangs
   the board's end and faces a window in the bay's end wall. The window is a USB-C cable's
   moulded plug (12.5 × 7 mm) plus the print clearance. The receptacle stands 14 mm in from the
   wall's outside face, so a plug's overmould reaches in through the window to mate.
-- The driver stands in columns 17 and 22, rows 0–6, beside the buck module.
+- The driver stands in column 15, rows 2–5, beside the 7.5 V buck. Its screw terminals face the
+  bay's +x wall, with 17 mm of room for the motor's leads.
+- The INA219 stands in columns 15–20, row 11, its board out toward +y, beside the Mini-360.
+- Each Adafruit board stands on one row of pins, with the rest of it held out over the
+  perfboard. A dab of hot glue under its far end stops it rocking.
+- The driver's terminal blocks are the tallest parts on the board. They stand 1.4 mm under the
+  cover.
 - The cover's west screw boss moved to y = −3 mm, out of the plug's way.
 
 ## Printing
@@ -169,7 +202,7 @@ wheel as blanks while changing the layout.
   a full turn, and judges the design table's claims (ratio, stall torque, free speed).
 - The boards' fit in the bay is claimed in the model and judged on every check:
   - a mated USB plug clears the end wall's window by 0.3 mm;
-  - the boards and their headers clear the frame and the cover;
+  - the boards and their headers clear the frame, the cover, one another and the buck modules;
   - the pins' tails under the perfboard clear the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
   shaped part, so it takes about ten minutes.
@@ -193,11 +226,15 @@ wheel as blanks while changing the layout.
 - **Motor:** one 130 motor from the pile. Its pinion is a press fit on the 2 mm shaft.
 - **Electronics, on a 5 × 7 cm perfboard** (no fabbed PCB); see *The electronics*:
   - a Seeed XIAO ESP32-C3 ($4.99), with two 7-pin 0.1 in male headers and its FPC antenna;
-  - a Pololu DRV8874 carrier (#4035, $11.94), its headers included: the H-bridge, and its CS pin
-    gives the motor's current, read by the XIAO's ADC for the end-of-travel sensing;
-  - for 24 VAC off the thermostat transformer: a bridge rectifier and a buck module rated above
-    40 V in and about 2.5 A out (rectified 24 VAC peaks near 34 V, beyond an MP1584's rating).
-    On a 5 V USB supply instead, leave both out;
+  - an Adafruit DRV8871 breakout (#3190, $7.50), its header and terminal blocks included: the
+    H-bridge. It takes its supply on its VM and GND pins, so its supply terminal can be left
+    off; the model keeps its room;
+  - an Adafruit INA219 breakout (#904, ~$10), its header included: the motor's current over I2C,
+    for the end-of-travel sensing. Leave its terminal block off;
+  - for the motor's 7.5 V: a bridge rectifier and a buck module rated above 40 V in and about
+    2.5 A out (rectified 24 VAC peaks near 34 V, beyond an MP1584's rating). Off a 9–24 V DC
+    adapter, the same two parts serve;
+  - a Mini-360 buck module set to 5.3 V and a 1N5819 Schottky diode, for the XIAO's 5 V;
   - an optocoupler to read the thermostat's call for heat;
   - a 3-way 5.08 mm screw terminal.
 - **Cable entries** are in the bay's end wall: a grommet hole for the thermostat and supply cable,
@@ -209,10 +246,10 @@ wheel as blanks while changing the layout.
 2. Stack the compounds on the rods (B3, D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
-4. Solder the XIAO and the driver to the perfboard on their headers, the long ends down, at the
-   grid places above, and cut the tails to 1.5 mm. Wire them as in the table, stick the XIAO's
-   antenna under the cover, and screw the perfboard to its posts with the USB-C toward the end
-   wall's window.
+4. Solder the XIAO, the driver and the INA219 to the perfboard on their headers, the long ends
+   down, at the grid places above, and cut the tails to 1.5 mm. Wire them as in the table, stick
+   the XIAO's antenna under the cover, and screw the perfboard to its posts with the USB-C toward
+   the end wall's window.
 5. Slide the bot onto the valve from −x, so the inlet hex enters the clamp's pocket, and bolt on
    the cap.
 6. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
@@ -231,8 +268,10 @@ wheel as blanks while changing the layout.
 - **The thermostat's interface.** It's a 2-wire R/W dry contact, a 24 VAC R/W/C, or something
   else. That decides whether the bot can draw its power from the thermostat wiring.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
-  whether a stall reads inside the ADC's ~2.2 A.
+  must stay under the DRV8871's ~2.1 A limit.
 - **The boards' heights.** The XIAO's board thickness (taken as 1.2 mm) and the cable's plug
   (taken as 12.5 × 7 mm) are estimates. Check the plug of the cable you'll use against the window.
+  The DRV8871's terminal blocks (taken as 8.5 mm tall) are estimated too, and stand 1.4 mm under
+  the cover: check them.
 - **The ring and last pinion run open** under the base, beside the packing nut. A guard would be
   a small printed part.
