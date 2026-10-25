@@ -2,29 +2,29 @@
 // stops, finding each end of the stem's travel by the motor's current.  A console on the USB
 // serial port shows what it's doing and sets it up; see firmware/README.md.
 #include <Arduino.h>
+#include <WDT.h>
 
 #include "app.h"
 #include "console.h"
 #include "pins.h"
+#include "port.h"
 #include "storage.h"
 
+static constexpr uint32_t kWatchdogMs = 2000;
+
 static App app;
-static Console console(app, Serial);
+static Port port(Serial);
+static Console console(app, port);
 
 void setup() {
   app.motor.begin();
   pinMode(pins::kThermostat, INPUT_PULLUP);
-
-  // The console never holds up the motor: with no host reading, output is dropped.  The buffer
-  // takes the longest reply (`help`, `get`) whole.
-  Serial.setTxBufferSize(4096);
-  Serial.setTxTimeoutMs(0);
   Serial.begin(115200);
 
   storage::load(app.settings);
-  enableLoopWDT();
+  WDT.begin(kWatchdogMs);
 
-  Serial.println("radiatorbot " RADIATORBOT_VERSION "; `help` lists the commands");
+  port.println("radiatorbot " RADIATORBOT_VERSION "; `help` lists the commands");
 }
 
 void loop() {
@@ -34,5 +34,7 @@ void loop() {
   app.ctl.tick(now);
   console.report(now);
   console.poll();
+  port.pump();
+  WDT.refresh();
   delay(1);
 }

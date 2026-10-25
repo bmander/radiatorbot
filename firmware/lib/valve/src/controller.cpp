@@ -24,7 +24,7 @@ const char* name(Outcome o) {
   switch (o) {
     case Outcome::kReached: return "reached";
     case Outcome::kTimeout: return "timed out";
-    case Outcome::kDriverFault: return "driver fault";
+    case Outcome::kDriverFault: return "supply fault";
     case Outcome::kAborted: return "stopped";
     default: return "none";
   }

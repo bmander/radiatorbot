@@ -12,10 +12,10 @@
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
-//     perfboard over the motor with the ESP32, the motor driver and its current monitor on it, the
-//     cable entries), and the spine up beside the valve to the **clamp**, a split block round the
-//     inlet hex and the supply pipe above it.  The hex takes the handle's reaction torque
-//     positively; the bolted cap closes the clamp from +x.
+//     Arduino over the motor with a perfboard shield on it carrying the motor driver and its
+//     current monitor, the cable entries), and the spine up beside the valve to the **clamp**, a
+//     split block round the inlet hex and the supply pipe above it.  The hex takes the handle's
+//     reaction torque positively; the bolted cap closes the clamp from +x.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
@@ -39,7 +39,8 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (XiaoEsp32C3, Drv8871, Ina219, xiao_dims, drv8871_dims, ina219_dims, header_dims, pitch)
+use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims, shield_top)
+use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~4 minutes)
@@ -167,8 +168,10 @@ hi_collar_z0 := ring_z1 + gap
 bridge_z0 := hi_collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 spine_z0 := s5_z0               // the spine's foot, over the wheel's ring
-board_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm  // the perfboard's underside
-bay_z1 := board_z + 1.6mm + 14mm                        // room for the modules on their headers
+uno_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm    // the Uno's underside
+shield_z := uno_z + shield_top                          // the shield's top face
+// the driver's terminal blocks, the tallest parts on the shield, 1.4 mm under the cover
+bay_z1 := shield_z + header_dims.body_h + drv8871_dims.pcb_t + drv8871_dims.block_h + 1.4mm
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
 clamp_z1 := clamp_z0 + 31.7mm
 
@@ -186,28 +189,25 @@ clamp_reach := 26mm             // each half of the clamp, out from the stem
 clamp_w := 50mm
 clamp_bolt_y := 20mm
 screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
-board_w := 70mm                 // a 5 x 7 cm perfboard
-board_h := 50mm
-board_cx := box_x0 + 47.5mm     // its USB end set by the end wall's window
+// The Uno and its shield (boards.sv) stand by the Uno's frame, its power header's first pin at
+// (uno_ox, uno_oy): its jack's mouth a millimetre in from the end wall's inside face, the
+// shield's middle on y = board_cy.
+uno_ox := box_x0 + wall + 1mm - uno_dims.jack_x0
 board_cy := 9mm
-board_post_dx := 33mm           // its corner holes, from its centre
-board_post_dy := 23mm
-board_cols := 24                // its holes, 0.1 in apart, centred on it
-board_rows := 18
-grid_x0 := board_cx - (board_cols - 1) * pitch / 2       // the first column's holes
-grid_y0 := board_cy - (board_rows - 1) * pitch / 2       // the first row's
-board_top := board_z + 1.6mm
-// The boards on the perfboard's grid (boards.sv), each at its pin field's middle: the XIAO's pins
-// in columns 0-6, rows 9 and 15, its USB out over the board's end toward the bay's end wall; the
-// driver's in column 15, rows 2-5, its terminals toward +x; the current monitor's in columns
-// 15-20, row 11, its board toward +y.
-xiao_cx := grid_x0 + 3 * pitch
-xiao_cy := grid_y0 + 12 * pitch
-drv_cx := grid_x0 + 15 * pitch
-drv_cy := grid_y0 + 3.5 * pitch
-ina_cx := grid_x0 + 17.5 * pitch
-ina_cy := grid_y0 + 11 * pitch
-usb_z := board_top + header_dims.body_h + xiao_dims.pcb_t + xiao_dims.usb_h / 2   // its axis
+uno_oy := board_cy - (shield_dims.row0 + (shield_dims.rows - 1) * pitch / 2)
+// The breakouts on the shield's grid, each at its pin field's middle, in the Uno's frame, both
+// their boards toward +x: the driver's pins in the shield's column 9 (x = 0.7 in), rows 4-7, its
+// terminals toward the bay's +x wall; the current monitor's in column 9, rows 13-18.  Column 9
+// is the Uno's VIN and D7 too, at rows 2 and 21.
+drv_cx := uno_ox + 7 * pitch
+drv_cy := uno_oy + 3.5 * pitch
+ina_cx := uno_ox + 7 * pitch
+ina_cy := uno_oy + 13.5 * pitch
+// The end wall's windows: the USB-C's axis and the jack's, up from the Uno's underside.
+usb_z := uno_z + uno_dims.pcb_t + uno_dims.usb_h / 2
+usb_y := uno_oy + uno_dims.usb_y
+jack_z := uno_z + uno_dims.pcb_t + uno_dims.jack_z
+jack_y := uno_oy + (uno_dims.jack_y0 + uno_dims.jack_y1) / 2
 
 // == Building blocks =============================================================================
 
@@ -557,13 +557,16 @@ motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
                         z0: lid_z1 - motor130_dims.boss_h - gap, z1: lid_z1 + 1mm)
 motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: lid_z1)
 
-// the cable entries, in the bay's far end wall: a grommet for the thermostat's and the supply's
-// cable, low beside the motor, and a window on the XIAO's USB-C that a cable's moulded plug
-// passes through to mate (the receptacle stands back from the wall's inside face)
+// the cable entries, in the bay's far end wall: a grommet for the thermostat's cable, low beside
+// the motor, and a window each on the Uno's barrel jack and its USB-C that a cable's moulded plug
+// passes through to mate
 grommet := BoreX(y: 30mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm)
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
-                  y0: xiao_cy - xiao_dims.plug_w / 2 - gap, y1: xiao_cy + xiao_dims.plug_w / 2 + gap,
-                  z0: usb_z - xiao_dims.plug_h / 2 - gap, z1: usb_z + xiao_dims.plug_h / 2 + gap)
+                  y0: usb_y - uno_dims.plug_w / 2 - gap, y1: usb_y + uno_dims.plug_w / 2 + gap,
+                  z0: usb_z - uno_dims.plug_h / 2 - gap, z1: usb_z + uno_dims.plug_h / 2 + gap)
+jack_room := uno_dims.jack_plug / 2 + gap
+jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_room,
+                   y1: jack_y + jack_room, z0: jack_z - jack_room, z1: jack_z + jack_room)
 
 frame_part := solid(lid.body)
 bay_shell union frame_part
@@ -577,8 +580,9 @@ motor_boss_room.body cut frame_part
 motor_shaft_room.body cut frame_part
 grommet.body cut frame_part
 usb_slot.body cut frame_part
+jack_slot.body cut frame_part
 
-// == The screws: the base to the lid, the perfboard, the cover ===================================
+// == The screws: the base to the lid, the Uno, the cover =========================================
 // The base's four, up from posts in its corners through the lid, their heads in the bay.
 repeat 2 as i {
   repeat 2 as j {
@@ -593,24 +597,34 @@ repeat 2 as i {
   }
 }
 
-// The perfboard's four M2.5s, into posts on the lid at its corner holes.
-repeat 2 as i {
-  repeat 2 as j {
-    board_at := At(x: board_cx + (2 * i - 1) * board_post_dx,
-                   y: board_cy + (2 * j - 1) * board_post_dy)
-    board_screw := ScrewPost(board_at.p, r: 3mm, z0: lid_z1, z1: board_z, hole_d: 2.2mm,
-                             depth: 8mm)
-    board_screw.post union frame_part
-    board_screw.hole cut frame_part
-  }
-}
+// The Uno's four M3s, self-tapping into posts on the lid at its holes (the Uno R3's, in its
+// frame: by the power header, by the D8-SCL header, and two at the far end).  The posts are 5 mm
+// across, an M3 standoff's size: the one by the D8-SCL header stands 3.6 mm off its SCL pin.
+uno_hole_p := At(x: uno_ox - 13.97mm, y: uno_oy)
+uno_hole_d := At(x: uno_ox - 12.7mm, y: uno_oy + 48.26mm)
+uno_hole_e := At(x: uno_ox + 38.1mm, y: uno_oy + 33.02mm)
+uno_hole_f := At(x: uno_ox + 38.1mm, y: uno_oy + 5.08mm)
+uno_screw_p := ScrewPost(uno_hole_p.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+uno_screw_d := ScrewPost(uno_hole_d.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+uno_screw_e := ScrewPost(uno_hole_e.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+uno_screw_f := ScrewPost(uno_hole_f.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+uno_screw_p.post union frame_part
+uno_screw_d.post union frame_part
+uno_screw_e.post union frame_part
+uno_screw_f.post union frame_part
+uno_screw_p.hole cut frame_part
+uno_screw_d.hole cut frame_part
+uno_screw_e.hole cut frame_part
+uno_screw_f.hole cut frame_part
 
-// The cover's four, down through it into posts in the bay's walls, clear of the board: west by
-// the end wall (moved to y = -3 mm, clear of the USB plug), east by the spine, south and north.
-cover_w := At(x: box_x0 + screw_inset, y: -3mm)
+// The cover's four, down through it into posts in the bay's walls, clear of the boards and of the
+// base's screws in the corners: west on the south wall by the end wall (the Uno's end comes up to
+// the end wall, its plugs either side of y = 5 mm), east by the spine, south and north clear of
+// the shield's +x end.
+cover_w := At(x: -120mm, y: box_y0 + screw_inset)
 cover_e := At(x: box_x1 - screw_inset, y: board_cy)
-cover_s := At(x: -65mm, y: box_y0 + screw_inset)
-cover_n := At(x: -65mm, y: box_y1 - screw_inset)
+cover_s := At(x: -55mm, y: box_y0 + screw_inset)
+cover_n := At(x: -55mm, y: box_y1 - screw_inset)
 cover_screw_w := ScrewPost(cover_w.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
 cover_screw_e := ScrewPost(cover_e.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
 cover_screw_s := ScrewPost(cover_s.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
@@ -673,61 +687,59 @@ cover_hole_s.body cut cover_part
 cover_hole_n.body cut cover_part
 
 // == The electronics =============================================================================
-// Bought boards soldered on headers to a 5 x 7 cm perfboard (boards.sv), and the room the rest
-// take (~ sizes):
-//   - a Seeed XIAO ESP32-C3, its USB-C to the end wall's window: power, programming and logs;
-//   - an Adafruit DRV8871 breakout: the H-bridge, its terminals toward the bay's +x wall;
+// An Arduino Uno R4 Minima screwed down over the motor, and a perfboard shield plugged into it
+// (boards.sv) carrying the two breakouts and the thermostat's terminal (~ size):
+//   - the Uno, its USB-C and its barrel jack to the end wall's windows: the wall adapter's 9 V in,
+//     its own 5 V, programming and the console;
+//   - an Adafruit DRV8871 breakout: the H-bridge, off the Uno's VIN, its terminals toward the
+//     bay's +x wall;
 //   - an Adafruit INA219 breakout in the driver's supply: the motor's current over I2C, which the
-//     XIAO reads for the end-of-travel sensing;
-//   - a buck module (22 x 17) and a bridge rectifier: the motor's 7.5 V, off 24 VAC from the
-//     thermostat's transformer or a DC adapter (the DRV8871 wants 6.5 V at least);
-//   - a mini buck module (Mini-360 size, 17 x 11) taking the 7.5 V down to the XIAO's 5 V;
-//   - a 3-way 5.08 mm screw terminal for the supply's and the thermostat's wires, by the grommet.
-perfboard := Block(x0: board_cx - board_w / 2, x1: board_cx + board_w / 2,
-                   y0: board_cy - board_h / 2, y1: board_cy + board_h / 2, z0: board_z,
-                   z1: board_top)
-xiao_c := At(x: xiao_cx, y: xiao_cy)
+//     Uno reads for the end-of-travel sensing;
+//   - a 2-way 5.08 mm screw terminal for the thermostat's two wires, at the shield's -x end by
+//     the grommet, its pins in the shield's column 1, rows 9 and 11.
+uno_c := At(x: uno_ox, y: uno_oy)
+uno_at := point
+uno_at raised(d: uno_z, along: std.z) uno_c.p
+uno := UnoR4Minima(uno_dims)
+uno seats(turn: 0deg, up: std.z, east: std.x) uno_at
+shield := Shield(shield_dims, u: uno_dims, h: header_dims)
+shield seats(turn: 0deg, up: std.z, east: std.x) uno_at
 drv_c := At(x: drv_cx, y: drv_cy)
 ina_c := At(x: ina_cx, y: ina_cy)
-xiao_at := point
-xiao_at raised(d: board_top, along: std.z) xiao_c.p
-xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
-xiao seats(turn: 0deg, up: std.z, east: std.x) xiao_at
 drv_at := point
-drv_at raised(d: board_top, along: std.z) drv_c.p
+drv_at raised(d: shield_z, along: std.z) drv_c.p
 driver := Drv8871(drv8871_dims, h: header_dims)
 driver seats(turn: -90deg, up: std.z, east: std.x) drv_at
 ina_at := point
-ina_at raised(d: board_top, along: std.z) ina_c.p
+ina_at raised(d: shield_z, along: std.z) ina_c.p
 monitor := Ina219(ina219_dims, h: header_dims)
-monitor seats(turn: 0deg, up: std.z, east: std.x) ina_at
-buck := Block(x0: board_cx - 16.5mm, x1: board_cx + 5.5mm, y0: board_cy - 23mm,
-              y1: board_cy - 6mm, z0: board_top, z1: board_top + 5mm)
-regulator := Block(x0: board_cx - 10mm, x1: board_cx + 1.1mm, y0: board_cy + 5mm,
-                   y1: board_cy + 22.3mm, z0: board_top, z1: board_top + 4.5mm)
-terminal := Block(x0: board_cx - 34mm, x1: board_cx - 19mm, y0: board_cy - 23mm,
-                  y1: board_cy - 15mm, z0: board_top, z1: board_top + 10mm)
+monitor seats(turn: -90deg, up: std.z, east: std.x) ina_at
+terminal := Block(x0: uno_ox - pitch - 3.8mm, x1: uno_ox - pitch + 3.8mm, y0: uno_oy + 6 * pitch,
+                  y1: uno_oy + 10 * pitch, z0: shield_z, z1: shield_z + 10mm)
 
-// The boards in the bay: a mated USB cable's plug through the end wall's window, and the boards,
-// their headers and the pins' tails under the perfboard clear of the frame, the motor and the
-// cover, and of one another and the buck modules' room.
-claim xiao.plug clear(0.2mm) frame_part
-claim xiao.board clear(0.5mm) frame_part
-claim xiao.headers clear(0.5mm) frame_part
+// The boards in the bay: a mated cable's plug through each of the end wall's windows, and the
+// boards, the Uno's parts and the pins' tails clear of the frame, the motor and the cover, and of
+// one another.
+claim uno.usb_plug clear(0.2mm) frame_part
+claim uno.jack_plug clear(0.2mm) frame_part
+claim uno.parts clear(0.5mm) frame_part
+claim uno.tails clear(0.5mm) frame_part
+claim uno.tails clear(0.5mm) motor.motor
+claim shield.board clear(0.5mm) frame_part
+claim shield.headers clear(0.5mm) frame_part
+claim shield.board clear(0.3mm) uno.parts
 claim driver.board clear(0.5mm) frame_part
 claim driver.headers clear(0.5mm) frame_part
 claim monitor.board clear(0.5mm) frame_part
 claim monitor.headers clear(0.5mm) frame_part
-claim xiao.headers clear(0.5mm) motor.motor
-claim driver.headers clear(0.5mm) motor.motor
-claim monitor.headers clear(0.5mm) motor.motor
-claim xiao.board clear(1mm) cover_part
+claim driver.headers clear(0.3mm) uno.parts
+claim monitor.headers clear(0.3mm) uno.parts
 claim driver.board clear(1mm) cover_part
 claim monitor.board clear(1mm) cover_part
+claim terminal.body clear(1mm) cover_part
+claim terminal.body clear(0.5mm) frame_part
 claim driver.board clear(0.5mm) monitor.board
-claim driver.board clear(0.5mm) buck.body
-claim monitor.board clear(0.5mm) regulator.body
-claim xiao.board clear(0.5mm) regulator.body
+claim terminal.body clear(0.5mm) monitor.board
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel

@@ -1,19 +1,20 @@
 # Radiator bot firmware
 
-Firmware for the bot's Seeed XIAO ESP32-C3. It opens the valve while the thermostat calls for heat
-and closes it when the call ends, and it finds each end of the stem's travel by the motor's
-current, read off the DRV8874's CS pin (see `hardware/DESIGN.md`, *The electronics*). A console on
-the USB-C port shows what it's doing and sets it up. It uses no Wi-Fi or Bluetooth.
+Firmware for the bot's Arduino Uno R4 Minima. It opens the valve while the thermostat calls for
+heat and closes it when the call ends, and it finds each end of the stem's travel by the motor's
+current, read off the INA219 in the DRV8871's supply (see `hardware/DESIGN.md`, *The
+electronics*). A console on the USB-C port shows what it's doing and sets it up.
 
 ## Layout
 
-- `src/` — the ESP32 side: `main.cpp` (the control loop), `drv8874.cpp` (the H-bridge and the
-  ADC), `console.cpp` (the serial console and the log), `storage.cpp` (settings in flash),
-  `pins.h`.
+- `src/` — the R4 side: `main.cpp` (the control loop), `drv8871.cpp` (the H-bridge and the
+  motor's current), `ina219.cpp` (the current monitor, over I2C), `console.cpp` (the serial
+  console and the log), `port.cpp` (the console's buffered side of the USB port), `storage.cpp`
+  (settings in flash), `pins.h`.
 - `lib/valve/` — everything that doesn't touch hardware, tested on the host:
   - `controller` — the state machine that drives the valve to an end and knows where it is;
   - `trip_detector` — end of travel from the current: blanking, low-pass, trip and hold;
-  - `thermostat` — the optocoupler's input, pulsing from 24 VAC or steady from DC, settled;
+  - `thermostat` — the thermostat's dry contact, settled;
   - `mode` — where the valve should go: the thermostat's say in auto, the console's in manual;
   - `settings` — the tunable figures and the table the console and the flash use.
 - `host_test/` — those tests, against a simulated motor and valve.
@@ -24,38 +25,47 @@ With [PlatformIO](https://platformio.org) (`pip install platformio`):
 
 ```sh
 pio run -d firmware                  # build
-pio run -d firmware -t upload        # flash over the XIAO's USB-C
+pio run -d firmware -t upload        # flash over the R4's USB-C
 pio device monitor -d firmware       # the console, 115200 baud
 make -C firmware/host_test           # the host tests (g++ or clang++)
 ```
 
-The platform is [pioarduino](https://github.com/pioarduino/platform-espressif32)'s, for the Arduino
-core 3.x, pinned to a release in `platformio.ini`. The C3's USB-JTAG resets it into the bootloader
-itself, so flashing needs no buttons.
+The platform is PlatformIO's [renesas-ra](https://github.com/platformio/platform-renesas-ra),
+pinned to a release in `platformio.ini`; it brings Arduino's core for the R4, 1.6. The upload
+resets the R4 into its bootloader over USB, so flashing needs no buttons. If an upload ever can't
+find the board, double-tap its reset button and try again.
 
 ## What it does
 
-- **Thermostat.** The optocoupler on D2 pulls the input low while it conducts. Off 24 VAC it
-  conducts only on half-cycles, so the input counts as low if it was low in the last 60 ms. A
-  state must then hold for `stat_settle` (3 s) before the bot acts on it. Calling for heat →
-  open; not calling → closed. If your wiring has the optocoupler conduct when the thermostat is
-  *satisfied*, `set stat_invert 1`.
-- **A move.** The driver wakes; the ADC's offset is read with the motor braked; the duty ramps up
-  over `ramp`. Past `blank` (the inrush is near stall), the current, low-passed over `filter`,
-  must stay over the trip (`trip_open` or `trip_close`) for `hold` to mark the end. Then the
-  motor brakes, the driver sleeps 50 ms later, and the bot knows which end it's at.
+- **Thermostat.** Its contact goes between D2 and ground, D2 pulled up: closed reads low. A state
+  must hold for `stat_settle` (3 s) before the bot acts on it, so a bounce as the mercury rolls,
+  or a thermostat's chatter, doesn't run the motor. Closed (calling for heat) → open; open (not
+  calling) → closed. If your thermostat's contact opens on a call, `set stat_invert 1`.
+- **The drive.** The DRV8871's inputs are PWM'd at 20 kHz, one held high and the other pulled low
+  for the on-time, so the bridge brakes through the off-time. The PWM is scaled to the supply
+  the INA219 reads, so the motor sees `motor_volts` (6 V) on average at full `duty`, off a 9 V
+  adapter or a 12 V one.
+- **The current.** The INA219 reads the supply's current, which under the PWM is about the PWM's
+  fraction times the motor's. The firmware divides it back out, so every current the console
+  shows, and the trips, are the motor's own: a 130 stalls near 1.8 A at 6 V whatever the adapter.
+- **A move.** The driver wakes braked and the supply is read; the duty ramps up over `ramp`. Past
+  `blank` (the inrush is near stall), the current, low-passed over `filter`, must stay over the
+  trip (`trip_open` or `trip_close`) for `hold` to mark the end. Then the motor brakes, the driver
+  sleeps 50 ms later, and the bot knows which end it's at.
   - Optionally it runs back for `backoff_open` / `backoff_close` ms after an end, to ease the
     printed train. Both are off by default: backing off the closed end unseats the valve.
   - A change of mind during a move stops it; after `rest` the motor sets off the other way.
 - **At power-up** the bot doesn't know where the valve is. Once the thermostat has settled it
   drives to the matching end; if the valve is there already, it stalls at once and trips.
-- **Failures.** A move fails if it runs `timeout` (60 s) without tripping, or if the driver's
-  FAULT pin goes low (overcurrent, overheating, undervoltage). The motor stops and the valve's
-  position is unknown. The bot tries again after `retry` (15 min), up to 3 times in a row on its
+- **Failures.** A move fails if it runs `timeout` (60 s) without tripping, or on a supply fault:
+  the supply under 6.5 V (the adapter unplugged, or sagging below where the DRV8871 locks out),
+  or the INA219 not answering. The motor stops and the valve's position is unknown. The bot tries again after `retry` (15 min), up to 3 times in a row on its
   own; a change in the thermostat, or the console's `clear`, `open` or `close`, tries again at
   once.
-- The loop runs about every millisecond under the loop watchdog. Console output never blocks it:
-  with no host reading, output is dropped.
+- The loop runs about every millisecond under a 2 s watchdog. Console output never blocks it: it
+  waits in a 4 kB buffer while the host catches up, and with no host connected it's dropped.
+- Over USB alone the R4 and the console run, but the motor doesn't: every move is a supply fault
+  until the wall adapter is plugged in.
 
 ## The console
 
@@ -69,7 +79,7 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 
 | command | |
 |---|---|
-| `status` | the mode, the thermostat, the valve, the motor and the last move |
+| `status` | the mode, the thermostat, the valve, the motor, the supply and the last move |
 | `open`, `close` | drive to that end, ignoring the thermostat (manual mode) |
 | `stop` | stop the motor and hold still (manual mode) |
 | `auto` | follow the thermostat again; the bot always starts in auto |
@@ -91,15 +101,15 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 | `blank` | 150 ms | how long after a start the trip is ignored |
 | `filter` | 10 ms | the current's low-pass time constant |
 | `timeout` | 60 s | the longest a move may take |
-| `duty` | 1.0 | the PWM duty on EN, 0.1–1 |
+| `duty` | 1.0 | the motor's speed, 0.1–1 of `motor_volts` |
+| `motor_volts` | 6 V | the motor's rating: the PWM gives it this on average at full `duty` |
 | `ramp` | 80 ms | the soft start |
 | `backoff_open`, `backoff_close` | 0 ms | run back after reaching that end |
 | `rest` | 500 ms | the motor's rest between moves |
 | `retry` | 900 s | the wait after a failed move |
 | `motor_invert` | 0 | swap the motor's directions |
-| `stat_invert` | 0 | the optocoupler conducting means *no* call for heat |
+| `stat_invert` | 0 | the contact closed means *no* call for heat |
 | `stat_settle` | 3000 ms | how long the thermostat must hold a state |
-| `cs_gain` | 1.1205 V/A | the DRV8874's current output: 450 µA/A into 2.49 kΩ |
 
 ## Setting it up on the valve
 
@@ -115,15 +125,18 @@ them with the valve in hand, well under the stall.
    closing torque seats the valve without straining the train, e.g. `set trip_close 0.9`. Then
    close and open a few times and check each move ends `reached`, in about the same time.
    - If moves end early, mid-travel, the trip is too low for a stiff stretch of the stem.
-   - If a stall reads near 2.2 A, it's at the top of the ADC's range: the trip must be under it.
-4. **The thermostat.** `auto`, and turn the thermostat up and down. `status` shows its input
+   - A stall reads about 1.8 A. The DRV8871 holds the current under about 2.1 A itself, so a
+     trip over 2 A never trips.
+4. **The thermostat.** `auto`, and turn the thermostat up and down. `status` shows its contact
    and the settled state; if they're backwards, `set stat_invert 1`.
 5. `save`.
 
 ## Assumptions to check
 
-- The thermostat reaches D2 through the optocoupler, pulling it low while it conducts; whether
-  that's a dry contact, 24 VAC R/W or something else is still open (`hardware/DESIGN.md`, *Open
-  questions*). Either kind of drive reads correctly; only the sense may need `stat_invert`.
+- The thermostat is a dry contact wired to the bot alone: an old two-wire heating thermostat,
+  mercury switch or bimetal, taken off the wall or out of salvage. One still wired to a boiler's
+  24 VAC mustn't reach D2 (`hardware/DESIGN.md`, *The thermostat*).
 - Calling for heat means fully open and not calling means fully closed: no part-open positions.
-- Which way PH turns the handle depends on the motor's leads, hence `motor_invert`.
+- Which way the motor turns the handle depends on its leads, hence `motor_invert`.
+- The motor current is worked out from the supply's, which holds while the motor's current runs on
+  through the PWM's off-time. That's so at load and at the stall, where the trip is.

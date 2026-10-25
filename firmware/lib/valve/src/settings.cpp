@@ -18,16 +18,16 @@ const Field kFields[] = {
     FIELD(blank, kUint, 0, 2000, "ms", "time after a start that the trip ignores"),
     FIELD(filter, kUint, 0, 200, "ms", "the current's low-pass time constant"),
     FIELD(timeout, kUint, 1, 600, "s", "longest a move may take"),
-    FIELD(duty, kFloat, 0.1f, 1.0f, "", "PWM duty, 0-1"),
+    FIELD(duty, kFloat, 0.1f, 1.0f, "", "the motor's speed, 0-1 of motor_volts"),
+    FIELD(motor_volts, kFloat, 1.0f, 24.0f, "V", "the motor's rating: the PWM gives it this"),
     FIELD(ramp, kUint, 0, 2000, "ms", "soft start"),
     FIELD(backoff_open, kUint, 0, 5000, "ms", "run back after reaching the open end"),
     FIELD(backoff_close, kUint, 0, 5000, "ms", "run back after reaching the closed end"),
     FIELD(rest, kUint, 0, 60000, "ms", "rest between moves"),
     FIELD(retry, kUint, 10, 86400, "s", "wait after a failed move before trying again"),
     FIELD(motor_invert, kBool, 0, 1, "", "swap the motor's directions"),
-    FIELD(stat_invert, kBool, 0, 1, "", "the optocoupler conducting means no call for heat"),
+    FIELD(stat_invert, kBool, 0, 1, "", "the contact closed means no call for heat"),
     FIELD(stat_settle, kUint, 0, 600000, "ms", "time the thermostat must hold a state"),
-    FIELD(cs_gain, kFloat, 0.1f, 10.0f, "V/A", "the driver's current output"),
 };
 
 #undef FIELD

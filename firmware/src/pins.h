@@ -1,14 +1,15 @@
-// The XIAO ESP32-C3's pins as wired on the perfboard (see hardware/DESIGN.md, "The electronics").
-// D0, D8 and D9 are the C3's strapping pins and stay free.
+// The Uno R4 Minima's pins as wired on the perfboard shield (see hardware/DESIGN.md, "The
+// electronics").  The INA219 is on the I2C pins, A4 (SDA) and A5 (SCL).
 #pragma once
+
+#include <stdint.h>
 
 namespace pins {
 
-constexpr int kCurrent = 3;     // D1, ADC1: the DRV8874's CS, ~1.1 V/A
-constexpr int kThermostat = 4;  // D2: the optocoupler, pulled up; low when it conducts
-constexpr int kEnable = 5;      // D3: EN/IN1, PWM for speed
-constexpr int kPhase = 6;       // D4: PH/IN2, direction
-constexpr int kSleep = 7;       // D5: SLEEP, high to run; VREF follows it
-constexpr int kFault = 10;      // D10: FAULT, open-drain, low on a fault
+constexpr int kThermostat = 2;  // D2: the thermostat's contact to ground, pulled up: low closed
+constexpr int kIn1 = 5;         // D5: the DRV8871's IN1, PWM (GPT2)
+constexpr int kIn2 = 6;         // D6: its IN2, PWM (GPT0)
+
+constexpr uint8_t kMonitorAddress = 0x40;  // the INA219, its A0 and A1 open
 
 }  // namespace pins

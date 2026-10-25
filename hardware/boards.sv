@@ -1,18 +1,24 @@
-// The bought boards in the electronics bay, as modules: their outlines on the perfboard, the room
-// their parts take, and where their pins stand, for placing them on the perfboard's grid and
-// fitting the bay round them.
+// The bought boards in the electronics bay, as modules: their outlines, the room their parts take,
+// and where their pins stand, for stacking them and fitting the bay round them.
 //
-// Each is drawn about its own std.origin as it stands on the perfboard: std.top is the
-// perfboard's top face, which its header's plastic stands on, and the origin is the middle of its
-// pin field, so a board placed on a grid point has every pin in a hole.  Pins are 0.1 in apart;
-// the long ends of the headers go down through the perfboard, soldered and cut to `tail` below
-// its top face.  Sizes marked "~" are read off photos or are a family's usual, worth checking on
-// the boards in hand.
+// The Uno and its shield are drawn about the Uno's own frame: std.top is the Uno's underside, which
+// stands on its posts, and the origin is its power header's first pin, so the shield's grid has
+// a hole on every one of the Uno's pins but the D8-SCL header's (which stands 0.06 in off it).
+// The breakouts on the shield are each drawn about their own std.origin as they stand on it:
+// std.top is the shield's top face, which a header's plastic stands on, and the origin is the
+// middle of its pin field, so a board placed on a grid point has every pin in a hole.  Pins are
+// 0.1 in apart; the long ends of the headers go down through the shield, soldered and cut to
+// `tail` below its top face.  Sizes marked "~" are read off photos or are a family's usual, worth
+// checking on the boards in hand.
 //
-//   - **Seeed XIAO ESP32-C3** (Seeed SKU 113991054, $4.99): an ESP32-C3 with USB-C, 21 x 17.8 mm,
-//     14 castellated pins in two rows 0.6 in apart.  Its outline, its pins and its USB-C
-//     receptacle are from Seeed's KiCad layout (XIAO ESP32C3 v1.3).  It wants the FPC antenna it
-//     comes with on its U.FL connector.
+//   - **Arduino Uno R4 Minima** (Arduino ABX00080, $20): an RA4M1 on the Uno's 2.7 x 2.1 in board,
+//     with USB-C, and a barrel jack that takes 6-24 V through a Schottky diode to VIN and the
+//     board's 5 V buck.  Its outline, its headers and its holes are the Uno R3's (KiCad's
+//     Arduino_UNO_R3 footprint), which the R4 keeps; its jack is the R3's; its USB-C receptacle is
+//     placed where the R3's USB-B was (~).
+//   - **The shield**: a 5 x 7 cm perfboard, 18 x 24 holes, on male headers plugged down into the
+//     Uno's power, analog and D0-D7 sockets.  Its long side runs across the Uno; it stands off
+//     the Uno's jack end.
 //   - **Adafruit DRV8871 breakout** (Adafruit #3190, $7.50): an H-bridge for one brushed motor,
 //     6.5-45 V, its current held under ~2.1 A by the 30 kOhm on ILIM.  20.3 x 24.1 mm, one row of
 //     4 pins and two 2-way 3.5 mm screw terminals (the motor's, and the supply's) at the far end.
@@ -28,7 +34,7 @@
 
 unit mm
 use std
-use std (coords, on_u, on_v, seats)
+use std (coords, on_u, on_v, seats, raised)
 
 pitch := 2.54mm                 // 0.1 in: every header's, and the perfboard's grid
 
@@ -44,39 +50,65 @@ header_dims := {
   over: 1.0mm,                  // ~
 }
 
-interface XiaoSizes {
-  len: Length, w: Length, pcb_t: Length, rows: Length, n: Int
-  usb_w: Length, usb_h: Length, usb_in: Length, usb_out: Length
-  chip: Length, chip_x: Length, chip_y: Length, chip_h: Length
-  ufl: Length, ufl_x: Length, ufl_h: Length
-  plug_w: Length, plug_h: Length, plug_len: Length
+interface UnoSizes {
+  x0: Length, x1: Length, y0: Length, y1: Length, pcb_t: Length, socket_h: Length, tail: Length
+  jack_x0: Length, jack_x1: Length, jack_y0: Length, jack_y1: Length, jack_h: Length, jack_z: Length
+  usb_w: Length, usb_h: Length, usb_in: Length, usb_out: Length, usb_y: Length
+  icsp_x: Length, icsp_y: Length, icsp_h: Length
+  jack_plug: Length, plug_w: Length, plug_h: Length, plug_len: Length
 }
-xiao_dims := {
-  len: 20.955mm,                // along the USB's axis
-  w: 17.78mm,
-  pcb_t: 1.2mm,                 // ~
-  rows: 15.24mm,                // the two rows of pins, 0.6 in apart
-  n: 7,                         // pins a row
-  usb_w: 8.94mm,                // the USB-C receptacle: its shell, standing on the board's top face
+uno_dims := {
+  x0: -27.94mm,                 // its outline, from the power header's first pin: 2.7 x 2.1 in,
+  x1: 40.64mm,                  // the USB end toward -x
+  y0: -2.54mm,
+  y1: 50.8mm,
+  pcb_t: 1.6mm,
+  socket_h: 8.5mm,              // the female headers, over its top face
+  tail: 1.5mm,                  // ~ its through-hole pins, under its underside
+  jack_x0: -29.84mm,            // the barrel jack, its mouth out past the board's end
+  jack_x1: -16.51mm,
+  jack_y0: 0.64mm,
+  jack_y1: 9.53mm,
+  jack_h: 11mm,                 // ~
+  jack_z: 6.5mm,                // ~ its pin's axis, over the top face
+  usb_w: 8.94mm,                // the USB-C receptacle's shell, standing on the top face
   usb_h: 3.26mm,
-  usb_in: 5.84mm,               // back from the board's end
-  usb_out: 1.51mm,              // out past it
-  chip: 5mm,                    // the ESP32-C3, a 5 x 5 QFN
-  chip_x: 0.69mm,               // from the pin field's middle, away from the USB
-  chip_y: 2.39mm,
-  chip_h: 0.9mm,
-  ufl: 2.6mm,                   // the antenna's U.FL connector, at the end away from the USB
-  ufl_x: 9.08mm,
-  ufl_h: 1.25mm,
+  usb_in: 7.35mm,               // ~ back from the board's end
+  usb_out: 1mm,                 // ~ out past it
+  usb_y: 35.56mm,               // ~ its axis
+  icsp_x: 36.2mm,               // ~ the 2 x 3 ICSP header's middle, by the far end
+  icsp_y: 24.13mm,
+  icsp_h: 8.5mm,                // ~ its pins' tops
+  jack_plug: 11mm,              // ~ a barrel plug's moulded body, mated: the room it needs
   plug_w: 12.5mm,               // ~ a USB-C cable's moulded plug, mated: the room it needs
   plug_h: 7mm,
   plug_len: 30mm,
 }
 
-// The ESP32-C3's pins, in a row from the USB end; looking down on it, its USB toward -x:
-//   -y: D0 D1 D2 D3 D4 D5 D6
-//   +y: 5V GND 3V3 D10 D9 D8 D7
-// D0-D2 are ADC1 (A0-A2); D0, D8 and D9 are strapping pins.
+// The Uno's sockets, looking down on it, its USB toward -x:
+//   y = 48.26: SCL SDA AREF GND D13 ... D8 (x = -9.14 to 13.72), then D7 ... D0 (x = 17.78 to
+//              35.56, on the 0.1 in grid with the rest)
+//   y = 0:     NC IOREF RESET 3V3 5V GND GND VIN (x = 0 to 17.78), then A0 ... A5 (x = 22.86 to
+//              35.56)
+// SDA and SCL are A4 and A5 again.  VIN is the jack's voltage, through the board's Schottky.
+
+interface ShieldSizes {
+  w: Length, h: Length, pcb_t: Length, cols: Int, rows: Int, col0: Length, row0: Length
+  plug: Length
+}
+shield_dims := {
+  w: 50mm,                      // a 5 x 7 cm perfboard, its 7 cm across the Uno
+  h: 70mm,
+  pcb_t: 1.6mm,
+  cols: 18,                     // its holes, 0.1 in apart, centred on it
+  rows: 24,
+  col0: -5.08mm,                // its first column's, and row's, holes, in the Uno's frame: two
+  row0: -5.08mm,                // holes out from the power header's first pin
+  plug: 6mm,                    // how far its header pins reach down into the Uno's sockets
+}
+// The shield's top face, which the breakouts stand on, up from the Uno's underside: over the
+// sockets and its headers' plastic.
+shield_top := uno_dims.pcb_t + uno_dims.socket_h + header_dims.body_h + shield_dims.pcb_t
 
 interface Drv8871Sizes {
   w: Length, len: Length, back: Length, pcb_t: Length, n: Int
@@ -180,35 +212,103 @@ component HeaderRow(h: HeaderSizes, y: Length, n: Int, pcb_t: Length) {
   }
 }
 
-// The XIAO ESP32-C3 on its headers, its USB toward -x.  `plug` is the room a mated cable's plug
-// takes, out from the receptacle's mouth along -x, for the bay's wall to clear.
-component XiaoEsp32C3(s: XiaoSizes, h: HeaderSizes) {
-  z0 := h.body_h                                   // the board's underside
-  z1 := z0 + s.pcb_t
-  pcb := Box(x0: -s.len / 2, x1: s.len / 2, y0: -s.w / 2, y1: s.w / 2, z0: z0, z1: z1)
-  usb := Box(x0: -s.len / 2 - s.usb_out, x1: -s.len / 2 + s.usb_in, y0: -s.usb_w / 2,
-             y1: s.usb_w / 2, z0: z1, z1: z1 + s.usb_h)
-  chip := Box(x0: s.chip_x - s.chip / 2, x1: s.chip_x + s.chip / 2, y0: s.chip_y - s.chip / 2,
-              y1: s.chip_y + s.chip / 2, z0: z1, z1: z1 + s.chip_h)
-  ufl := Box(x0: s.ufl_x - s.ufl / 2, x1: s.ufl_x + s.ufl / 2, y0: -s.ufl / 2, y1: s.ufl / 2,
-             z0: z1, z1: z1 + s.ufl_h)
-  row_a := HeaderRow(h, y: -s.rows / 2, n: s.n, pcb_t: s.pcb_t)
-  row_b := HeaderRow(h, y: s.rows / 2, n: s.n, pcb_t: s.pcb_t)
+// A row of `n` male pins along x from x = x0, plugged down into sockets whose tops stand at z0,
+// under a board `pcb_t` thick: the plastic between the sockets and the board, and the pins from
+// `plug` down in the sockets up through the board.
+component PlugRow(h: HeaderSizes, x0: Length, y: Length, n: Int, z0: Length, pcb_t: Length,
+                  plug: Length) {
+  plastic := Box(x0: x0 - pitch / 2, x1: x0 + (n - 0.5) * pitch, y0: y - h.body_w / 2,
+                 y1: y + h.body_w / 2, z0: z0, z1: z0 + h.body_h)
+  pins := solid()
+  repeat n as k {
+    px := x0 + k * pitch
+    pin := Box(x0: px - h.pin_w / 2, x1: px + h.pin_w / 2, y0: y - h.pin_w / 2, y1: y + h.pin_w / 2,
+               z0: z0 - plug, z1: z0 + h.body_h + pcb_t + h.over)
+    pin.body union pins
+  }
+}
+
+// A socket's plastic along x from x = x0, `n` pins, standing `height` on a board's top face at z0,
+// and its pins' tails under the board.
+component SocketRow(x0: Length, y: Length, n: Int, z0: Length, height: Length, pcb_t: Length,
+                    tail: Length) {
+  plastic := Box(x0: x0 - pitch / 2, x1: x0 + (n - 0.5) * pitch, y0: y - pitch / 2,
+                 y1: y + pitch / 2, z0: z0, z1: z0 + height)
+  tails := Box(x0: x0 - 0.5mm, x1: x0 + (n - 1) * pitch + 0.5mm, y0: y - 0.5mm, y1: y + 0.5mm,
+               z0: z0 - pcb_t - tail, z1: z0 - pcb_t)
+}
+
+// The Uno R4 Minima, in its own frame (std.top its underside), its USB and its jack toward -x:
+// its board, the parts on it (the tall ones: the jack, the USB-C, the ICSP header and the
+// sockets) and the pins' tails under it.  `usb_plug` and `jack_plug` are the room a mated cable's
+// plug takes, out from each mouth along -x, for the bay's wall to clear.
+component UnoR4Minima(s: UnoSizes) {
+  z1 := s.pcb_t                                    // its top face
+  pcb := Box(x0: s.x0, x1: s.x1, y0: s.y0, y1: s.y1, z0: 0mm, z1: z1)
+  jack := Box(x0: s.jack_x0, x1: s.jack_x1, y0: s.jack_y0, y1: s.jack_y1, z0: z1,
+              z1: z1 + s.jack_h)
+  usb := Box(x0: s.x0 - s.usb_out, x1: s.x0 + s.usb_in, y0: s.usb_y - s.usb_w / 2,
+             y1: s.usb_y + s.usb_w / 2, z0: z1, z1: z1 + s.usb_h)
+  icsp := Box(x0: s.icsp_x - pitch, x1: s.icsp_x + pitch, y0: s.icsp_y - 1.5 * pitch,
+              y1: s.icsp_y + 1.5 * pitch, z0: z1, z1: z1 + s.icsp_h)
+  power := SocketRow(x0: 0mm, y: 0mm, n: 8, z0: z1, height: s.socket_h, pcb_t: s.pcb_t,
+                     tail: s.tail)
+  analog := SocketRow(x0: 9 * pitch, y: 0mm, n: 6, z0: z1, height: s.socket_h, pcb_t: s.pcb_t,
+                      tail: s.tail)
+  low := SocketRow(x0: 7 * pitch, y: 19 * pitch, n: 8, z0: z1, height: s.socket_h,
+                   pcb_t: s.pcb_t, tail: s.tail)
+  high := SocketRow(x0: -9.14mm, y: 19 * pitch, n: 10, z0: z1, height: s.socket_h,
+                    pcb_t: s.pcb_t, tail: s.tail)
 
   board := solid(pcb.body)
-  usb.body union board
-  chip.body union board
-  ufl.body union board
-  headers := solid(row_a.plastic.body)
-  row_b.plastic.body union headers
-  row_a.pins union headers
-  row_b.pins union headers
+  parts := solid(jack.body)
+  usb.body union parts
+  icsp.body union parts
+  power.plastic.body union parts
+  analog.plastic.body union parts
+  low.plastic.body union parts
+  high.plastic.body union parts
+  tails := solid(power.tails.body)
+  analog.tails.body union tails
+  low.tails.body union tails
+  high.tails.body union tails
 
-  usb_z := z1 + s.usb_h / 2                        // the receptacle's axis, up from the perfboard
-  usb_x := -s.len / 2 - s.usb_out                  // its mouth, out from the pin field's middle
-  plug_room := Box(x0: usb_x - s.plug_len, x1: usb_x, y0: -s.plug_w / 2, y1: s.plug_w / 2,
-                   z0: usb_z - s.plug_h / 2, z1: usb_z + s.plug_h / 2)
-  construction plug := solid(plug_room.body)
+  usb_z := z1 + s.usb_h / 2                        // the receptacle's axis, up from its underside
+  usb_x := s.x0 - s.usb_out                        // its mouth
+  usb_room := Box(x0: usb_x - s.plug_len, x1: usb_x, y0: s.usb_y - s.plug_w / 2,
+                  y1: s.usb_y + s.plug_w / 2, z0: usb_z - s.plug_h / 2, z1: usb_z + s.plug_h / 2)
+  construction usb_plug := solid(usb_room.body)
+  jack_y := (s.jack_y0 + s.jack_y1) / 2
+  jack_room := Box(x0: s.jack_x0 - s.plug_len, x1: s.jack_x0, y0: jack_y - s.jack_plug / 2,
+                   y1: jack_y + s.jack_plug / 2, z0: z1 + s.jack_z - s.jack_plug / 2,
+                   z1: z1 + s.jack_z + s.jack_plug / 2)
+  construction jack_plug := solid(jack_room.body)
+}
+
+// The perfboard shield on the Uno, in the Uno's frame: its board, and the headers that plug it
+// into the Uno's power, analog and D0-D7 sockets.  `top` is its top face, up from the Uno's
+// underside: `shield_top`, for the sizes above.
+component Shield(s: ShieldSizes, u: UnoSizes, h: HeaderSizes) {
+  z0 := u.pcb_t + u.socket_h + h.body_h            // its underside
+  top := z0 + s.pcb_t
+  mx := (s.w - (s.cols - 1) * pitch) / 2           // its margins, past the outer holes
+  my := (s.h - (s.rows - 1) * pitch) / 2
+  pcb := Box(x0: s.col0 - mx, x1: s.col0 + (s.cols - 1) * pitch + mx, y0: s.row0 - my,
+             y1: s.row0 + (s.rows - 1) * pitch + my, z0: z0, z1: top)
+  power := PlugRow(h, x0: 0mm, y: 0mm, n: 8, z0: u.pcb_t + u.socket_h, pcb_t: s.pcb_t,
+                   plug: s.plug)
+  analog := PlugRow(h, x0: 9 * pitch, y: 0mm, n: 6, z0: u.pcb_t + u.socket_h, pcb_t: s.pcb_t,
+                    plug: s.plug)
+  low := PlugRow(h, x0: 7 * pitch, y: 19 * pitch, n: 8, z0: u.pcb_t + u.socket_h,
+                 pcb_t: s.pcb_t, plug: s.plug)
+
+  board := solid(pcb.body)
+  headers := solid(power.plastic.body)
+  analog.plastic.body union headers
+  low.plastic.body union headers
+  power.pins union headers
+  analog.pins union headers
+  low.pins union headers
 }
 
 // The Adafruit DRV8871 breakout on its row of pins along x, its terminals toward +y.
@@ -263,15 +363,20 @@ component Ina219(s: Ina219Sizes, h: HeaderSizes) {
 }
 
 preview {
-  xiao := XiaoEsp32C3(xiao_dims, h: header_dims)
+  uno := UnoR4Minima(uno_dims)
+  shield := Shield(shield_dims, u: uno_dims, h: header_dims)
   in std.top {
-    drv_at := point hint((0, 15))
-    drv_at on_v(d: 15mm) std.top
-    ina_at := point hint((30, 0))
-    ina_at on_u(d: 30mm) std.top
+    drv_at := point hint((7 * pitch, 3.5 * pitch))
+    drv_at coords(du: 7 * pitch, dv: 3.5 * pitch) std.top
+    ina_at := point hint((7 * pitch, 13.5 * pitch))
+    ina_at coords(du: 7 * pitch, dv: 13.5 * pitch) std.top
   }
+  drv_on := point
+  drv_on raised(d: shield_top, along: std.z) drv_at
   drv := Drv8871(drv8871_dims, h: header_dims)
-  drv seats(turn: 0deg, up: std.z, east: std.x) drv_at
+  drv seats(turn: -90deg, up: std.z, east: std.x) drv_on
+  ina_on := point
+  ina_on raised(d: shield_top, along: std.z) ina_at
   ina := Ina219(ina219_dims, h: header_dims)
-  ina seats(turn: 0deg, up: std.z, east: std.x) ina_at
+  ina seats(turn: -90deg, up: std.z, east: std.x) ina_on
 }
