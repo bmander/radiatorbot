@@ -14,7 +14,7 @@ valve under motor control.
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_turn` scrubs the handle about the stem.
-  - `gears.sv` — printed spur gears, shaped by a rack at discrete rolls (true involutes,
+  - `gears.sv` — printed spur gears, cut by a rack's exact generating sweep (true involutes,
     undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
   - `boards.sv` — the bought boards on the perfboard: a Seeed XIAO ESP32-C3, an Adafruit DRV8871
@@ -55,3 +55,6 @@ sh hardware/export.sh            # every printed part as STL, into hardware/stl
 ```
 
 The models are checked with Solvent v0.1.4 (`SOLVENTC_VERSION=v0.1.4` pins the installer to it).
+The gears are cut by their exact rack sweeps, which v0.1.4 builds slowly; geomsolver's faster
+swept-cut build (`make solventc` on its `main` once it lands, or a release after v0.1.4) exports
+the whole bot in under a minute, its STLs smaller than the bites' were (4.2 MB against 8.4).

@@ -203,19 +203,17 @@ component NutX(y: Length, z: Length, af: Length, x0: Length, x1: Length) {
 
 // A printed gear seated on an axle: its figure (gears.sv) with its origin `z` up the axle from
 // `c`, its axis up the world's z, turned `phase` about it.  A driving gear has a tooth on the line
-// of centres and the gear it drives a space: with the bites' space on +v, a pinion turned
+// of centres and the gear it drives a space: with the cut space on +v, a pinion turned
 // `bearing - 90deg - 180deg / N` and its gear `bearing + 90deg`, `bearing` the line of centres'
 // from the pinion's axle to the gear's.  Gears of one size and face are one figure, shaped once.
 // A large gear is spoked to save material: `spokes` of them, `web` wide, between a hub of radius
 // `hub` (clear of the pinion it carries) and a rim `web` thick under its roots; 0 spokes, solid.
 component Gear(c: point, z: Length, phase: Angle, N: Int, m: Length, shift: Scalar,
-               face: Length, bore: Length, step: Angle, shaped: Int, spokes: Int, hub: Length,
-               web: Length) {
+               face: Length, bore: Length, shaped: Int, spokes: Int, hub: Length, web: Length) {
   at := point
   at raised(d: z, along: std.z) c
   g := ShapedSpur(N: N, m: m, phi: pa, shift: shift, thin: thin, z0: 0mm, z1: face, bore: bore,
-                  step: step, shaped: shaped, chamfer: chamfer, spokes: spokes, hub: hub,
-                  web: web)
+                  shaped: shaped, chamfer: chamfer, spokes: spokes, hub: hub, web: web)
   g seats(turn: phase, up: std.z, east: std.x) at
 }
 
@@ -309,8 +307,7 @@ cw := ConjugateWheel(valve.handle_top, open_top, valve.stem_axis, a_spindle, a_c
                      z_top: wheel_top, top_z: top0, grow: wheel_backlash / 2, shaped: shaped)
 
 ring_gear := Gear(a_c, z: ring_z0, phase: 0deg + 90deg, N: ring_n, m: m_fin, shift: -pin_shift,
-             face: 10mm, bore: axle_d + run, step: 2deg, shaped: shaped,
-             spokes: 0, hub: 0mm, web: 0mm)
+             face: 10mm, bore: axle_d + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 
 web := Post(a_c, r: 33mm, z0: wheel_top, z1: ring_z0 + 0.25mm)
 wheel_bore := Post(a_c, r: (axle_d + run) / 2, z0: wheel_bottom - 1mm, z1: ring_z0 + 11mm)
@@ -336,41 +333,36 @@ collar_screw.body cut collar_part
 // stage 1: the motor's pinion, pressed on its shaft, into B's first compound's gear
 motor_pin := Gear(m_c, z: s1_z0 + 0.5mm, phase: 120deg - 90deg - 15deg, N: pin_n, m: m_small,
                   shift: pin_shift, face: 4.75mm, bore: motor130_dims.shaft_d - 0.1mm,
-                  step: 3deg, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
+                  shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 // B's first compound: stage 1's gear over stage 2's pinion
 b1_gear := Gear(b_c, z: s1_z0, phase: 120deg + 90deg, N: s1_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 0, hub: 0mm, web: 0mm)
+                face: 5mm, bore: rod_b + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 b1_pin := Gear(b_c, z: s2_z0, phase: 75deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // D's first: stage 2's gear over stage 3's pinion
 d1_gear := Gear(d_c, z: s2_z0, phase: 75deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_d + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 8mm, web: 2.4mm)
+                face: 5mm, bore: rod_d + run, shaped: shaped, spokes: 5, hub: 8mm, web: 2.4mm)
 d1_pin := Gear(d_c, z: s3_z0, phase: 255deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_d + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_d + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // B's second: stage 3's gear over stage 4's pinion
 b2_gear := Gear(b_c, z: s3_z0, phase: 255deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 8mm, web: 2.4mm)
+                face: 5mm, bore: rod_b + run, shaped: shaped, spokes: 5, hub: 8mm, web: 2.4mm)
 b2_pin := Gear(b_c, z: s4_z0, phase: 75deg - 90deg - 15deg, N: pin_n, m: m_small,
-               shift: pin_shift, face: 5.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 5.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // D's second: stage 4's gear over stage 5's pinion, at module 1
 d2_gear := Gear(d_c, z: s4_z0, phase: 75deg + 90deg, N: big_n, m: m_small, shift: -pin_shift,
-                face: 5mm, bore: rod_d + run, step: 2deg, shaped: shaped,
-                spokes: 5, hub: 9mm, web: 3mm)
+                face: 5mm, bore: rod_d + run, shaped: shaped, spokes: 5, hub: 9mm, web: 3mm)
 d2_pin := Gear(d_c, z: s5_z0, phase: 255deg - 90deg - 15deg, N: pin_n, m: m_s5,
-               shift: pin_shift, face: 6.75mm, bore: rod_d + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 6.75mm, bore: rod_d + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 // B's third: stage 5's gear over the last pinion, which drives the wheel's ring
 b3_gear := Gear(b_c, z: s5_z0, phase: 255deg + 90deg, N: s5_n, m: m_s5, shift: -pin_shift,
-                face: 6mm, bore: rod_b + run, step: 2deg, shaped: shaped,
-                spokes: 0, hub: 0mm, web: 0mm)
+                face: 6mm, bore: rod_b + run, shaped: shaped, spokes: 0, hub: 0mm, web: 0mm)
 b3_pin := Gear(b_c, z: fin_z0, phase: 0deg - 90deg - 15deg, N: pin_n, m: m_fin,
-               shift: pin_shift, face: 10.75mm, bore: rod_b + run, step: 3deg, shaped: shaped,
+               shift: pin_shift, face: 10.75mm, bore: rod_b + run, shaped: shaped,
                spokes: 0, hub: 0mm, web: 0mm)
 
 construction motor_pinion := solid(motor_pin.g.gear)
