@@ -16,12 +16,12 @@ void ThermostatInput::update(uint32_t now_ms, bool low) {
   if (now_ms - start_ < kPresenceMs && !seen_low_) return;
 
   bool present = seen_low_ && now_ms - last_low_ < kPresenceMs;
-  bool calling = present != invert_;
+  bool calling = present != s_.stat_invert;
   if (calling != candidate_) {
     candidate_ = calling;
     candidate_since_ = now_ms;
   }
-  if (now_ms - candidate_since_ >= settle_) {
+  if (now_ms - candidate_since_ >= s_.stat_settle) {
     known_ = true;
     calling_ = candidate_;
   }

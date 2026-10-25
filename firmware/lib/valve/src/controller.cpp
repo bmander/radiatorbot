@@ -34,10 +34,7 @@ void Controller::tick(uint32_t now) {
   switch (state_) {
     case State::kIdle: {
       clear_ = false;
-      if (awake_ && now - stopped_ >= kBrakeMs) {
-        motor_.sleep();
-        awake_ = false;
-      }
+      sleepAfterBrake(now);
       if (desired_ == End::kUnknown || desired_ == position_) return;
       if (stopped_ever_ && now - stopped_ < s_.rest) return;
       begin(now, desired_);
@@ -62,23 +59,20 @@ void Controller::tick(uint32_t now) {
 
     case State::kBackoff: {
       amps_ = motor_.amps();
-      uint32_t backoff = target_ == End::kOpen ? s_.backoff_open : s_.backoff_close;
-      if (faulted(now) || desired_ != target_ || now - backoff_from_ >= backoff) {
+      uint32_t since = now - stopped_;  // the backoff began as the end was reached
+      if (faulted(now) || desired_ != target_ || since >= backoffAt(target_)) {
         stop(now);
         state_ = State::kIdle;
       } else {
-        motor_.drive(!forward(target_), ramped(now - backoff_from_));
+        motor_.drive(!forward(target_), ramped(since));
       }
       return;
     }
 
     case State::kFault: {
-      if (awake_ && now - stopped_ >= kBrakeMs) {
-        motor_.sleep();
-        awake_ = false;
-      }
-      bool fresh = clear_ || desired_ != failed_target_;
-      bool retry = failures_ <= kMaxRetries && now - failed_at_ >= s_.retry * 1000;
+      sleepAfterBrake(now);
+      bool fresh = clear_ || desired_ != target_;
+      bool retry = failures_ <= kMaxRetries && now - stopped_ >= s_.retry * 1000;
       clear_ = false;
       if (fresh) failures_ = 0;
       if (fresh || retry) state_ = State::kIdle;
@@ -97,9 +91,7 @@ void Controller::begin(uint32_t now, End target) {
   started_ = now;
   fault_ticks_ = 0;
   amps_ = 0;
-  float trip = target == End::kOpen ? s_.trip_open : s_.trip_close;
-  trip_.start(now, trip, s_.blank, s_.hold, s_.filter);
-  last_trip_ = trip;
+  trip_.start(now, tripAt(target), s_.blank, s_.hold, s_.filter);
   state_ = State::kRunning;
   motor_.drive(forward(target_), ramped(0));
 }
@@ -111,16 +103,14 @@ void Controller::finish(uint32_t now, Outcome outcome) {
   last_.duration_ms = now - started_;
   last_.running_a = trip_.running();
   last_.peak_a = trip_.peak();
-  last_.trip_a = last_trip_;
+  last_.trip_a = trip_.trip();
   moves_++;
 
   switch (outcome) {
     case Outcome::kReached: {
       position_ = target_;
       failures_ = 0;
-      uint32_t backoff = target_ == End::kOpen ? s_.backoff_open : s_.backoff_close;
-      if (backoff > 0 && desired_ == target_) {
-        backoff_from_ = now;
+      if (backoffAt(target_) > 0 && desired_ == target_) {
         state_ = State::kBackoff;
       } else {
         state_ = State::kIdle;
@@ -134,8 +124,6 @@ void Controller::finish(uint32_t now, Outcome outcome) {
     default:
       position_ = End::kUnknown;
       if (failures_ < 255) failures_++;
-      failed_at_ = now;
-      failed_target_ = target_;
       state_ = State::kFault;
       break;
   }
@@ -145,6 +133,13 @@ void Controller::stop(uint32_t now) {
   motor_.brake();
   stopped_ = now;
   stopped_ever_ = true;
+}
+
+void Controller::sleepAfterBrake(uint32_t now) {
+  if (awake_ && now - stopped_ >= kBrakeMs) {
+    motor_.sleep();
+    awake_ = false;
+  }
 }
 
 bool Controller::faulted(uint32_t now) {

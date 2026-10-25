@@ -10,6 +10,7 @@
 #include <vector>
 
 #include "controller.h"
+#include "mode.h"
 #include "settings.h"
 #include "thermostat.h"
 #include "trip_detector.h"
@@ -177,8 +178,10 @@ static void test_trip_wraps() {
 // == The thermostat ==============================================================================
 static void test_stat_ac_pulses() {
   g_test = "thermostat reads AC pulses as a call";
-  ThermostatInput in;
-  in.configure(3000, false);
+  Settings s;
+  s.stat_settle = 3000;
+  s.stat_invert = false;
+  ThermostatInput in(s);
   // 60 Hz: low for 7 ms of each 16.7 ms cycle
   uint32_t ms = 0;
   for (; ms < 2999; ms++) {
@@ -200,8 +203,10 @@ static void test_stat_ac_pulses() {
 
 static void test_stat_idle() {
   g_test = "thermostat idle";
-  ThermostatInput in;
-  in.configure(1000, false);
+  Settings s;
+  s.stat_settle = 1000;
+  s.stat_invert = false;
+  ThermostatInput in(s);
   for (uint32_t ms = 0; ms < 1200; ms++) in.update(ms, false);
   CHECK(in.known());
   CHECK(!in.calling());
@@ -209,8 +214,10 @@ static void test_stat_idle() {
 
 static void test_stat_glitch() {
   g_test = "thermostat ignores a glitch";
-  ThermostatInput in;
-  in.configure(1000, false);
+  Settings s;
+  s.stat_settle = 1000;
+  s.stat_invert = false;
+  ThermostatInput in(s);
   uint32_t ms = 0;
   for (; ms < 2000; ms++) in.update(ms, false);
   for (; ms < 2500; ms++) in.update(ms, true);   // half a second's contact
@@ -222,14 +229,47 @@ static void test_stat_glitch() {
 
 static void test_stat_invert() {
   g_test = "thermostat inverted";
-  ThermostatInput in;
-  in.configure(500, true);
+  Settings s;
+  s.stat_settle = 500;
+  s.stat_invert = true;
+  ThermostatInput in(s);
   uint32_t ms = 0;
   for (; ms < 700; ms++) in.update(ms, true);
   CHECK(in.known());
   CHECK(!in.calling());
   for (; ms < 1400; ms++) in.update(ms, false);
   CHECK(in.calling());
+}
+
+// == The mode ====================================================================================
+static void test_desired_end() {
+  g_test = "desired end";
+  Settings s;
+  s.stat_settle = 100;
+  ThermostatInput in(s);
+  CHECK(desiredEnd(Mode::kAuto, End::kUnknown, in) == End::kUnknown);  // not settled yet
+  uint32_t ms = 0;
+  for (; ms < 200; ms++) in.update(ms, false);
+  CHECK(desiredEnd(Mode::kAuto, End::kOpen, in) == End::kClosed);
+  for (; ms < 400; ms++) in.update(ms, true);
+  CHECK(desiredEnd(Mode::kAuto, End::kClosed, in) == End::kOpen);
+  // manual ignores the thermostat
+  CHECK(desiredEnd(Mode::kManual, End::kClosed, in) == End::kClosed);
+  CHECK(desiredEnd(Mode::kManual, End::kUnknown, in) == End::kUnknown);
+}
+
+static void test_settings_read_live() {
+  g_test = "thermostat and controller read live settings";
+  Rig r;
+  ThermostatInput in(r.s);
+  uint32_t ms = 0;
+  for (; ms < 4000; ms++) in.update(ms, true);
+  CHECK(in.calling());
+  r.s.stat_invert = true;  // as the console's `set` does
+  in.update(ms++, true);
+  r.s.stat_settle = 0;
+  in.update(ms++, true);
+  CHECK(!in.calling());
 }
 
 // == The settings ================================================================================
@@ -245,7 +285,6 @@ static void test_settings_table() {
     // every default lies within its own range
     char buf[32];
     formatField(s, fs[i], buf, sizeof buf);
-    CHECK(inRange(s, fs[i]));
     Settings t;
     CHECK(setField(t, fs[i], buf));
     // and it comes back from its text as it was
@@ -529,6 +568,8 @@ int main() {
   test_stat_glitch();
   test_stat_invert();
   test_settings_table();
+  test_desired_end();
+  test_settings_read_live();
   test_settings_parse();
   test_holds_without_desire();
   test_closes_and_opens();

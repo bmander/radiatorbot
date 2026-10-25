@@ -50,13 +50,17 @@ const Field* findField(const char* name);
 
 // Parses `text` into the field. False, leaving it unchanged, if it's malformed or out of range.
 bool setField(Settings& s, const Field& f, const char* text);
-// The field's value lies in its range.
-bool inRange(const Settings& s, const Field& f);
+// `v` lies in the field's range.
+bool inRange(const Field& f, float v);
 // The field's value as text, without its unit.
 void formatField(const Settings& s, const Field& f, char* buf, size_t len);
 
-float* floatField(Settings& s, const Field& f);
-uint32_t* uintField(Settings& s, const Field& f);
-bool* boolField(Settings& s, const Field& f);
+// The field's value, by its type.
+float& floatField(Settings& s, const Field& f);
+uint32_t& uintField(Settings& s, const Field& f);
+bool& boolField(Settings& s, const Field& f);
+float floatField(const Settings& s, const Field& f);
+uint32_t uintField(const Settings& s, const Field& f);
+bool boolField(const Settings& s, const Field& f);
 
 }  // namespace valve

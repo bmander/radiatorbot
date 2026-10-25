@@ -16,20 +16,22 @@ void load(valve::Settings& s) {
   for (size_t i = 0; i < n; i++) {
     const valve::Field& f = fs[i];
     if (!p.isKey(f.name)) continue;
-    valve::Settings t = s;
+    // A stored value outside the field's range (an older firmware's) is ignored.
     switch (f.type) {
-      case valve::FieldType::kFloat:
-        *valve::floatField(t, f) = p.getFloat(f.name, *valve::floatField(s, f));
+      case valve::FieldType::kFloat: {
+        float v = p.getFloat(f.name);
+        if (valve::inRange(f, v)) valve::floatField(s, f) = v;
         break;
-      case valve::FieldType::kUint:
-        *valve::uintField(t, f) = p.getUInt(f.name, *valve::uintField(s, f));
+      }
+      case valve::FieldType::kUint: {
+        uint32_t v = p.getUInt(f.name);
+        if (valve::inRange(f, v)) valve::uintField(s, f) = v;
         break;
+      }
       case valve::FieldType::kBool:
-        *valve::boolField(t, f) = p.getBool(f.name, *valve::boolField(s, f));
+        valve::boolField(s, f) = p.getBool(f.name);
         break;
     }
-    // A stored value outside the field's range (an older firmware's) is ignored.
-    if (valve::inRange(t, f)) s = t;
   }
   p.end();
 }
@@ -38,20 +40,19 @@ bool save(const valve::Settings& s) {
   Preferences p;
   if (!p.begin(kNamespace, false)) return false;
   bool ok = true;
-  valve::Settings t = s;  // the accessors take a mutable struct
   size_t n = 0;
   const valve::Field* fs = valve::fields(&n);
   for (size_t i = 0; i < n; i++) {
     const valve::Field& f = fs[i];
     switch (f.type) {
       case valve::FieldType::kFloat:
-        ok &= p.putFloat(f.name, *valve::floatField(t, f)) > 0;
+        ok &= p.putFloat(f.name, valve::floatField(s, f)) > 0;
         break;
       case valve::FieldType::kUint:
-        ok &= p.putUInt(f.name, *valve::uintField(t, f)) > 0;
+        ok &= p.putUInt(f.name, valve::uintField(s, f)) > 0;
         break;
       case valve::FieldType::kBool:
-        ok &= p.putBool(f.name, *valve::boolField(t, f)) > 0;
+        ok &= p.putBool(f.name, valve::boolField(s, f)) > 0;
         break;
     }
   }

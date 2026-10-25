@@ -46,7 +46,6 @@ class Controller {
   // The end to go to; kUnknown holds still, stopping a move under way.  A change of mind during
   // a move stops it, and after the rest the motor sets off for the new end.
   void setDesired(End end) { desired_ = end; }
-  End desired() const { return desired_; }
 
   // Forgets a failure, so the controller tries again at once.
   void clearFault() { clear_ = true; }
@@ -55,8 +54,10 @@ class Controller {
   void tick(uint32_t now_ms);
 
   State state() const { return state_; }
+  // The motor is running, toward an end or backing off one.
+  bool moving() const { return state_ == State::kRunning || state_ == State::kBackoff; }
   End position() const { return position_; }
-  // Where a move under way is going.
+  // Where a move under way, or the latest, is going.
   End target() const { return target_; }
   bool awake() const { return awake_; }
   // The latest reading, and its low-passed value, while the motor runs.
@@ -73,9 +74,14 @@ class Controller {
   void begin(uint32_t now, End target);
   void finish(uint32_t now, Outcome outcome);
   void stop(uint32_t now);
+  void sleepAfterBrake(uint32_t now);
   bool faulted(uint32_t now);
   float ramped(uint32_t since) const;
   bool forward(End toward) const { return (toward == End::kOpen) != s_.motor_invert; }
+  float tripAt(End end) const { return end == End::kOpen ? s_.trip_open : s_.trip_close; }
+  uint32_t backoffAt(End end) const {
+    return end == End::kOpen ? s_.backoff_open : s_.backoff_close;
+  }
 
   Motor& motor_;
   const Settings& s_;
@@ -88,12 +94,12 @@ class Controller {
   bool awake_ = false;
   bool stopped_ever_ = false;
   bool clear_ = false;
-  uint32_t started_ = 0, stopped_ = 0, backoff_from_ = 0, failed_at_ = 0;
+  // `stopped_` also marks when a backoff began and when a move failed; a failed move's end is
+  // `target_`, until the next begins.
+  uint32_t started_ = 0, stopped_ = 0;
   uint32_t fault_ticks_ = 0;
   uint8_t failures_ = 0;
-  End failed_target_ = End::kUnknown;
   float amps_ = 0;
-  float last_trip_ = 0;
 
   MoveReport last_;
   uint32_t moves_ = 0;

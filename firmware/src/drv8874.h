@@ -26,10 +26,11 @@ class Drv8874 : public valve::Motor {
 
   // The CS reading with no current, taken at each wake and taken off every reading.
   float offset_mv() const { return offset_mv_; }
+
+ private:
   // The CS pin's voltage, averaged over `n` readings.
   float read_mv(int n);
 
- private:
   const valve::Settings& s_;
   float offset_mv_ = 0;
 };

@@ -32,8 +32,14 @@ const Field kFields[] = {
 
 #undef FIELD
 
-char* base(Settings& s) { return reinterpret_cast<char*>(&s); }
-const char* base(const Settings& s) { return reinterpret_cast<const char*>(&s); }
+template <class T>
+T& at(Settings& s, const Field& f) {
+  return *reinterpret_cast<T*>(reinterpret_cast<char*>(&s) + f.offset);
+}
+template <class T>
+T at(const Settings& s, const Field& f) {
+  return *reinterpret_cast<const T*>(reinterpret_cast<const char*>(&s) + f.offset);
+}
 
 }  // namespace
 
@@ -49,11 +55,14 @@ const Field* findField(const char* name) {
   return nullptr;
 }
 
-float* floatField(Settings& s, const Field& f) { return reinterpret_cast<float*>(base(s) + f.offset); }
-uint32_t* uintField(Settings& s, const Field& f) {
-  return reinterpret_cast<uint32_t*>(base(s) + f.offset);
-}
-bool* boolField(Settings& s, const Field& f) { return reinterpret_cast<bool*>(base(s) + f.offset); }
+float& floatField(Settings& s, const Field& f) { return at<float>(s, f); }
+uint32_t& uintField(Settings& s, const Field& f) { return at<uint32_t>(s, f); }
+bool& boolField(Settings& s, const Field& f) { return at<bool>(s, f); }
+float floatField(const Settings& s, const Field& f) { return at<float>(s, f); }
+uint32_t uintField(const Settings& s, const Field& f) { return at<uint32_t>(s, f); }
+bool boolField(const Settings& s, const Field& f) { return at<bool>(s, f); }
+
+bool inRange(const Field& f, float v) { return v >= f.min && v <= f.max; }
 
 bool setField(Settings& s, const Field& f, const char* text) {
   if (text == nullptr || *text == '\0') return false;
@@ -61,24 +70,24 @@ bool setField(Settings& s, const Field& f, const char* text) {
   switch (f.type) {
     case FieldType::kFloat: {
       float v = strtof(text, &end);
-      if (*end != '\0' || !(v >= f.min && v <= f.max)) return false;
-      *floatField(s, f) = v;
+      if (*end != '\0' || !inRange(f, v)) return false;
+      floatField(s, f) = v;
       return true;
     }
     case FieldType::kUint: {
       if (*text == '-') return false;
       unsigned long v = strtoul(text, &end, 10);
-      if (*end != '\0' || v < f.min || v > f.max) return false;
-      *uintField(s, f) = static_cast<uint32_t>(v);
+      if (*end != '\0' || !inRange(f, v)) return false;
+      uintField(s, f) = static_cast<uint32_t>(v);
       return true;
     }
     case FieldType::kBool: {
       if (strcmp(text, "1") == 0 || strcmp(text, "on") == 0 || strcmp(text, "true") == 0) {
-        *boolField(s, f) = true;
+        boolField(s, f) = true;
         return true;
       }
       if (strcmp(text, "0") == 0 || strcmp(text, "off") == 0 || strcmp(text, "false") == 0) {
-        *boolField(s, f) = false;
+        boolField(s, f) = false;
         return true;
       }
       return false;
@@ -87,34 +96,16 @@ bool setField(Settings& s, const Field& f, const char* text) {
   return false;
 }
 
-bool inRange(const Settings& s, const Field& f) {
-  const char* p = base(s) + f.offset;
-  switch (f.type) {
-    case FieldType::kFloat: {
-      float v = *reinterpret_cast<const float*>(p);
-      return v >= f.min && v <= f.max;
-    }
-    case FieldType::kUint: {
-      uint32_t v = *reinterpret_cast<const uint32_t*>(p);
-      return v >= f.min && v <= f.max;
-    }
-    case FieldType::kBool:
-      return true;
-  }
-  return false;
-}
-
 void formatField(const Settings& s, const Field& f, char* buf, size_t len) {
-  const char* p = base(s) + f.offset;
   switch (f.type) {
     case FieldType::kFloat:
-      snprintf(buf, len, "%.6g", static_cast<double>(*reinterpret_cast<const float*>(p)));
+      snprintf(buf, len, "%.6g", static_cast<double>(floatField(s, f)));
       break;
     case FieldType::kUint:
-      snprintf(buf, len, "%lu", static_cast<unsigned long>(*reinterpret_cast<const uint32_t*>(p)));
+      snprintf(buf, len, "%lu", static_cast<unsigned long>(uintField(s, f)));
       break;
     case FieldType::kBool:
-      snprintf(buf, len, "%d", *reinterpret_cast<const bool*>(p) ? 1 : 0);
+      snprintf(buf, len, "%d", boolField(s, f) ? 1 : 0);
       break;
   }
 }

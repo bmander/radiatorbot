@@ -14,6 +14,7 @@ class TripDetector {
   // Feeds a reading; true once the trip has held.
   bool update(uint32_t now_ms, float amps);
 
+  float trip() const { return trip_; }
   float filtered() const { return filtered_; }
   // The highest filtered current past the blanking.
   float peak() const { return peak_; }

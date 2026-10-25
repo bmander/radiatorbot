@@ -8,11 +8,13 @@ the USB-C port shows what it's doing and sets it up. It uses no Wi-Fi or Bluetoo
 ## Layout
 
 - `src/` — the ESP32 side: `main.cpp` (the control loop), `drv8874.cpp` (the H-bridge and the
-  ADC), `console.cpp` (the serial console), `storage.cpp` (settings in flash), `pins.h`.
+  ADC), `console.cpp` (the serial console and the log), `storage.cpp` (settings in flash),
+  `pins.h`.
 - `lib/valve/` — everything that doesn't touch hardware, tested on the host:
   - `controller` — the state machine that drives the valve to an end and knows where it is;
   - `trip_detector` — end of travel from the current: blanking, low-pass, trip and hold;
   - `thermostat` — the optocoupler's input, pulsing from 24 VAC or steady from DC, settled;
+  - `mode` — where the valve should go: the thermostat's say in auto, the console's in manual;
   - `settings` — the tunable figures and the table the console and the flash use.
 - `host_test/` — those tests, against a simulated motor and valve.
 
