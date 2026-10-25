@@ -19,8 +19,8 @@ valve under motor control.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
   - `boards.sv` — the bought boards on the perfboard: a Seeed XIAO ESP32-C3 and a Pololu DRV8874
     motor driver (whose current output senses the stall), on their headers.
-  - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
-    open questions.
+  - `DESIGN.md` — how the bot works, the drive's numbers, fits, assembly and open questions.
+  - `BOM.md` — the bill of materials: printed parts, drill rod, screws, motor and electronics.
   - `export.sh` — writes every printed part as STL.
 
 ## Tooling: Solvent

@@ -182,26 +182,12 @@ wheel as blanks while changing the layout.
 
 ## Bill of materials
 
-- **Printed:** frame, base, clamp cap, cover, wheel (with ring), axle collar, motor pinion, and
-  compounds B1, B2, B3, D1, D2.
-- **Drill rod:** 8 mm × 67 mm (wheel axle); 5 mm × 46 mm, two of them (B and D).
-- **Screws:**
-  - M4 × 50, four, with nuts (clamp);
-  - M3 × 10 self-tapping, eight (base to lid, cover);
-  - M2.5 × 6, four (perfboard);
-  - M3 set screw (collar).
-- **Motor:** one 130 motor from the pile. Its pinion is a press fit on the 2 mm shaft.
-- **Electronics, on a 5 × 7 cm perfboard** (no fabbed PCB); see *The electronics*:
-  - a Seeed XIAO ESP32-C3 ($4.99), with two 7-pin 0.1 in male headers and its FPC antenna;
-  - a Pololu DRV8874 carrier (#4035, $11.94), its headers included: the H-bridge, and its CS pin
-    gives the motor's current, read by the XIAO's ADC for the end-of-travel sensing;
-  - for 24 VAC off the thermostat transformer: a bridge rectifier and a buck module rated above
-    40 V in and about 2.5 A out (rectified 24 VAC peaks near 34 V, beyond an MP1584's rating).
-    On a 5 V USB supply instead, leave both out;
-  - an optocoupler to read the thermostat's call for heat;
-  - a 3-way 5.08 mm screw terminal.
-- **Cable entries** are in the bay's end wall: a grommet hole for the thermostat and supply cable,
-  and a window on the XIAO's USB-C.
+The full list, with sizes, quantities, materials and the power options, is in `BOM.md`. In short:
+twelve printed parts, three lengths of drill rod (8 mm × 67 mm; 5 mm × 46 mm, two of them), the
+clamp's four M4 bolts and nuts, eight M3 and four M2.5 self-tapping screws, an M3 set screw, a 130
+motor from the pile, and on a 5 × 7 cm perfboard the XIAO ESP32-C3 and the DRV8874 carrier (see
+*The electronics*). The cable entries are in the bay's end wall: a grommet hole for the thermostat
+and supply cable, and a window on the XIAO's USB-C.
 
 ## Assembly
 
