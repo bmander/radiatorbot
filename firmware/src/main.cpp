@@ -100,7 +100,9 @@ void setup() {
   app.motor.begin();
   pinMode(pins::kThermostat, INPUT_PULLUP);
 
-  // The console never holds up the motor: with no host reading, output is dropped.
+  // The console never holds up the motor: with no host reading, output is dropped.  The buffer
+  // takes the longest reply (`help`, `get`) whole.
+  Serial.setTxBufferSize(4096);
   Serial.setTxTimeoutMs(0);
   Serial.begin(115200);
 
