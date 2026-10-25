@@ -22,6 +22,9 @@ valve under motor control.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
   - `export.sh` — writes every printed part as STL.
+- `firmware/` — the XIAO ESP32-C3's firmware, a PlatformIO project: it opens the valve while the
+  thermostat calls for heat and closes it after, finding each end of travel by the motor's
+  current, with a USB serial console for setting it up. See [firmware/README.md](firmware/README.md).
 
 ## Tooling: Solvent
 
