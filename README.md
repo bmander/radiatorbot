@@ -54,4 +54,4 @@ sh hardware/export.sh            # every printed part as STL, into hardware/stl
 The models are checked with Solvent v0.1.4 (`SOLVENTC_VERSION=v0.1.4` pins the installer to it).
 The gears are cut by their exact rack sweeps, which v0.1.4 builds slowly; geomsolver's faster
 swept-cut build (`make solventc` on its `main` once it lands, or a release after v0.1.4) exports
-them in about a minute for the whole bot.
+the whole bot in under a minute, its STLs smaller than the bites' were (4.2 MB against 8.4).
