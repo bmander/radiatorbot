@@ -10,9 +10,9 @@
 //
 // The cut is the exact envelope of the rack's tooth, not a run of bites at discrete rolls: no
 // scallops, quicker to build than the bites were, and a smaller STL (a few faces, each meshed
-// along its rulings).  A gear's tooth spaces are one space
-// turned a pitch at a time, so the kernel builds one sector and turns it; a spoked gear is
-// shaped whole first and its windows cut after, since the windows do not turn by a pitch.
+// along its rulings).  A gear's tooth spaces are one space turned a pitch at a time, so the
+// kernel builds one sector and turns it; a spoked gear is shaped whole first and its windows cut
+// after, since the windows do not turn by a pitch.
 //
 // A gear is drawn about its own std.origin, its axis std.z and its faces at z0 and z1, so it is
 // placed by a mate and every copy of one size is one figure.  Its solid is construction: an
