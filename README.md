@@ -51,7 +51,7 @@ solventc hardware/radiatorbot.sv
 sh hardware/export.sh            # every printed part as STL, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.3 (`SOLVENTC_VERSION=v0.1.3` pins the installer to it).
-Exporting the gears needs a newer `solventc`: v0.1.3 refuses a 12-tooth pinion's swept region and
-builds the exact cuts slowly, so build `solventc` from geomsolver's `main` (`make solventc`) until a
-release carries the faster swept-cut build.
+The models are checked with Solvent v0.1.4 (`SOLVENTC_VERSION=v0.1.4` pins the installer to it).
+The gears are cut by their exact rack sweeps, which v0.1.4 builds slowly; geomsolver's faster
+swept-cut build (`make solventc` on its `main` once it lands, or a release after v0.1.4) exports
+them in about a minute for the whole bot.
