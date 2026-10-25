@@ -221,6 +221,7 @@ gear and the wheel as blanks while changing the layout.
     the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
     walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
+  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 11.5.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     lid, the base against the frame, the clamp on the pipe).
 
@@ -234,7 +235,9 @@ gear and the wheel as blanks while changing the layout.
   - M3 × 10 self-tapping, eight (base to lid, cover);
   - M2.5 × 6, four (perfboard);
   - M3 set screw (collar).
-- **Motor:** one 130 motor from the pile. Its pinion is a press fit on the 2 mm shaft.
+- **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
+  across the flats and 30.65 mm long. Its pinion is a press fit on the 2 mm shaft, which runs on
+  8.3 mm past the pinion, beside stage 2.
 - **Electronics, on a 5 × 7 cm perfboard** (no fabbed PCB); see *The electronics*:
   - a Seeed XIAO ESP32-C3 ($4.99), with two 7-pin 0.1 in male headers and its FPC antenna;
   - an Adafruit DRV8871 breakout (#3190, $7.50), its header and terminal blocks included: the
