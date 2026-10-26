@@ -2,7 +2,10 @@
 // through a wheel conjugate to it.
 //
 // Coordinates are the valve's (radiator_valve.sv): the stem is std.z, z = 0 is the packing nut's
-// bottom face, the radiator lies toward +x.  The bot hangs on the valve's -x side:
+// bottom face, the radiator lies toward +x.  The bot is laid out in a frame of its own, `bot`,
+// turned `bot_turn` (a quarter turn) about the stem, and hangs on that frame's -x side: the
+// valve's -y side, beside the outlet, turned 90deg clockwise seen from below from where it hung
+// off the outlet's far end.  In the bot's frame:
 //
 //   - the **wheel** turns about an axle `wheel_c` out along -x, at the handle's height.  Its
 //     pockets are what the handle, drafted as it is, sweeps through its blank as the two turn
@@ -15,7 +18,8 @@
 //     beside it the Arduino with a perfboard shield on it carrying the motor driver and its
 //     current monitor, the cable entries), and the spine up beside the valve to the **clamp**, a
 //     split block round the inlet hex and the supply pipe above it.  The hex takes the handle's
-//     reaction torque positively; the bolted cap closes the clamp from +x.
+//     reaction torque positively; the bolted cap closes the clamp from +x, the side away from
+//     the bot.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
@@ -112,8 +116,8 @@ claim m_s5 * (pin_n + s5_n) / 2 == cd_bd                // stage 5 stands on the
 pin_wall := m_small * (pin_n / 2 + pin_shift - 1.25) - rod_bore / 2   // roots to bore, module 0.8
 claim pin_wall >= 1.5mm
 
-// The bearings of the lines of centres, from +x: B to the wheel 0deg, B to D 75deg, B to the
-// motor -60deg; each the other way round is 180deg on.
+// The bearings of the lines of centres, from the bot's +x: B to the wheel 0deg, B to D 75deg, B
+// to the motor -60deg; each the other way round is 180deg on.
 bd_bearing := 75deg
 bm_bearing := -60deg
 
@@ -179,9 +183,9 @@ clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's under
 clamp_z1 := clamp_z0 + 31.7mm
 
 // == Plan ========================================================================================
-// The housing's outline, the clamp and the spine, in plan (x, y): the box the base, the lid, the
-// bay and the cover all share.  Its end wall and its sides stand about 2.4 mm off the tips of
-// the 64-tooth gears on B (at x = -105) and on D (30.9 mm up +y).
+// The housing's outline, the clamp and the spine, in plan (x, y) in the bot's frame: the box the
+// base, the lid, the bay and the cover all share.  Its end wall and its sides stand about 2.4 mm
+// off the tips of the 64-tooth gears on B (at x = -105) and on D (30.9 mm up +y).
 box_x0 := -136mm
 box_x1 := -35mm
 box_y0 := -31mm
@@ -189,8 +193,12 @@ box_y1 := 62mm
 spine_x1 := -21.5mm             // 4 mm off the valve's bulge and collar
 spine_w := 28mm
 clamp_reach := 26mm             // each half of the clamp, out from the stem
-clamp_w := 50mm
-clamp_bolt_y := 20mm
+clamp_w := 48mm                 // its side toward the radiator 2 mm off the outlet's union nut
+clamp_bolt_y := 19mm
+// The clamp's bolts: both rows over the hex's pocket, whose corners stand on the split where a
+// bolt beside the hex would pass, the lower row a millimetre and a half over it.
+clamp_bolt_z0 := body_dims.inlet_top + 0.2mm + m4_clear / 2 + 1.5mm
+clamp_bolt_z1 := clamp_z1 - 7mm
 screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
 // The Uno and its shield (boards.sv) stand beside the motor, by the Uno's frame, its power
 // header's first pin at (uno_ox, uno_oy): its jack's mouth a millimetre in from the end wall's
@@ -284,13 +292,14 @@ component Collar(x: Length, y: Length, r: Length, bore: Length, z0: Length, z1: 
 
 // A printed gear seated on an axle: its figure (gears.sv) with its origin `z` up the axle from
 // `c`, its axis up the world's z.  `bearing` is the line of centres' to the gear it meshes with,
-// from the pinion's axle to the gear's, and `drives` says which this is: 1 for the pinion, which
-// drives, 0 for the gear it drives.  The pinion is shifted +pin_shift and stands a tooth on the
-// line of centres; its gear is shifted -pin_shift and stands a space on it (the figure's cut
-// space is on +v: a pinion turned `bearing - 90deg - 180deg / N`, its gear `bearing + 90deg`).
-// Gears of one size and face are one figure, shaped once.  A large gear is spoked to save
-// material: `spokes` of them, `web` wide, between a hub of radius `hub` (clear of the pinion it
-// carries) and a rim `web` thick under its roots; 0 spokes, solid.
+// from the pinion's axle to the gear's, read from the bot's x (`bot_turn` from the world's), and
+// `drives` says which this is: 1 for the pinion, which drives, 0 for the gear it drives.  The
+// pinion is shifted +pin_shift and stands a tooth on the line of centres; its gear is shifted
+// -pin_shift and stands a space on it (the figure's cut space is on +v: a pinion turned `bearing
+// - 90deg - 180deg / N`, its gear `bearing + 90deg`).  Gears of one size and face are one figure,
+// shaped once.  A large gear is spoked to save material: `spokes` of them, `web` wide, between a
+// hub of radius `hub` (clear of the pinion it carries) and a rim `web` thick under its roots;
+// 0 spokes, solid.
 component Gear(c: point, z: Length, bearing: Angle, drives: Int, N: Int, m: Length, face: Length,
                bore: Length, spokes: Int, hub: Length, web: Length) {
   at := point
@@ -298,7 +307,8 @@ component Gear(c: point, z: Length, bearing: Angle, drives: Int, N: Int, m: Leng
   g := ShapedSpur(N: N, m: m, phi: pa, shift: (2 * drives - 1) * pin_shift, thin: thin,
                   z0: 0mm, z1: face, bore: bore, shaped: shaped, chamfer: chamfer,
                   spokes: spokes, hub: hub, web: web)
-  g seats(turn: bearing + 90deg + drives * (180deg - 180deg / N), up: std.z, east: std.x) at
+  g seats(turn: bot_turn + bearing + 90deg + drives * (180deg - 180deg / N), up: std.z,
+          east: std.x) at
   construction gear := solid(g.gear)
 }
 
@@ -348,17 +358,37 @@ component ConjugateWheel(open_top: plane, stem: line, spindle: line, c: point, s
 param handle_turn: Angle over (0deg, 360deg)
 valve := RadiatorValve(handle_turn: handle_turn)
 
+// == The bot's frame =============================================================================
+// The bot is drawn in a frame of its own, `bot`, turned `bot_turn` about the stem from the
+// valve's: every plan number above (the box, the spine, the clamp, the boards' places) is in it,
+// its x out from the stem through the clamp's split to the bot's far end at -x, its z the stem's.
+// A quarter turn stands the bot on the valve's -y side, beside the outlet rather than off its far
+// end: turned 90deg clockwise as seen from below, looking at the handle.  The parts square to the
+// bot (`Block`, `BoreX`, `NutX`, `At` and what stands on it, the collars) are called `in bot`;
+// the axles' points are drawn in the world's top plane, turned by `bot_turn`, and every part
+// seated on them (the gears, the motor, the boards) is turned by it too.
+bot_turn := 90deg
+bot := frame
+fix(origin == (0mm, 0mm, 0mm)) bot
+fix(dir == (cos(bot_turn), sin(bot_turn), 0)) bot.u
+fix(dir == (-sin(bot_turn), cos(bot_turn), 0)) bot.v
+
 // == The axles ===================================================================================
-// A, the wheel's, is `wheel_c` out along -x; B is the last pinion's, `cd_fin` beyond it; D stands
-// `cd_bd` from B at `bd_bearing`; the motor's axis M is `cd_s1` from B at `bm_bearing`.
+// A, the wheel's, is `wheel_c` out along the bot's -x; B is the last pinion's, `cd_fin` beyond
+// it; D stands `cd_bd` from B at `bd_bearing`; the motor's axis M is `cd_s1` from B at
+// `bm_bearing`, each bearing from the bot's x.
+a_r := -wheel_c
+b_r := -wheel_c - cd_fin
 in std.top {
-  a_c := point in std.top, std.front
-  std.top.origin distance(-wheel_c, along: u) a_c
-  b_c := point in std.top, std.front
-  std.top.origin distance(-wheel_c - cd_fin, along: u) b_c
-  d_c := point hint((-wheel_c - cd_fin + cd_bd * cos(bd_bearing), cd_bd * sin(bd_bearing)))
+  a_c := point hint((a_r * cos(bot_turn), a_r * sin(bot_turn)))
+  a_c coords(du: a_r * cos(bot_turn), dv: a_r * sin(bot_turn)) std.top
+  b_c := point hint((b_r * cos(bot_turn), b_r * sin(bot_turn)))
+  b_c coords(du: b_r * cos(bot_turn), dv: b_r * sin(bot_turn)) std.top
+  d_c := point hint((b_r * cos(bot_turn) + cd_bd * cos(bot_turn + bd_bearing),
+                     b_r * sin(bot_turn) + cd_bd * sin(bot_turn + bd_bearing)))
   b_c distance(cd_bd) d_c
-  m_c := point hint((-wheel_c - cd_fin + cd_s1 * cos(bm_bearing), cd_s1 * sin(bm_bearing)))
+  m_c := point hint((b_r * cos(bot_turn) + cd_s1 * cos(bot_turn + bm_bearing),
+                     b_r * sin(bot_turn) + cd_s1 * sin(bot_turn + bm_bearing)))
   b_c distance(cd_s1) m_c
   construction b_d := line(b_c, d_c)
   construction b_m := line(b_c, m_c)
@@ -409,9 +439,9 @@ wheel_bore.body cut wheel_part
 // The wheel kept on its axle: a collar under it, and one over it, under the base's bridge.  The
 // two are one print.
 lo_collar := Collar(x: -wheel_c, y: 0mm, r: collar_r, bore: axle_bore, z0: lo_collar_z1 - collar_h,
-                    z1: lo_collar_z1)
+                    z1: lo_collar_z1) in bot
 hi_collar := Collar(x: -wheel_c, y: 0mm, r: collar_r, bore: axle_bore, z0: hi_collar_z0,
-                    z1: hi_collar_z0 + collar_h)
+                    z1: hi_collar_z0 + collar_h) in bot
 collar_part := solid(lo_collar.part)
 
 // == The gear train ==============================================================================
@@ -498,12 +528,12 @@ pinion := motor_pinion in motor_turn
 motor_at := point
 motor_at raised(d: motor_z, along: std.z) m_c
 motor := Motor130(motor130_dims)
-motor seats(turn: 0deg, up: std.z, east: std.x) motor_at
+motor seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 
 cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z, z1: 18mm)
-cradle_out seats(turn: 0deg, up: std.z, east: std.x) motor_at
+cradle_out seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 cradle_in := MotorCan(motor130_dims, grow: gap, z0: 0mm, z1: 19mm)
-cradle_in seats(turn: 0deg, up: std.z, east: std.x) motor_at
+cradle_in seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 cradle := solid(cradle_out.body)
 cradle_in.body cut cradle
 
@@ -512,18 +542,18 @@ cradle_in.body cut cradle
 // wheel's ring turns under the train (the whole of its +x end, down there), and a bridge across
 // it, standing on the upper collar, holds the wheel's axle.  Four M3 screws down through the lid
 // hold it up to the frame (below).
-base_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: floor_z0, z1: lid_z0)
+base_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: floor_z0, z1: lid_z0) in bot
 base_cavity := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
-                     z0: floor_z1, z1: lid_z0 + 1mm)
+                     z0: floor_z1, z1: lid_z0 + 1mm) in bot
 base_shell := solid(base_box.body)
 base_cavity.body cut base_shell
 
 bridge := Block(x0: -wheel_c, x1: box_x1 - wall, y0: -collar_r, y1: collar_r, z0: bridge_z0,
-                z1: bridge_z1)
+                z1: bridge_z1) in bot
 bridge_boss := Post(a_c, r: collar_r, z0: bridge_z0, z1: bridge_z1)
 ring_room := Post(a_c, r: 39mm, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
 ring_side := Block(x0: -wheel_c, x1: box_x1 + 1mm, y0: box_y0 - 1mm, y1: box_y1 + 1mm,
-                   z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)       // and the box's end over it
+                   z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm) in bot  // and the box's end over it
 base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: bridge_z1 + 1mm)
 base_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
 base_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
@@ -541,17 +571,17 @@ base_hole_d.body cut base
 // One print, the bot's backbone: the wheel's axle and the train's rods stand in its lid, the
 // electronics bay stands on it, and the spine carries it all up beside the valve to the clamp
 // round the inlet hex and the pipe.
-lid := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z0, z1: lid_z1)
-bay_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z1, z1: bay_z1)
+lid := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z0, z1: lid_z1) in bot
+bay_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z1, z1: bay_z1) in bot
 bay_room := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
-                  z0: lid_z1 - 1mm, z1: bay_z1 + 1mm)
+                  z0: lid_z1 - 1mm, z1: bay_z1 + 1mm) in bot
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
 
 spine := Block(x0: box_x1, x1: spine_x1, y0: -spine_w / 2, y1: spine_w / 2, z0: spine_z0,
-               z1: clamp_z1)
+               z1: clamp_z1) in bot
 clamp_main := Block(x0: -clamp_reach, x1: -split / 2, y0: -clamp_w / 2, y1: clamp_w / 2,
-                    z0: clamp_z0, z1: clamp_z1)
+                    z0: clamp_z0, z1: clamp_z1) in bot
 
 // the rods' holes, the motor's boss and shaft
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
@@ -564,13 +594,15 @@ motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 // the cable entries, in the bay's far end wall: a grommet for the thermostat's cable, low beside
 // the motor, and a window each on the Uno's barrel jack and its USB-C that a cable's moulded plug
 // passes through to mate
-grommet := BoreX(y: -14mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm)
+grommet := BoreX(y: -14mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm,
+                 x1: box_x0 + wall + 1mm) in bot
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
                   y0: usb_y - uno_dims.plug_w / 2 - gap, y1: usb_y + uno_dims.plug_w / 2 + gap,
-                  z0: usb_z - uno_dims.plug_h / 2 - gap, z1: usb_z + uno_dims.plug_h / 2 + gap)
+                  z0: usb_z - uno_dims.plug_h / 2 - gap,
+                  z1: usb_z + uno_dims.plug_h / 2 + gap) in bot
 jack_half := uno_dims.jack_plug / 2 + gap
 jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_half,
-                   y1: jack_y + jack_half, z0: jack_z - jack_half, z1: jack_z + jack_half)
+                   y1: jack_y + jack_half, z0: jack_z - jack_half, z1: jack_z + jack_half) in bot
 
 frame_part := solid(lid.body)
 bay_shell union frame_part
@@ -591,10 +623,10 @@ jack_slot.body cut frame_part
 repeat 2 as i {
   repeat 2 as j {
     base_at := At(x: box_x0 + screw_inset + i * (box_x1 - box_x0 - 2 * screw_inset),
-                  y: box_y0 + screw_inset + j * (box_y1 - box_y0 - 2 * screw_inset))
+                  y: box_y0 + screw_inset + j * (box_y1 - box_y0 - 2 * screw_inset)) in bot
     base_screw := ScrewPost(base_at.p, r: 4mm, z0: floor_z1, z1: lid_z0, hole_d: pilot,
-                            depth: 12mm)
-    lid_screw := Post(base_at.p, r: m3_clear / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
+                            depth: 12mm) in bot
+    lid_screw := Post(base_at.p, r: m3_clear / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm) in bot
     base_screw.post union base
     base_screw.hole cut base
     lid_screw.body cut frame_part
@@ -605,9 +637,9 @@ repeat 2 as i {
 // 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
 // Each hole runs a millimetre on into the lid.
 repeat h in uno_holes {
-  uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y)
+  uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y) in bot
   uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot,
-                         depth: uno_z - lid_z1 + 1mm)
+                         depth: uno_z - lid_z1 + 1mm) in bot
   uno_screw.post union frame_part
   uno_screw.hole cut frame_part
 }
@@ -623,20 +655,27 @@ cover_screws := [
   (-55mm, box_y1 - screw_inset),                   // north
 ]
 repeat c in cover_screws {
-  cover_at := At(x: c.x, y: c.y)
-  cover_screw := ScrewPost(cover_at.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
+  cover_at := At(x: c.x, y: c.y) in bot
+  cover_screw := ScrewPost(cover_at.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot,
+                           depth: 12mm) in bot
   cover_screw.post union frame_part
   cover_screw.hole cut frame_part
 }
 
 // == The clamp ===================================================================================
-// A block round the inlet hex and the pipe above it, split on the stem's plane square to x:
-// the fixed half is the frame's, the cap bolts to it from +x with four M4 bolts, their nuts in
-// pockets in the fixed half's back.  The hex's pocket stands a print's clearance off every flat,
-// so the hex takes the handle's torque; the pipe's bore is the pipe's, so the closing split
-// grips it.  The clamp hangs on the hex's top face.
+// A block round the inlet hex and the pipe above it, split on the stem's plane square to the
+// bot's x: the fixed half is the frame's, on the bot's side, and the cap bolts to it from the
+// other, out of the radiator's way, with four M4 bolts, their nuts in pockets in the fixed half's
+// back.  The hex's pocket stands a print's clearance off every flat, so the hex takes the
+// handle's torque; the pipe's bore is the pipe's, so the closing split grips it.  The clamp hangs
+// on the hex's top face.
+//
+// With the bot a quarter turn round, the split runs through two of the hex's corners, so each
+// half holds three whole flats and the bolts close the two halves square onto the middle ones.
+// Those corners stand where the bolts would pass beside the hex, so both rows of bolts grip the
+// pipe over it.  The clamp's side toward the radiator stands beside the outlet's union nut.
 clamp_cap := Block(x0: split / 2, x1: clamp_reach, y0: -clamp_w / 2, y1: clamp_w / 2,
-                   z0: clamp_z0, z1: clamp_z1)
+                   z0: clamp_z0, z1: clamp_z1) in bot
 cap_part := solid(clamp_cap.body)
 
 hex_room := HexBar(std.top.origin, valve.top_ref, af: body_dims.inlet_af + 2 * gap, phase: 0deg,
@@ -649,28 +688,30 @@ pipe_room.bar cut frame_part
 pipe_room.bar cut cap_part
 
 repeat 2 as i {
-  bolt_lo := BoreX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_z0 + 5mm, d: m4_clear,
-                   x0: -clamp_reach - 1mm, x1: clamp_reach + 1mm)
-  bolt_hi := BoreX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_z1 - 7mm, d: m4_clear,
-                   x0: -clamp_reach - 1mm, x1: clamp_reach + 1mm)
-  nut_lo := NutX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_z0 + 5mm, af: m4_nut_af,
-                 x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm)
-  nut_hi := NutX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_z1 - 7mm, af: m4_nut_af,
-                 x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm)
+  bolt_lo := BoreX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z0, d: m4_clear,
+                   x0: -clamp_reach - 1mm, x1: clamp_reach + 1mm) in bot
+  bolt_hi := BoreX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z1, d: m4_clear,
+                   x0: -clamp_reach - 1mm, x1: clamp_reach + 1mm) in bot
+  nut_lo := NutX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z0, af: m4_nut_af,
+                 x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm) in bot
+  nut_hi := NutX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z1, af: m4_nut_af,
+                 x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm) in bot
   bolt_lo.body cut frame_part
   bolt_lo.body cut cap_part
   bolt_hi.body cut frame_part
   bolt_hi.body cut cap_part
   nut_lo.nut.bar cut frame_part
   nut_hi.nut.bar cut frame_part
+  claim bolt_lo.body clear(1mm) hex_room.bar
 }
 
 // == The cover ===================================================================================
-cover := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: bay_z1, z1: bay_z1 + wall)
+cover := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: bay_z1, z1: bay_z1 + wall) in bot
 cover_part := solid(cover.body)
 repeat c in cover_screws {
-  cover_hole_at := At(x: c.x, y: c.y)
-  cover_hole := Post(cover_hole_at.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
+  cover_hole_at := At(x: c.x, y: c.y) in bot
+  cover_hole := Post(cover_hole_at.p, r: m3_clear / 2, z0: bay_z1 - 1mm,
+                     z1: bay_z1 + wall + 1mm) in bot
   cover_hole.body cut cover_part
 }
 
@@ -685,25 +726,25 @@ repeat c in cover_screws {
 //     Uno reads for the end-of-travel sensing;
 //   - a 2-way 5.08 mm screw terminal for the thermostat's two wires, at the shield's -x end by
 //     the grommet, its pins in the shield's column 1, rows 7 and 9.
-uno_c := At(x: uno_ox, y: uno_oy)
+uno_c := At(x: uno_ox, y: uno_oy) in bot
 uno_at := point
 uno_at raised(d: uno_z, along: std.z) uno_c.p
 uno := UnoR4Minima(uno_dims)
-uno seats(turn: 0deg, up: std.z, east: std.x) uno_at
+uno seats(turn: bot_turn, up: std.z, east: std.x) uno_at
 shield := Shield(shield_dims, u: uno_dims, h: header_dims)
-shield seats(turn: 0deg, up: std.z, east: std.x) uno_at
-drv_c := At(x: drv_cx, y: drv_cy)
-ina_c := At(x: ina_cx, y: ina_cy)
+shield seats(turn: bot_turn, up: std.z, east: std.x) uno_at
+drv_c := At(x: drv_cx, y: drv_cy) in bot
+ina_c := At(x: ina_cx, y: ina_cy) in bot
 drv_at := point
 drv_at raised(d: shield_z, along: std.z) drv_c.p
 driver := Drv8871(drv8871_dims, h: header_dims)
-driver seats(turn: -90deg, up: std.z, east: std.x) drv_at
+driver seats(turn: bot_turn - 90deg, up: std.z, east: std.x) drv_at
 ina_at := point
 ina_at raised(d: shield_z, along: std.z) ina_c.p
 monitor := Ina219(ina219_dims, h: header_dims)
-monitor seats(turn: -90deg, up: std.z, east: std.x) ina_at
+monitor seats(turn: bot_turn - 90deg, up: std.z, east: std.x) ina_at
 terminal := Block(x0: uno_ox - pitch - 3.8mm, x1: uno_ox - pitch + 3.8mm, y0: uno_oy + 6 * pitch,
-                  y1: uno_oy + 10 * pitch, z0: shield_z, z1: shield_z + 10mm)
+                  y1: uno_oy + 10 * pitch, z0: shield_z, z1: shield_z + 10mm) in bot
 
 // The boards in the bay: a mated cable's plug through each of the end wall's windows, and the
 // boards, the Uno's parts and the pins' tails clear of the frame, the motor and the cover, and of
@@ -802,4 +843,7 @@ when checks == 1 {
   claim base clear(2mm) valve.packing_nut.bar
   claim base clear(0.3mm) valve.star_handle.handle
   claim frame_part clear(1mm) valve.union.nut.bar
+  claim cap_part clear(1mm) valve.union.nut.bar
+  claim frame_part clear(1mm) valve.body.boss.bar
+  claim cap_part clear(1mm) valve.body.boss.bar
 }
