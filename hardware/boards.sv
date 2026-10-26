@@ -184,8 +184,7 @@ ina219_dims := {
 // VIN+ to VIN- is the shunt; the 3.5 mm terminal at the far end is the same two nets, and isn't
 // fitted.  SCL and SDA are pulled up to VCC (10 kOhm) on the board; the address is 0x40.
 
-// A box square to the body's frame: x0..x1, y0..y1, z0..z1.  Its middle is placed by its
-// ordinates, or on an axis where one is zero (a zero ordinate is a relation, not a number).
+// A box square to the body's frame: x0..x1, y0..y1, z0..z1, its middle placed by its ordinates.
 component Box(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: Length) {
   cx := (x0 + x1) / 2
   cy := (y0 + y1) / 2
