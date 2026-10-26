@@ -49,8 +49,9 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     the bolts close the halves square onto the middle two.
   - Those corners stand where a bolt beside the hex would pass, so both rows of bolts grip the
     pipe above the hex. The lower row clears the hex's pocket by 1.7 mm, and that is claimed.
-  - The clamp's radiator-side face stands beside the outlet's union nut. The clamp is 48 mm
-    across, so that face clears the nut by 2 mm.
+  - The clamp is 48 mm across, so its radiator-side face reaches out over the outlet's union nut
+    (18.5 mm from the stem, 18.8 mm thick), whose top stands above the hex's underside. Both
+    halves are relieved round the nut, its hex grown 2 mm all round.
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
   the ring, and a bridge across it holds the wheel's axle, standing on the upper collar just
   above the ring.
