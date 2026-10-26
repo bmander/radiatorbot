@@ -39,7 +39,7 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims, shield_top)
+use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims)
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
@@ -169,7 +169,7 @@ bridge_z0 := hi_collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 spine_z0 := s5_z0               // the spine's foot, over the wheel's ring
 uno_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm    // the Uno's underside
-shield_z := uno_z + shield_top                          // the shield's top face
+shield_z := uno_z + shield.top                          // the shield's top face
 // the driver's terminal blocks, the tallest parts on the shield, 1.4 mm under the cover
 bay_z1 := shield_z + header_dims.body_h + drv8871_dims.pcb_t + drv8871_dims.block_h + 1.4mm
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
@@ -204,10 +204,10 @@ drv_cy := uno_oy + 3.5 * pitch
 ina_cx := uno_ox + 7 * pitch
 ina_cy := uno_oy + 13.5 * pitch
 // The end wall's windows: the USB-C's axis and the jack's, up from the Uno's underside.
-usb_z := uno_z + uno_dims.pcb_t + uno_dims.usb_h / 2
+usb_z := uno_z + uno.usb_z
 usb_y := uno_oy + uno_dims.usb_y
-jack_z := uno_z + uno_dims.pcb_t + uno_dims.jack_z
-jack_y := uno_oy + (uno_dims.jack_y0 + uno_dims.jack_y1) / 2
+jack_z := uno_z + uno.jack_z
+jack_y := uno_oy + uno.jack_y
 
 // == Building blocks =============================================================================
 

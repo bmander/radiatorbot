@@ -117,9 +117,6 @@ shield_dims := {
   row0: -5.08mm,                // holes out from the power header's first pin
   plug: 6mm,                    // how far its header pins reach down into the Uno's sockets
 }
-// The shield's top face, which the breakouts stand on, up from the Uno's underside: over the
-// sockets and its headers' plastic.
-shield_top := uno_dims.pcb_t + uno_dims.socket_h + header_dims.body_h + shield_dims.pcb_t
 
 interface Drv8871Sizes {
   w: Length, len: Length, back: Length, pcb_t: Length, n: Int
@@ -287,20 +284,22 @@ component UnoR4Minima(s: UnoSizes) {
                   y1: s.usb_y + s.plug_w / 2, z0: usb_z - s.plug_h / 2, z1: usb_z + s.plug_h / 2)
   construction usb_plug := solid(usb_room.body)
   jack_y := (s.jack_y0 + s.jack_y1) / 2
+  jack_z := z1 + s.jack_z                          // the jack's axis, up from its underside
   jack_room := Box(x0: s.jack_x0 - s.plug_len, x1: s.jack_x0, y0: jack_y - s.jack_plug / 2,
-                   y1: jack_y + s.jack_plug / 2, z0: z1 + s.jack_z - s.jack_plug / 2,
-                   z1: z1 + s.jack_z + s.jack_plug / 2)
+                   y1: jack_y + s.jack_plug / 2, z0: jack_z - s.jack_plug / 2,
+                   z1: jack_z + s.jack_plug / 2)
   construction jack_plug := solid(jack_room.body)
 }
 
 // The perfboard shield on the Uno, in the Uno's frame: its board, and the headers that plug it
-// into the Uno's power, analog and D0-D7 sockets.  Its top face is `shield_top` up from the
-// Uno's underside.
+// into the Uno's power, analog and D0-D7 sockets.  Its top face, which the breakouts stand on, is
+// `top` up from the Uno's underside: over the sockets and its headers' plastic.
 component Shield(s: ShieldSizes, u: UnoSizes, h: HeaderSizes) {
+  top := u.pcb_t + u.socket_h + h.body_h + s.pcb_t
   mx := (s.w - (s.cols - 1) * pitch) / 2           // its margins, past the outer holes
   my := (s.h - (s.rows - 1) * pitch) / 2
   pcb := Box(x0: s.col0 - mx, x1: s.col0 + (s.cols - 1) * pitch + mx, y0: s.row0 - my,
-             y1: s.row0 + (s.rows - 1) * pitch + my, z0: shield_top - s.pcb_t, z1: shield_top)
+             y1: s.row0 + (s.rows - 1) * pitch + my, z0: top - s.pcb_t, z1: top)
   power := PlugRow(h, s, u, x0: 0mm, y: 0mm, n: 8)
   analog := PlugRow(h, s, u, x0: u.analog_x0, y: 0mm, n: 6)
   low := PlugRow(h, s, u, x0: u.low_x0, y: u.top_y, n: 8)
@@ -375,11 +374,11 @@ preview {
     ina_at coords(du: 7 * pitch, dv: 13.5 * pitch) std.top
   }
   drv_on := point
-  drv_on raised(d: shield_top, along: std.z) drv_at
+  drv_on raised(d: shield.top, along: std.z) drv_at
   drv := Drv8871(drv8871_dims, h: header_dims)
   drv seats(turn: -90deg, up: std.z, east: std.x) drv_on
   ina_on := point
-  ina_on raised(d: shield_top, along: std.z) ina_at
+  ina_on raised(d: shield.top, along: std.z) ina_at
   ina := Ina219(ina219_dims, h: header_dims)
   ina seats(turn: -90deg, up: std.z, east: std.x) ina_on
 }
