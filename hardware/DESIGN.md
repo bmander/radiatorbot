@@ -14,7 +14,11 @@ monitor).
 
 ## How it works
 
-The bot hangs on the valve's −x side, away from the radiator.
+The bot hangs on the valve's −y side, beside the outlet. Seen from below, looking up at the
+handle, it stands a quarter turn clockwise from where it hung before, off the outlet's far end
+(−x). `radiatorbot.sv` lays the bot out in a frame of its own, `bot`, turned `bot_turn` (90°)
+about the stem. Its x runs out from the stem through the clamp's split, and the bot hangs on its
+−x side. Directions below (the bay's −y half, the driver toward +x) are that frame's.
 
 - **The wheel** turns on a ½ in axle 60 mm from the stem, at the handle's height. A collar on
   the axle under it and another over it keep it in place. It has six pockets. The handle's four
@@ -36,10 +40,17 @@ The bot hangs on the valve's −x side, away from the radiator.
 - **The frame** is one print: the gearbox lid, the electronics bay standing on it (the motor on a
   pad, the boards beside it), and a spine up beside the valve to the **clamp**.
   - The clamp is a block split at the stem, round the valve's inlet hex and the supply pipe above
-    it.
+    it. The fixed half is the frame's; the cap closes it from the side away from the bot (the
+    valve's +y), out of the radiator's way, with four M4 bolts whose nuts sit in pockets in the
+    fixed half's back.
   - The hex pocket takes the handle's reaction torque positively; nothing relies on friction on
     a round pipe.
-  - The cap bolts on from the radiator side with four M4 bolts.
+  - The split runs through two of the hex's corners, so each half holds three whole flats, and
+    the bolts close the halves square onto the middle two.
+  - Those corners stand where a bolt beside the hex would pass, so both rows of bolts grip the
+    pipe above the hex. The lower row clears the hex's pocket by 1.7 mm, and that is claimed.
+  - The clamp's radiator-side face stands beside the outlet's union nut. The clamp is 48 mm
+    across, so that face clears the nut by 2 mm.
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
   the ring, and a bridge across it holds the wheel's axle, standing on the upper collar just
   above the ring.
@@ -286,7 +297,8 @@ gear and the wheel as blanks while changing the layout.
   - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14.5,
     and its end stands 1 mm over B's second.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
-    pad, the base against the frame, the clamp on the pipe).
+    pad, the base against the frame, the clamp on the pipe). Both of the clamp's halves clear the
+    outlet's union nut by 2 mm and its boss by 1.2 mm.
 
 ## Bill of materials
 
@@ -337,8 +349,8 @@ gear and the wheel as blanks while changing the layout.
 5. Screw the Uno to its posts with its jack and USB-C toward the end wall's windows, plug the
    shield on, and connect the motor's leads to the driver's terminal. Pass the thermostat's cable
    through the grommet to its terminal.
-6. Slide the bot onto the valve from −x, so the inlet hex enters the clamp's pocket, and bolt on
-   the cap.
+6. Slide the bot onto the valve from −y, so the inlet hex enters the clamp's pocket. Drop the
+   four M4 nuts into their pockets in the fixed half's back, and bolt on the cap from +y.
 7. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
    both the handle and the last pinion, up against the upper collar. Fit the lower collar.
    - The star narrows downward and each of the wheel's bands is cut for the star's widest section
@@ -351,7 +363,10 @@ gear and the wheel as blanks while changing the layout.
   opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
   the pockets' straight band above the draft goes.
 - **The inlet hex's orientation** relative to the outlet. The model has a corner on ±x, so the
-  bot can stand at multiples of 60° about the stem. Check it on the valve.
+  clamp's split, a quarter turn from the outlet, runs through two corners. The pocket is cut from
+  the hex, so the clamp fits it either way. If the valve's hex has flats on ±x, the split crosses
+  two flats instead and the bolts clear the pocket by more. Check it on the valve, and set it in
+  `radiator_valve.sv`.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
   must stay under the DRV8871's ~2.1 A limit.
 - **The Uno's connectors.** Its outline, sockets and holes are the Uno standard, but the R4
