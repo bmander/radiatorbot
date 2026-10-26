@@ -25,13 +25,14 @@ use std (horizontal, vertical, turns, round)
 
 // The body casting's sizes, and the interface ValveBody reads them through.
 interface BodySizes {
-  inlet_af: Length, inlet_top: Length, inlet_h: Length
+  inlet_af: Length, inlet_phase: Angle, inlet_top: Length, inlet_h: Length
   bulge_d: Length, bulge_r: Length
   collar_d: Length, collar_top: Length, collar_bottom: Length
   boss_d: Length, boss_x: Length
 }
 body_dims := {
   inlet_af: 30.0mm,          // inlet hex, across the flats
+  inlet_phase: 30deg,        // its corners on ±y, a flat square to the outlet
   inlet_top: 73.3mm,
   inlet_h: 10mm,             // ~
   bulge_d: 33.7mm,
@@ -148,7 +149,7 @@ component ValveBody(outlet: point, ref: line, s: BodySizes) {
     std.origin level(right) crown.p2
   }
   barrel := solid(section, about: std.z)
-  inlet := HexBar(std.top.origin, ref, af: s.inlet_af, phase: 0deg,
+  inlet := HexBar(std.top.origin, ref, af: s.inlet_af, phase: s.inlet_phase,
                   z0: s.inlet_top - s.inlet_h, z1: s.inlet_top)
   boss := RoundBar(outlet, d: s.boss_d, z0: 0mm, z1: s.boss_x)
 
