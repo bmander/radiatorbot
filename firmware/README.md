@@ -63,7 +63,7 @@ find the board, double-tap its reset button and try again.
   again after `retry` (15 min), up to 3 times in a row on its own; a change in the thermostat, or
   the console's `clear`, `open` or `close`, tries again at once.
 - The loop runs about every millisecond under a 2 s watchdog. Console output never blocks it: it
-  waits in a 4 kB buffer while the host catches up, and with no host connected it's dropped.
+  waits in a 2 kB buffer while the host catches up, and with no host connected it's dropped.
 - Over USB alone the R4 and the console run, but the motor doesn't: every move is a motor fault
   until the wall adapter is plugged in.
 
