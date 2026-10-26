@@ -56,14 +56,15 @@ solventc --no-check hardware/radiatorbot.sv   # the layout alone, its solids' cl
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.8 (`SOLVENTC_VERSION=v0.1.8` pins the installer to it),
+The models are checked with Solvent v0.1.9 (`SOLVENTC_VERSION=v0.1.9` pins the installer to it),
 which solves the bot and judges its claims in about fifteen seconds, and exports it in about two and
-a half minutes. The models use its lists (`repeat h in LIST`) and read numbers off component
-instances (`shield.top`), so they need v0.1.8 or later. Every gear is its rack's exact sweep; the
+a half minutes. The models use its lists (`repeat h in LIST`), read numbers off component
+instances (`shield.top`) and cut clearances as a part's body grown (`std.Grown`), so they need
+v0.1.9 or later. Every gear is its rack's exact sweep; the
 printed parts' STLs come to 4.7 MB and the assembly's STEP to 36 MB. v0.1.6 wrote the 16-tooth
 pinions' straight tip edges as dense B-splines, doubling the STEP (bmander/geomsolver#644).
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
-(`.github/workflows/export.yml`, Solvent pinned to v0.1.8 there too) and keeps its output on the
+(`.github/workflows/export.yml`, Solvent pinned to v0.1.9 there too) and keeps its output on the
 run's page: `radiatorbot-stl-<sha>`, a zip of the printed parts' STLs, and `radiatorbot-step-<sha>`,
 the assembly. It can also be run by hand from the Actions tab.
