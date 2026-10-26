@@ -23,7 +23,7 @@
 // takes a few minutes).  The design table's requirements are claims, judged before the solve;
 // `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
 // `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about four minutes more).
+// period of their mesh (about two and a half minutes more).
 //
 // The file runs from the numbers to the parts: the stock and the fits, the drive, the heights
 // and the plan, then the building blocks, then each part in turn, then the clearances.  Every
@@ -43,7 +43,7 @@ use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, uno_holes, shield_di
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; ~4 minutes)
+checks := 0                    // 1: judge every clearance (needs `shaped`; ~2.5 minutes)
 
 // == Stock =======================================================================================
 // Drill rod.  The gears and the wheel turn on fixed rods; the housing holds the rods.
