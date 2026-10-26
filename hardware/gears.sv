@@ -2,7 +2,8 @@
 //
 // Every gear is printed, so every gear is **shaped**: its blank is cut by the basic rack's tooth
 // swept through the roll of the rack on the gear's pitch circle, as a gear shaper or a hob cuts
-// one, in one statement (`sweep(tooth over t in (…), under: rack, seen_from: blank_turn)`).
+// one, in one statement (`sweep(tooth, through: shaped_blank, under: rack, …)`): the rack rolls
+// for as long as its tooth meets the blank, a roll the kernel finds, so none is stated.
 // Nothing states an involute; the flanks the sweep leaves are one, exactly, and a small pinion is
 // undercut where a real one would be.  The rack's tooth is drawn `thin` wider than the basic
 // rack's, so the printed tooth comes out that much thinner on its pitch circle: a pair's backlash
@@ -46,9 +47,6 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
   Rp := R + shift * m                    // where the rack's pitch line stands off the axis
   Rt := Rp + m                           // the tip: an addendum off the rack's pitch line
   hw := pi * m / 4 + thin / 2            // the rack tooth's half thickness on its pitch line
-  // how far the rack runs while its tooth is inside the tip circle, as a roll of the blank
-  reach := sqrt(Rt ^ 2 - (Rp - 1.25 * m) ^ 2) + hw + 1.5 * m * tan(phi)
-  window := reach / R * 1rad
 
   in std.front {
     construction spindle := vertical line(std.origin, hint((0, 10)))
@@ -61,16 +59,23 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     rack_line.p1 coords(du: 10mm, dv: Rp) std.top
     rack_line.p2 on_v(d: Rp) std.top
 
-    // the basic rack's tooth, pointing in: its flanks lean `phi` off the radial, it runs a full
-    // dedendum (1.25 m) in past the pitch line to cut the root, and out past the blank's tip
-    a := point hint((-hw - 1.5 * m * tan(phi), Rp + 1.5 * m))
-    b := point hint((-hw + 1.25 * m * tan(phi), Rp - 1.25 * m))
-    c := point hint((hw - 1.25 * m * tan(phi), Rp - 1.25 * m))
-    d := point hint((hw + 1.5 * m * tan(phi), Rp + 1.5 * m))
-    a coords(du: -hw - 1.5 * m * tan(phi), dv: Rp + 1.5 * m) std.top
-    b coords(du: -hw + 1.25 * m * tan(phi), dv: Rp - 1.25 * m) std.top
-    c coords(du: hw - 1.25 * m * tan(phi), dv: Rp - 1.25 * m) std.top
-    d coords(du: hw + 1.5 * m * tan(phi), dv: Rp + 1.5 * m) std.top
+    // the basic rack's tooth, pointing in, centred on +v: its flanks lean `phi` off the radial and
+    // cross the pitch line `2 hw` apart; it runs a full dedendum (1.25 m) in past the pitch line
+    // to cut the root, and out past the blank's tip
+    construction centre := line(std.top.origin, rack_line.p2)
+    a := point hint((-hw - m, Rp + 1.5 * m))
+    b := point hint((-hw + m / 2, Rp - 1.25 * m))
+    c := point hint((hw - m / 2, Rp - 1.25 * m))
+    d := point hint((hw + m, Rp + 1.5 * m))
+    flank := line(b, a)
+    centre angle(phi) flank
+    on_pitch := point hint((-hw, Rp))
+    on_pitch coords(du: -hw, dv: Rp) std.top
+    on_pitch coincident flank
+    std.top.origin distance(Rp - 1.25 * m, along: v) b
+    std.top.origin distance(Rp + 1.5 * m, along: v) a
+    c symmetry(centre) b
+    d symmetry(centre) a
     rack_tooth := face(a, b, c, d, -> close)
 
     tip := circle(center: std.top.origin) hint(r: Rt)
@@ -188,7 +193,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     }
   }
   when shaped == 1 {
-    private construction space := sweep(tooth over t in (-window, window), under: rack,
+    private construction space := sweep(tooth, through: shaped_blank, under: rack,
                                         seen_from: blank_turn)
     space cut shaped_blank
     repeat N - 1 as j {
