@@ -11,8 +11,8 @@
 //     a collar either side of it keeps it on its axle;
 //   - the **gearbox** above it is five printed spur stages on two drill-rod axles, B and D, the
 //     130 motor's pinion driving the first; its base's floor stops short of the wheel's ring;
-//   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, the
-//     Arduino over the motor with a perfboard shield on it carrying the motor driver and its
+//   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, and
+//     beside it the Arduino with a perfboard shield on it carrying the motor driver and its
 //     current monitor, the cable entries), and the spine up beside the valve to the **clamp**, a
 //     split block round the inlet hex and the supply pipe above it.  The hex takes the handle's
 //     reaction torque positively; the bolted cap closes the clamp from +x.
@@ -146,7 +146,9 @@ claim motor_rate == -handle_ratio
 // == Heights =====================================================================================
 // From the floor up: the ring and the last pinion, stages 5 to 1, the lid, the electronics bay
 // and its cover.  Faces are 5 mm at module 0.8, 6 at module 1 and 10 at module 1.5, with half a
-// millimetre between layers.  The motor stands face down on the lid, its pinion through it.
+// millimetre between layers.  The motor stands face down on a pad on the lid, its shaft down
+// through both to its pinion in stage 1, high enough that the shaft's end stands a millimetre
+// over stage 3's gear on B; the boards stand beside it, so the bay is the motor's height.
 floor_z0 := -0.1mm              // the base's floor, round B and D only: the wheel turns under it
 floor_z1 := floor_z0 + 3mm
 ring_z0 := 3mm                  // the ring's teeth; the web under it runs down to the wheel
@@ -168,9 +170,11 @@ hi_collar_z0 := ring_z1 + gap
 bridge_z0 := hi_collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 spine_z0 := s5_z0               // the spine's foot, over the wheel's ring
-uno_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm    // the Uno's underside
+motor_z := s3_z0 + 5mm + 1mm + motor130_dims.shaft_len  // the motor's front face, on its pad
+claim motor_z >= lid_z1
+uno_z := lid_z1 + 6mm                                   // the Uno's underside, on its posts
 shield_z := uno_z + shield.top                          // the shield's top face
-bay_z1 := shield_z + driver.top + 1.4mm                 // its tallest parts 1.4 mm under the cover
+bay_z1 := motor_z + motor130_dims.len + motor130_dims.back_h + 3mm  // room over it for its leads
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
 clamp_z1 := clamp_z0 + 31.7mm
 
@@ -188,16 +192,16 @@ clamp_reach := 26mm             // each half of the clamp, out from the stem
 clamp_w := 50mm
 clamp_bolt_y := 20mm
 screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
-// The Uno and its shield (boards.sv) stand by the Uno's frame, its power header's first pin at
-// (uno_ox, uno_oy): its jack's mouth a millimetre in from the end wall's inside face, the
-// shield's middle on y = board_cy.
+// The Uno and its shield (boards.sv) stand beside the motor, by the Uno's frame, its power
+// header's first pin at (uno_ox, uno_oy): its jack's mouth a millimetre in from the end wall's
+// inside face, its edge 2 mm off the motor's cradle's flat.
+cradle_f := motor130_dims.flats / 2 + wall + gap        // the cradle's flats, off the motor's axis
 uno_ox := box_x0 + wall + 1mm - uno_dims.jack_x0
-board_cy := 9mm
-uno_oy := board_cy - (shield_dims.row0 + (shield_dims.rows - 1) * pitch / 2)
+uno_oy := cd_s1 * sin(bm_bearing) + cradle_f + 2mm - uno_dims.y0
 // The breakouts on the shield's grid, each at its pin field's middle, in the Uno's frame, both
-// their boards toward +x: the driver's pins in the shield's column 9 (x = 0.7 in), rows 4-7, its
-// terminals toward the bay's +x wall; the current monitor's in column 9, rows 13-18.  Column 9
-// is the Uno's VIN and D7 too, at rows 2 and 21.
+// their boards toward +x: the driver's pins in the shield's column 9 (x = 0.7 in), rows 2-5, its
+// terminals toward the bay's +x wall; the current monitor's in column 9, rows 11-16.  Column 9
+// is the Uno's VIN and D7 too, at rows 0 and 19.
 drv_cx := uno_ox + 7 * pitch
 drv_cy := uno_oy + 3.5 * pitch
 ina_cx := uno_ox + 7 * pitch
@@ -488,16 +492,17 @@ compound_b1 := b1 in b1_turn
 pinion := motor_pinion in motor_turn
 
 // == The motor ===================================================================================
-// Face down on the lid, its boss in a recess, its pinion through the lid into stage 1; held in a
-// cradle of its own section grown by a wall, a print's clearance inside.
+// Face down on a pad on the lid, its boss in a recess, its shaft through the pad and the lid to
+// its pinion in stage 1; held in a cradle of its own section grown by a wall, a print's clearance
+// inside, the pad the cradle's section under it.
 motor_at := point
-motor_at raised(d: lid_z1, along: std.z) m_c
+motor_at raised(d: motor_z, along: std.z) m_c
 motor := Motor130(motor130_dims)
 motor seats(turn: 0deg, up: std.z, east: std.x) motor_at
 
-cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: 0mm, z1: 18mm)
+cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z, z1: 18mm)
 cradle_out seats(turn: 0deg, up: std.z, east: std.x) motor_at
-cradle_in := MotorCan(motor130_dims, grow: gap, z0: -1mm, z1: 19mm)
+cradle_in := MotorCan(motor130_dims, grow: gap, z0: 0mm, z1: 19mm)
 cradle_in seats(turn: 0deg, up: std.z, east: std.x) motor_at
 cradle := solid(cradle_out.body)
 cradle_in.body cut cradle
@@ -553,13 +558,13 @@ lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 
 lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 - 1mm)
 lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 - 1mm)
 motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
-                        z0: lid_z1 - motor130_dims.boss_h - gap, z1: lid_z1 + 1mm)
-motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: lid_z1)
+                        z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
+motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 
 // the cable entries, in the bay's far end wall: a grommet for the thermostat's cable, low beside
 // the motor, and a window each on the Uno's barrel jack and its USB-C that a cable's moulded plug
 // passes through to mate
-grommet := BoreX(y: 30mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm)
+grommet := BoreX(y: -14mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm)
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
                   y0: usb_y - uno_dims.plug_w / 2 - gap, y1: usb_y + uno_dims.plug_w / 2 + gap,
                   z0: usb_z - uno_dims.plug_h / 2 - gap, z1: usb_z + uno_dims.plug_h / 2 + gap)
@@ -598,20 +603,22 @@ repeat 2 as i {
 
 // The Uno's four M3s, self-tapping into posts on the lid at its holes (boards.sv).  The posts are
 // 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
+// Each hole runs a millimetre on into the lid.
 repeat h in uno_holes {
   uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y)
-  uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+  uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot,
+                         depth: uno_z - lid_z1 + 1mm)
   uno_screw.post union frame_part
   uno_screw.hole cut frame_part
 }
 
-// The cover's four, down through it into posts in the bay's walls, clear of the boards and of the
-// base's screws in the corners: west on the south wall by the end wall (the Uno's end comes up to
-// the end wall, its plugs either side of y = 5 mm), east by the spine, south and north clear of
-// the shield's +x end.
+// The cover's four, down through it into posts in the bay's walls, clear of the boards, the motor
+// and the base's screws in the corners: west on the south wall by the end wall, between the
+// corner's screw and the motor (the Uno's end comes up to the end wall), east by the spine, south
+// and north clear of the shield's +x end.
 cover_screws := [
   (box_x0 + 16mm, box_y0 + screw_inset),           // west
-  (box_x1 - screw_inset, board_cy),                // east
+  (box_x1 - screw_inset, (box_y0 + box_y1) / 2),   // east
   (-55mm, box_y0 + screw_inset),                   // south
   (-55mm, box_y1 - screw_inset),                   // north
 ]
@@ -668,7 +675,7 @@ repeat c in cover_screws {
 }
 
 // == The electronics =============================================================================
-// An Arduino Uno R4 Minima screwed down over the motor, and a perfboard shield plugged into it
+// An Arduino Uno R4 Minima screwed down beside the motor, and a perfboard shield plugged into it
 // (boards.sv) carrying the two breakouts and the thermostat's terminal (~ size):
 //   - the Uno, its USB-C and its barrel jack to the end wall's windows: the wall adapter's 9 V in,
 //     its own 5 V, programming and the console;
@@ -677,7 +684,7 @@ repeat c in cover_screws {
 //   - an Adafruit INA219 breakout in the driver's supply: the motor's current over I2C, which the
 //     Uno reads for the end-of-travel sensing;
 //   - a 2-way 5.08 mm screw terminal for the thermostat's two wires, at the shield's -x end by
-//     the grommet, its pins in the shield's column 1, rows 9 and 11.
+//     the grommet, its pins in the shield's column 1, rows 7 and 9.
 uno_c := At(x: uno_ox, y: uno_oy)
 uno_at := point
 uno_at raised(d: uno_z, along: std.z) uno_c.p
@@ -700,12 +707,19 @@ terminal := Block(x0: uno_ox - pitch - 3.8mm, x1: uno_ox - pitch + 3.8mm, y0: un
 
 // The boards in the bay: a mated cable's plug through each of the end wall's windows, and the
 // boards, the Uno's parts and the pins' tails clear of the frame, the motor and the cover, and of
-// one another.
+// one another.  The motor clears the cover over it.
 claim uno.usb_plug clear(0.2mm) frame_part
 claim uno.jack_plug clear(0.2mm) frame_part
 claim uno.parts clear(0.5mm) frame_part
 claim uno.tails clear(0.5mm) frame_part
+claim uno.board clear(1mm) cradle
+claim uno.board clear(1mm) motor.motor
+claim uno.parts clear(1mm) motor.motor
 claim uno.tails clear(0.5mm) motor.motor
+claim shield.board clear(1mm) motor.motor
+claim shield.board clear(1mm) cradle
+claim driver.board clear(1mm) motor.motor
+claim motor.motor clear(1mm) cover_part
 claim shield.board clear(0.5mm) frame_part
 claim shield.headers clear(0.5mm) frame_part
 claim shield.board clear(0.3mm) uno.parts
@@ -777,6 +791,7 @@ when checks == 1 {
   claim pinion clear(0.2mm) frame_part
   claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
   claim compound_d1 clear(0.2mm) motor.motor
+  claim compound_b2 clear(0.5mm) motor.motor            // the shaft's end, 1 mm over its spokes
   claim frame_part clear(0.05mm) valve.supply_pipe.bar
   claim cap_part clear(0.05mm) valve.supply_pipe.bar
   claim frame_part clear(0.15mm) valve.body.casting

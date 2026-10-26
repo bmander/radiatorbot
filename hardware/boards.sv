@@ -16,9 +16,10 @@
 //     board's 5 V buck.  Its outline, its headers and its holes are the Uno R3's (KiCad's
 //     Arduino_UNO_R3 footprint), which the R4 keeps; its jack is the R3's; its USB-C receptacle is
 //     placed where the R3's USB-B was (~).
-//   - **The shield**: a 5 x 7 cm perfboard, 18 x 24 holes, on male headers plugged down into the
-//     Uno's power, analog and D0-D7 sockets.  Its long side runs across the Uno; it stands off
-//     the Uno's jack end.
+//   - **The shield**: a 5 x 7 cm perfboard, 18 x 24 holes, cut down to 18 x 20 (two rows off each
+//     end, which no part uses) so it's no wider than the Uno, on male headers plugged down into the
+//     Uno's power, analog and D0-D7 sockets.  Its rows run from the power header's to the D0-D7
+//     socket's; it stands off the Uno's jack end.
 //   - **Adafruit DRV8871 breakout** (Adafruit #3190, $7.50): an H-bridge for one brushed motor,
 //     6.5-45 V, its current held under ~2.1 A by the 30 kOhm on ILIM.  20.3 x 24.1 mm, one row of
 //     4 pins and two 2-way 3.5 mm screw terminals (the motor's, and the supply's) at the far end.
@@ -110,13 +111,13 @@ interface ShieldSizes {
   plug: Length
 }
 shield_dims := {
-  w: 50mm,                      // a 5 x 7 cm perfboard, its 7 cm across the Uno
-  h: 70mm,
+  w: 50mm,                      // a 5 x 7 cm perfboard, its 7 cm across the Uno, cut down to 20
+  h: 50.8mm,                    // rows: across the Uno, half a pitch past its outer rows
   pcb_t: 1.6mm,
   cols: 18,                     // its holes, 0.1 in apart, centred on it
-  rows: 24,
-  col0: -5.08mm,                // its first column's, and row's, holes, in the Uno's frame: two
-  row0: -5.08mm,                // holes out from the power header's first pin
+  rows: 20,
+  col0: -5.08mm,                // its first column's hole, in the Uno's frame: two holes out from
+  row0: 0mm,                    // the power header's first pin; its first row, that header's
   plug: 6mm,                    // how far its header pins reach down into the Uno's sockets
 }
 
