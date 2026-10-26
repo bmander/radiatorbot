@@ -61,16 +61,23 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     rack_line.p1 coords(du: 10mm, dv: Rp) std.top
     rack_line.p2 on_v(d: Rp) std.top
 
-    // the basic rack's tooth, pointing in: its flanks lean `phi` off the radial, it runs a full
-    // dedendum (1.25 m) in past the pitch line to cut the root, and out past the blank's tip
-    a := point hint((-hw - 1.5 * m * tan(phi), Rp + 1.5 * m))
-    b := point hint((-hw + 1.25 * m * tan(phi), Rp - 1.25 * m))
-    c := point hint((hw - 1.25 * m * tan(phi), Rp - 1.25 * m))
-    d := point hint((hw + 1.5 * m * tan(phi), Rp + 1.5 * m))
-    a coords(du: -hw - 1.5 * m * tan(phi), dv: Rp + 1.5 * m) std.top
-    b coords(du: -hw + 1.25 * m * tan(phi), dv: Rp - 1.25 * m) std.top
-    c coords(du: hw - 1.25 * m * tan(phi), dv: Rp - 1.25 * m) std.top
-    d coords(du: hw + 1.5 * m * tan(phi), dv: Rp + 1.5 * m) std.top
+    // the basic rack's tooth, pointing in, centred on +v: its flanks lean `phi` off the radial and
+    // cross the pitch line `2 hw` apart; it runs a full dedendum (1.25 m) in past the pitch line
+    // to cut the root, and out past the blank's tip
+    construction centre := line(std.top.origin, rack_line.p2)
+    a := point hint((-hw - m, Rp + 1.5 * m))
+    b := point hint((-hw + m / 2, Rp - 1.25 * m))
+    c := point hint((hw - m / 2, Rp - 1.25 * m))
+    d := point hint((hw + m, Rp + 1.5 * m))
+    flank := line(b, a)
+    centre angle(phi) flank
+    on_pitch := point hint((-hw, Rp))
+    on_pitch coords(du: -hw, dv: Rp) std.top
+    on_pitch coincident flank
+    std.top.origin distance(Rp - 1.25 * m, along: v) b
+    std.top.origin distance(Rp + 1.5 * m, along: v) a
+    c symmetry(centre) b
+    d symmetry(centre) a
     rack_tooth := face(a, b, c, d, -> close)
 
     tip := circle(center: std.top.origin) hint(r: Rt)
