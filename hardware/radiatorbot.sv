@@ -39,7 +39,7 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims, shield_top)
+use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, uno_holes, shield_dims, shield_top)
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
@@ -597,20 +597,14 @@ repeat 2 as i {
   }
 }
 
-// The Uno's four M3s, self-tapping into posts on the lid at its holes (uno_dims): by the power
-// header and by the SCL socket at the USB end (j = 0, 1), and two at the far end.  The posts are
-// 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
-near_dx := uno_dims.hole_b_x - uno_dims.hole_a_x
-far_dy := uno_dims.hole_far_y1 - uno_dims.hole_far_y0
-repeat 2 as j {
-  near_hole := At(x: uno_ox + uno_dims.hole_a_x + j * near_dx, y: uno_oy + j * uno_dims.top_y)
-  far_hole := At(x: uno_ox + uno_dims.hole_far_x, y: uno_oy + uno_dims.hole_far_y0 + j * far_dy)
-  near_screw := ScrewPost(near_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-  far_screw := ScrewPost(far_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-  near_screw.post union frame_part
-  far_screw.post union frame_part
-  near_screw.hole cut frame_part
-  far_screw.hole cut frame_part
+// The Uno's four M3s, self-tapping into posts on the lid at its holes (uno_holes): by the power
+// header and by the SCL socket at the USB end, and two at the far end.  The posts are 5 mm
+// across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
+repeat h in uno_holes {
+  uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y)
+  uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+  uno_screw.post union frame_part
+  uno_screw.hole cut frame_part
 }
 
 // The cover's four, down through it into posts in the bay's walls, clear of the boards and of the

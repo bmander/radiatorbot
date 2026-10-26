@@ -53,7 +53,6 @@ header_dims := {
 interface UnoSizes {
   x0: Length, x1: Length, y0: Length, y1: Length, pcb_t: Length, socket_h: Length, tail: Length
   analog_x0: Length, low_x0: Length, high_x0: Length, top_y: Length
-  hole_a_x: Length, hole_b_x: Length, hole_far_x: Length, hole_far_y0: Length, hole_far_y1: Length
   jack_x0: Length, jack_x1: Length, jack_y0: Length, jack_y1: Length, jack_h: Length, jack_z: Length
   usb_w: Length, usb_h: Length, usb_in: Length, usb_out: Length, usb_y: Length
   icsp_x: Length, icsp_y: Length, icsp_h: Length
@@ -71,11 +70,6 @@ uno_dims := {
   low_x0: 17.78mm,              // A0, D7 and SCL; D7 ... D0 and SCL ... D8 along y = top_y
   high_x0: -9.14mm,
   top_y: 48.26mm,
-  hole_a_x: -13.97mm,           // its M3 holes: by the power header (y = 0), by the SCL socket
-  hole_b_x: -12.7mm,            // (y = top_y), and two at the far end
-  hole_far_x: 38.1mm,
-  hole_far_y0: 5.08mm,
-  hole_far_y1: 33.02mm,
   jack_x0: -29.84mm,            // the barrel jack, its mouth out past the board's end
   jack_x1: -16.51mm,
   jack_y0: 0.64mm,
@@ -95,6 +89,8 @@ uno_dims := {
   plug_h: 7mm,
   plug_len: 30mm,
 }
+// Its four M3 holes, in its frame: by the power header, by the SCL socket, and two at the far end.
+uno_holes := [(-13.97mm, 0mm), (-12.7mm, uno_dims.top_y), (38.1mm, 5.08mm), (38.1mm, 33.02mm)]
 
 // The Uno's sockets, looking down on it, its USB toward -x:
 //   y = 48.26: SCL SDA AREF GND D13 ... D8 (x = -9.14 to 13.72), then D7 ... D0 (x = 17.78 to
