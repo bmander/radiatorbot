@@ -51,12 +51,14 @@ Check a model, and write the printed parts and the assembly:
 
 ```sh
 solventc hardware/radiator_valve.sv
-solventc hardware/radiatorbot.sv
+solventc hardware/radiatorbot.sv            # every clearance judged too: about a minute
+solventc --no-check hardware/radiatorbot.sv # the layout alone: seconds
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.7 (`SOLVENTC_VERSION=v0.1.7` pins the installer to it),
-which solves the bot in about ten seconds and exports it in about two minutes. Every gear is its
+The models are checked with Solvent v0.1.8 (`SOLVENTC_VERSION=v0.1.8` pins the installer to it;
+it is the first with `--no-check`), which solves the bot in about ten seconds, judges every
+clearance in about a minute and exports it in about two minutes. Every gear is its
 rack's exact sweep; the printed parts' STLs come to 4.7 MB and the assembly's STEP to 36 MB.
 v0.1.6 wrote the 16-tooth pinions' straight tip edges as dense B-splines, doubling the STEP
 (bmander/geomsolver#644).

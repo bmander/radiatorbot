@@ -258,14 +258,17 @@ gear and the wheel as blanks while changing the layout.
 - `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
   a full turn, and judges the design table's claims (ratio, stall torque, free speed, and the
   pinions' walls round their bores).
-- The boards' fit in the bay is claimed in the model and judged on every check:
+- `solventc --no-check hardware/radiatorbot.sv` does all that but judge the claims about solids:
+  it builds no part for one, so it takes seconds, and it is the way to run the model with
+  `shaped := 0`.
+- The boards' fit in the bay is claimed in the model and judged on every full check:
   - a mated USB-C plug and a mated barrel plug each clear their window in the end wall by 0.3 mm;
   - the boards, their headers and the Uno's tall parts clear the frame, the cover and one
     another, the shield clearing the Uno's parts by 2.5 mm;
   - the pins' tails under the shield clear the Uno's parts, and the Uno's under it clear the
     motor and the posts.
-- With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part and measures the wheel at thirteen poses, so it takes about four minutes.
+- Every clearance is judged as well. That builds every shaped part and measures the wheel at
+  thirteen poses, one build of it moved to each, so it takes about a minute.
   - The wheel is judged against the handle at seven rolls across a whole period of the mesh
     (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
     nearly open (2 mm and 3.8 mm down the stem's travel).

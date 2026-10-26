@@ -21,9 +21,11 @@
 // printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
 // 0 to draw every gear and the wheel as blanks while the layout is worked on (building them all
 // takes a few minutes).  The design table's requirements are claims, judged before the solve;
-// `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
-// `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about four minutes more).
+// `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Every
+// clearance is claimed, the wheel against the handle through a whole period of their mesh, and
+// judging them builds every shaped part (about a minute); `solventc --no-check` leaves the claims
+// about solids unjudged for a quick look at the layout, and is how to run it with `shaped` 0,
+// whose blanks overlap where the teeth would mesh.
 //
 // The file runs from the numbers to the parts: the stock and the fits, the drive, the heights
 // and the plan, then the building blocks, then each part in turn, then the clearances.  Every
@@ -43,7 +45,6 @@ use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims, shield_
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; ~4 minutes)
 
 // == Stock =======================================================================================
 // Drill rod.  The gears and the wheel turn on fixed rods; the housing holds the rods.
@@ -738,68 +739,66 @@ claim driver.board clear(0.5mm) monitor.board
 claim terminal.body clear(0.5mm) monitor.board
 
 // == Clearances ==================================================================================
-// With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel
-// is judged against the handle closed, half open and nearly open, both read at rolls of the
+// Every part's clearance is judged, which builds every shaped part (`--no-check` skips it).  The
+// wheel is judged against the handle closed, half open and nearly open, both read at rolls of the
 // pair's generating motion across a whole period of the mesh (90deg of the handle: one arm
 // through one pocket).  Gears in mesh run 0.15 mm clear a flank; parts that rest on one another
 // (the motor on its lid, the base on the frame, the upper collar on the bridge) are not claimed
 // clear.
-when checks == 1 {
-  rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
-  repeat 7 as k {
-    construction handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
-    construction wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
-    claim wheel_at clear(0.1mm) handle_at
-  }
-  // and partway down its travel, half open and nearly open, where the pockets' walls turn from
-  // the top face's section to the open star's draft
-  half_top := plane
-  fix(origin == (0mm, 0mm, top0 - stem_travel / 2)) half_top
-  fix(dir == (1, 0, 0)) half_top.u
-  fix(dir == (0, 1, 0)) half_top.v
-  near_top := plane
-  fix(origin == (0mm, 0mm, top0 - 0.95 * stem_travel)) near_top
-  fix(dir == (1, 0, 0)) near_top.u
-  fix(dir == (0, 1, 0)) near_top.v
-  half_handle := StarHandle(half_top, s: handle_dims, stem_up: 1mm)
-  near_handle := StarHandle(near_top, s: handle_dims, stem_up: 1mm)
-  repeat 3 as k {
-    construction half_at := half_handle.handle at(under: cw.gen_handle) (k * 30deg)
-    construction near_at := near_handle.handle at(under: cw.gen_handle) (k * 30deg + 15deg)
-    construction wheel_half := wheel_part at(under: cw.gen_wheel) (k * 30deg)
-    construction wheel_near := wheel_part at(under: cw.gen_wheel) (k * 30deg + 15deg)
-    claim wheel_half clear(0.1mm) half_at
-    claim wheel_near clear(0.1mm) near_at
-  }
-  claim wheel clear(0.5mm) valve.packing_nut.bar
-  claim wheel clear(0.3mm) base
-  claim wheel clear(0.3mm) frame_part
-  claim wheel clear(0.1mm) compound_b3
-  claim wheel clear(0.25mm) lo_collar.part
-  claim wheel clear(0.25mm) hi_collar.part
-  claim lo_collar.part clear(2mm) valve.star_handle.handle
-  claim compound_b3 clear(1mm) hi_collar.part
-  claim compound_b3 clear(0.05mm) compound_d2
-  claim compound_d2 clear(0.05mm) compound_b2
-  claim compound_b2 clear(0.05mm) compound_d1
-  claim compound_d1 clear(0.05mm) compound_b1
-  claim compound_b1 clear(0.05mm) pinion
-  claim compound_b3 clear(0.2mm) base
-  claim compound_d2 clear(0.2mm) base
-  claim compound_b2 clear(0.2mm) base
-  claim compound_b1 clear(0.2mm) frame_part
-  claim compound_d1 clear(0.2mm) frame_part
-  claim pinion clear(0.2mm) frame_part
-  claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
-  claim compound_d1 clear(0.2mm) motor.motor
-  claim frame_part clear(0.05mm) valve.supply_pipe.bar
-  claim cap_part clear(0.05mm) valve.supply_pipe.bar
-  claim frame_part clear(0.15mm) valve.body.casting
-  claim cap_part clear(0.15mm) valve.body.casting
-  claim frame_part clear(2mm) valve.bonnet.bonnet
-  claim frame_part clear(2mm) valve.packing_nut.bar
-  claim base clear(2mm) valve.bonnet.bonnet
-  claim base clear(2mm) valve.packing_nut.bar
-  claim base clear(0.3mm) valve.star_handle.handle
-  claim frame_part clear(1mm) valve.union.nut.bar
+rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
+repeat 7 as k {
+  construction handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
+  construction wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
+  claim wheel_at clear(0.1mm) handle_at
 }
+// and partway down its travel, half open and nearly open, where the pockets' walls turn from
+// the top face's section to the open star's draft
+half_top := plane
+fix(origin == (0mm, 0mm, top0 - stem_travel / 2)) half_top
+fix(dir == (1, 0, 0)) half_top.u
+fix(dir == (0, 1, 0)) half_top.v
+near_top := plane
+fix(origin == (0mm, 0mm, top0 - 0.95 * stem_travel)) near_top
+fix(dir == (1, 0, 0)) near_top.u
+fix(dir == (0, 1, 0)) near_top.v
+half_handle := StarHandle(half_top, s: handle_dims, stem_up: 1mm)
+near_handle := StarHandle(near_top, s: handle_dims, stem_up: 1mm)
+repeat 3 as k {
+  construction half_at := half_handle.handle at(under: cw.gen_handle) (k * 30deg)
+  construction near_at := near_handle.handle at(under: cw.gen_handle) (k * 30deg + 15deg)
+  construction wheel_half := wheel_part at(under: cw.gen_wheel) (k * 30deg)
+  construction wheel_near := wheel_part at(under: cw.gen_wheel) (k * 30deg + 15deg)
+  claim wheel_half clear(0.1mm) half_at
+  claim wheel_near clear(0.1mm) near_at
+}
+claim wheel clear(0.5mm) valve.packing_nut.bar
+claim wheel clear(0.3mm) base
+claim wheel clear(0.3mm) frame_part
+claim wheel clear(0.1mm) compound_b3
+claim wheel clear(0.25mm) lo_collar.part
+claim wheel clear(0.25mm) hi_collar.part
+claim lo_collar.part clear(2mm) valve.star_handle.handle
+claim compound_b3 clear(1mm) hi_collar.part
+claim compound_b3 clear(0.05mm) compound_d2
+claim compound_d2 clear(0.05mm) compound_b2
+claim compound_b2 clear(0.05mm) compound_d1
+claim compound_d1 clear(0.05mm) compound_b1
+claim compound_b1 clear(0.05mm) pinion
+claim compound_b3 clear(0.2mm) base
+claim compound_d2 clear(0.2mm) base
+claim compound_b2 clear(0.2mm) base
+claim compound_b1 clear(0.2mm) frame_part
+claim compound_d1 clear(0.2mm) frame_part
+claim pinion clear(0.2mm) frame_part
+claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
+claim compound_d1 clear(0.2mm) motor.motor
+claim frame_part clear(0.05mm) valve.supply_pipe.bar
+claim cap_part clear(0.05mm) valve.supply_pipe.bar
+claim frame_part clear(0.15mm) valve.body.casting
+claim cap_part clear(0.15mm) valve.body.casting
+claim frame_part clear(2mm) valve.bonnet.bonnet
+claim frame_part clear(2mm) valve.packing_nut.bar
+claim base clear(2mm) valve.bonnet.bonnet
+claim base clear(2mm) valve.packing_nut.bar
+claim base clear(0.3mm) valve.star_handle.handle
+claim frame_part clear(1mm) valve.union.nut.bar
