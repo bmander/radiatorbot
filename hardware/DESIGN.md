@@ -33,8 +33,8 @@ The bot hangs on the valve's −x side, away from the radiator.
 - **The gear train** has five stages on two fixed 0.311 in rods, B and D. The motor's pinion
   drives stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the
   ring.
-- **The frame** is one print: the gearbox lid, the electronics bay standing on it, and a spine
-  up beside the valve to the **clamp**.
+- **The frame** is one print: the gearbox lid, the electronics bay standing on it (the motor on a
+  pad, the boards beside it), and a spine up beside the valve to the **clamp**.
   - The clamp is a block split at the stem, round the valve's inlet hex and the supply pipe above
     it.
   - The hex pocket takes the handle's reaction torque positively; nothing relies on friction on
@@ -82,9 +82,10 @@ voltage), put them in `motor130.sv`, and the figures and claims follow.
 
 ## The electronics
 
-An Arduino stands over the motor with a 5 × 7 cm perfboard shield plugged into it, and two bought
-boards and the thermostat's terminal soldered to the shield. All are modelled in `boards.sv`, from
-their makers' layouts where there is one, and placed in the bay in `radiatorbot.sv`.
+An Arduino stands beside the motor with a cut-down 5 × 7 cm perfboard shield plugged into it, and
+two bought boards and the thermostat's terminal soldered to the shield. All are modelled in
+`boards.sv`, from their makers' layouts where there is one, and placed in the bay in
+`radiatorbot.sv`.
 
 | board | what it does | price | where |
 |---|---|---|---|
@@ -193,30 +194,36 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
 - The INA219's 12-bit conversion averages the PWM's ripple out.
 
 **In the bay.**
-- The Uno stands on four 5 mm posts on the lid, at its holes, over the motor: its pins' tails
-  clear the motor's end bell by 1.5 mm. The post by its D8–SCL socket stands about 0.6 mm off its
-  SCL pin's tail.
+- The motor stands in the bay's −y half, on a 2.8 mm pad on the lid, and the boards stand beside
+  it in the +y half, so the bay is only as tall as the motor. Over the Uno it was 25 mm taller.
+- The Uno stands on four 6 mm posts on the lid, at its holes. Its edge stands 2 mm off the
+  motor's cradle, and its board 4.7 mm off the motor. The post by its D8–SCL socket stands about
+  0.6 mm off its SCL pin's tail.
 - Its jack's mouth stands 1 mm in from the end wall, its USB-C's 1.9 mm. The end wall has a
   window on each, a plug's moulded body plus the print clearance: 11 mm square on the jack,
   12.5 × 7 mm on the USB-C.
 - The shield is the perfboard, its 7 cm across the Uno, on male headers plugged into the Uno's
   power, analog and D0–D7 sockets (8, 6 and 8 pins).
-  - Its holes are two columns and two rows out from the power header's first pin, so all three
-    sockets fall on its grid. It misses the D8–SCL socket, which stands 0.06 in off the grid, and
+  - It's cut down to 18 × 20 holes, two rows off each end, which no part used. Its rows then run
+    from the power header's (row 0) to the D0–D7 socket's (row 19), and it's no wider than the
+    Uno, so it clears the motor's cradle by 3.3 mm. Whole, it would overhang the cradle.
+  - Its first column is two holes out from the power header's first pin, and its first row is
+    that header's, so all three sockets fall on its grid. It misses the D8–SCL socket, which stands 0.06 in off the grid, and
     stands clear of the jack.
   - Its underside stands 12.6 mm over the Uno's, 2.5 mm over the tops of the Uno's sockets and
     its ICSP header.
-- The driver stands in the shield's column 9, rows 4–7, its board out toward +x. Its screw
+- The driver stands in the shield's column 9, rows 2–5, its board out toward +x. Its screw
   terminals face the bay's +x wall, with about 26 mm of room for the motor's leads.
-- The INA219 stands in column 9, rows 13–18, its board out toward +x beside the driver's.
+- The INA219 stands in column 9, rows 11–16, its board out toward +x beside the driver's.
 - Each Adafruit board stands on one row of pins, with the rest of it held out over the
   shield. A dab of hot glue under its far end stops it rocking.
-- The thermostat's 2-way terminal stands at the shield's −x end, in column 1, rows 9 and 11, its
-  wires toward the end wall's grommet.
-- The driver's terminal blocks are the tallest parts on the shield. They stand 1.4 mm under the
-  cover.
-- The cover's west screw stands on the south wall, by the end wall: the corner is the base's
-  screw's, and the Uno's end is up against the end wall.
+- The thermostat's 2-way terminal stands at the shield's −x end, in column 1, rows 7 and 9. The
+  end wall's grommet is low beside the motor, and the wires come in there and over the Uno's end.
+- The motor sets the bay's height: the cover stands 3 mm over its end bell's boss, for its
+  terminals and leads. The driver's terminal blocks, the tallest parts on the shield, stand 5.6 mm
+  under it.
+- The cover's west screw stands on the south wall, between the base's screw in the corner and the
+  motor; the Uno's end is up against the end wall.
 
 ## Printing
 
@@ -263,7 +270,9 @@ gear and the wheel as blanks while changing the layout.
   - the boards, their headers and the Uno's tall parts clear the frame, the cover and one
     another, the shield clearing the Uno's parts by 2.5 mm;
   - the pins' tails under the shield clear the Uno's parts, and the Uno's under it clear the
-    motor and the posts.
+    posts;
+  - the Uno, the shield and the driver clear the motor and its cradle, and the motor clears the
+    cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
   shaped part and measures the wheel at thirteen poses, so it takes about two and a half
   minutes.
@@ -274,9 +283,10 @@ gear and the wheel as blanks while changing the layout.
     the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
     walls below, close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
-  - The motor's shaft, out past its pinion, clears B's first compound by 2.6 mm and D's by 12.4.
+  - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14.5,
+    and its end stands 1 mm over B's second.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
-    lid, the base against the frame, the clamp on the pipe).
+    pad, the base against the frame, the clamp on the pipe).
 
 ## Bill of materials
 
@@ -290,10 +300,11 @@ gear and the wheel as blanks while changing the layout.
   - M3 set screws, two (collars).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. Its pinion is a press fit on the 2 mm shaft, which runs on
-  8.3 mm past the pinion, beside stage 2.
+  5.5 mm past the pinion, beside stage 2, and ends 1 mm over stage 3's gear on B.
 - **Electronics** (no fabbed PCB); see *The electronics*:
   - an Arduino Uno R4 Minima (ABX00080, $20): the controller, and the adapter's way in;
-  - a 5 × 7 cm perfboard (18 × 24 holes), and 0.1 in male headers for it: 8, 6 and 8 pins;
+  - a 5 × 7 cm perfboard (18 × 24 holes, cut down to 18 × 20), and 0.1 in male headers for it:
+    8, 6 and 8 pins;
   - an Adafruit DRV8871 breakout (#3190, $7.50), its header and terminal blocks included: the
     H-bridge. It takes its supply on its VM and GND pins, so its supply terminal can be left
     off; the model keeps its room;
@@ -317,9 +328,10 @@ gear and the wheel as blanks while changing the layout.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
 4. Make the shield. Plug the male headers into the Uno's power, analog and D0–D7 sockets, lay the
-   perfboard on them (its holes two columns and two rows out from the power header's first pin,
-   its 7 cm across the Uno) and solder them, so they line up. Solder the driver and the INA219
-   on their headers, the long ends down, at the grid places above, and cut the tails to 1.5 mm.
+   perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
+   column two holes out from that header's first pin, its 7 cm across the Uno) and solder them, so
+   they line up. Solder the driver and the INA219 on their headers, the long ends down, at the
+   grid places above, and cut the tails to 1.5 mm.
    Add the thermostat's terminal, the two resistors and the capacitor, and wire them as in the
    table.
 5. Screw the Uno to its posts with its jack and USB-C toward the end wall's windows, plug the
@@ -347,6 +359,6 @@ gear and the wheel as blanks while changing the layout.
   pin 6.5 mm up. Check both against the end wall's windows on the board in hand before printing
   the frame, and the plugs of the cables you'll use (taken as 12.5 × 7 mm and 11 mm square).
 - **The boards' heights.** The DRV8871's terminal blocks (taken as 8.5 mm tall) are estimated,
-  and stand 1.4 mm under the cover: check them.
+  and stand 5.6 mm under the cover: check them.
 - **The ring and last pinion run open** under the base, beside the packing nut. A guard would be
   a small printed part.
