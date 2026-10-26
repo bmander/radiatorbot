@@ -61,6 +61,7 @@ packing_dims := {
 }
 union_dims := {
   af: 33.1mm,
+  phase: 30deg,              // its corners top and bottom, a flat facing ±y
   t: 18.8mm,                 // the nut's thickness along the outlet; it starts at the boss
   tail_d: 24mm,              // ~ the tailpiece, nut to spud
 }
@@ -168,9 +169,9 @@ component Bonnet(ref: line, nut_w: Length, neck_d: Length,
 }
 
 // The outlet's union: the nut, and the tailpiece from it to the radiator's spud.
-component OutletUnion(outlet: point, ref: line, nut_af: Length, tail_d: Length,
-                      x0: Length, x1: Length, x_spud: Length) {
-  nut := HexBar(outlet, ref, af: nut_af, phase: 0deg, z0: x0, z1: x1)
+component OutletUnion(outlet: point, ref: line, nut_af: Length, nut_phase: Angle,
+                      tail_d: Length, x0: Length, x1: Length, x_spud: Length) {
+  nut := HexBar(outlet, ref, af: nut_af, phase: nut_phase, z0: x0, z1: x1)
   tailpiece := RoundBar(outlet, d: tail_d, z0: x1, z1: x_spud)
 }
 
@@ -290,9 +291,9 @@ component RadiatorValve(handle_turn: Angle) {
   packing_nut := HexBar(std.top.origin, top_ref, af: packing_dims.af, phase: 0deg,
                         z0: 0mm, z1: packing_dims.top)
 
-  union := OutletUnion(outlet, side_ref, nut_af: union_dims.af, tail_d: union_dims.tail_d,
-                       x0: body_dims.boss_x, x1: body_dims.boss_x + union_dims.t,
-                       x_spud: spud_dims.x)
+  union := OutletUnion(outlet, side_ref, nut_af: union_dims.af, nut_phase: union_dims.phase,
+                       tail_d: union_dims.tail_d, x0: body_dims.boss_x,
+                       x1: body_dims.boss_x + union_dims.t, x_spud: spud_dims.x)
 
   radiator_spud := RoundBar(outlet, d: spud_dims.d,
                             z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
