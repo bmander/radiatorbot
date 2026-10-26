@@ -23,7 +23,7 @@
 // takes a few minutes).  The design table's requirements are claims, judged before the solve;
 // `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
 // `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about four minutes more).
+// period of their mesh (about two and a half minutes more).
 //
 // The file runs from the numbers to the parts: the stock and the fits, the drive, the heights
 // and the plan, then the building blocks, then each part in turn, then the clearances.  Every
@@ -39,11 +39,11 @@ use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, shield_dims, shield_top)
+use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, uno_holes, shield_dims)
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the wheel; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; ~4 minutes)
+checks := 0                    // 1: judge every clearance (needs `shaped`; ~2.5 minutes)
 
 // == Stock =======================================================================================
 // Drill rod.  The gears and the wheel turn on fixed rods; the housing holds the rods.
@@ -169,9 +169,8 @@ bridge_z0 := hi_collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 spine_z0 := s5_z0               // the spine's foot, over the wheel's ring
 uno_z := lid_z1 + motor130_dims.len + motor130_dims.back_h + 3mm    // the Uno's underside
-shield_z := uno_z + shield_top                          // the shield's top face
-// the driver's terminal blocks, the tallest parts on the shield, 1.4 mm under the cover
-bay_z1 := shield_z + header_dims.body_h + drv8871_dims.pcb_t + drv8871_dims.block_h + 1.4mm
+shield_z := uno_z + shield.top                          // the shield's top face
+bay_z1 := shield_z + driver.top + 1.4mm                 // its tallest parts 1.4 mm under the cover
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
 clamp_z1 := clamp_z0 + 31.7mm
 
@@ -203,11 +202,11 @@ drv_cx := uno_ox + 7 * pitch
 drv_cy := uno_oy + 3.5 * pitch
 ina_cx := uno_ox + 7 * pitch
 ina_cy := uno_oy + 13.5 * pitch
-// The end wall's windows: the USB-C's axis and the jack's, up from the Uno's underside.
-usb_z := uno_z + uno_dims.pcb_t + uno_dims.usb_h / 2
+// The end wall's windows: the USB-C's axis and the jack's, as the Uno places them.
+usb_z := uno_z + uno.usb_z
 usb_y := uno_oy + uno_dims.usb_y
-jack_z := uno_z + uno_dims.pcb_t + uno_dims.jack_z
-jack_y := uno_oy + (uno_dims.jack_y0 + uno_dims.jack_y1) / 2
+jack_z := uno_z + uno.jack_axis
+jack_y := uno_oy + uno.jack_y
 
 // == Building blocks =============================================================================
 
@@ -597,42 +596,31 @@ repeat 2 as i {
   }
 }
 
-// The Uno's four M3s, self-tapping into posts on the lid at its holes (uno_dims): by the power
-// header and by the SCL socket at the USB end (j = 0, 1), and two at the far end.  The posts are
+// The Uno's four M3s, self-tapping into posts on the lid at its holes (boards.sv).  The posts are
 // 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
-near_dx := uno_dims.hole_b_x - uno_dims.hole_a_x
-far_dy := uno_dims.hole_far_y1 - uno_dims.hole_far_y0
-repeat 2 as j {
-  near_hole := At(x: uno_ox + uno_dims.hole_a_x + j * near_dx, y: uno_oy + j * uno_dims.top_y)
-  far_hole := At(x: uno_ox + uno_dims.hole_far_x, y: uno_oy + uno_dims.hole_far_y0 + j * far_dy)
-  near_screw := ScrewPost(near_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-  far_screw := ScrewPost(far_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-  near_screw.post union frame_part
-  far_screw.post union frame_part
-  near_screw.hole cut frame_part
-  far_screw.hole cut frame_part
+repeat h in uno_holes {
+  uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y)
+  uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+  uno_screw.post union frame_part
+  uno_screw.hole cut frame_part
 }
 
 // The cover's four, down through it into posts in the bay's walls, clear of the boards and of the
 // base's screws in the corners: west on the south wall by the end wall (the Uno's end comes up to
 // the end wall, its plugs either side of y = 5 mm), east by the spine, south and north clear of
 // the shield's +x end.
-cover_w := At(x: box_x0 + 16mm, y: box_y0 + screw_inset)
-cover_e := At(x: box_x1 - screw_inset, y: board_cy)
-cover_s := At(x: -55mm, y: box_y0 + screw_inset)
-cover_n := At(x: -55mm, y: box_y1 - screw_inset)
-cover_screw_w := ScrewPost(cover_w.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
-cover_screw_e := ScrewPost(cover_e.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
-cover_screw_s := ScrewPost(cover_s.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
-cover_screw_n := ScrewPost(cover_n.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
-cover_screw_w.post union frame_part
-cover_screw_e.post union frame_part
-cover_screw_s.post union frame_part
-cover_screw_n.post union frame_part
-cover_screw_w.hole cut frame_part
-cover_screw_e.hole cut frame_part
-cover_screw_s.hole cut frame_part
-cover_screw_n.hole cut frame_part
+cover_screws := [
+  (box_x0 + 16mm, box_y0 + screw_inset),           // west
+  (box_x1 - screw_inset, board_cy),                // east
+  (-55mm, box_y0 + screw_inset),                   // south
+  (-55mm, box_y1 - screw_inset),                   // north
+]
+repeat c in cover_screws {
+  cover_at := At(x: c.x, y: c.y)
+  cover_screw := ScrewPost(cover_at.p, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
+  cover_screw.post union frame_part
+  cover_screw.hole cut frame_part
+}
 
 // == The clamp ===================================================================================
 // A block round the inlet hex and the pipe above it, split on the stem's plane square to x:
@@ -673,14 +661,11 @@ repeat 2 as i {
 // == The cover ===================================================================================
 cover := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: bay_z1, z1: bay_z1 + wall)
 cover_part := solid(cover.body)
-cover_hole_w := Post(cover_w.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
-cover_hole_e := Post(cover_e.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
-cover_hole_s := Post(cover_s.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
-cover_hole_n := Post(cover_n.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
-cover_hole_w.body cut cover_part
-cover_hole_e.body cut cover_part
-cover_hole_s.body cut cover_part
-cover_hole_n.body cut cover_part
+repeat c in cover_screws {
+  cover_hole_at := At(x: c.x, y: c.y)
+  cover_hole := Post(cover_hole_at.p, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)
+  cover_hole.body cut cover_part
+}
 
 // == The electronics =============================================================================
 // An Arduino Uno R4 Minima screwed down over the motor, and a perfboard shield plugged into it

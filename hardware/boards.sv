@@ -34,7 +34,7 @@
 
 unit mm
 use std
-use std (coords, on_u, on_v, seats, raised)
+use std (coords, seats, raised)
 
 pitch := 2.54mm                 // 0.1 in: every header's, and the perfboard's grid
 
@@ -52,8 +52,6 @@ header_dims := {
 
 interface UnoSizes {
   x0: Length, x1: Length, y0: Length, y1: Length, pcb_t: Length, socket_h: Length, tail: Length
-  analog_x0: Length, low_x0: Length, high_x0: Length, top_y: Length
-  hole_a_x: Length, hole_b_x: Length, hole_far_x: Length, hole_far_y0: Length, hole_far_y1: Length
   jack_x0: Length, jack_x1: Length, jack_y0: Length, jack_y1: Length, jack_h: Length, jack_z: Length
   usb_w: Length, usb_h: Length, usb_in: Length, usb_out: Length, usb_y: Length
   icsp_x: Length, icsp_y: Length, icsp_h: Length
@@ -67,15 +65,6 @@ uno_dims := {
   pcb_t: 1.6mm,
   socket_h: 8.5mm,              // the female headers, over its top face
   tail: 1.5mm,                  // ~ its through-hole pins, under its underside
-  analog_x0: 22.86mm,           // the sockets' first pins (the power header's is the origin):
-  low_x0: 17.78mm,              // A0, D7 and SCL; D7 ... D0 and SCL ... D8 along y = top_y
-  high_x0: -9.14mm,
-  top_y: 48.26mm,
-  hole_a_x: -13.97mm,           // its M3 holes: by the power header (y = 0), by the SCL socket
-  hole_b_x: -12.7mm,            // (y = top_y), and two at the far end
-  hole_far_x: 38.1mm,
-  hole_far_y0: 5.08mm,
-  hole_far_y1: 33.02mm,
   jack_x0: -29.84mm,            // the barrel jack, its mouth out past the board's end
   jack_x1: -16.51mm,
   jack_y0: 0.64mm,
@@ -102,6 +91,19 @@ uno_dims := {
 //   y = 0:     NC IOREF RESET 3V3 5V GND GND VIN (x = 0 to 17.78), then A0 ... A5 (x = 22.86 to
 //              35.56)
 // SDA and SCL are A4 and A5 again.  VIN is the jack's voltage, through the board's Schottky.
+// Each socket as its first pin, its count, and whether the shield plugs into it: all but the
+// D8-SCL socket, which stands 0.06 in off the others' grid.
+interface SocketPlace { x0: Length, y: Length, n: Int, shield: Int }
+uno_top_y := 48.26mm            // the far row of sockets
+uno_sockets := [
+  {x0: 0mm, y: 0mm, n: 8, shield: 1},              // power
+  {x0: 22.86mm, y: 0mm, n: 6, shield: 1},          // analog
+  {x0: 17.78mm, y: uno_top_y, n: 8, shield: 1},    // D7-D0
+  {x0: -9.14mm, y: uno_top_y, n: 10, shield: 0},   // SCL-D8
+]
+
+// The Uno's M3 holes: by the power header, by the SCL socket, and two at the far end.
+uno_holes := [(-13.97mm, 0mm), (-12.7mm, uno_top_y), (38.1mm, 5.08mm), (38.1mm, 33.02mm)]
 
 interface ShieldSizes {
   w: Length, h: Length, pcb_t: Length, cols: Int, rows: Int, col0: Length, row0: Length
@@ -117,9 +119,6 @@ shield_dims := {
   row0: -5.08mm,                // holes out from the power header's first pin
   plug: 6mm,                    // how far its header pins reach down into the Uno's sockets
 }
-// The shield's top face, which the breakouts stand on, up from the Uno's underside: over the
-// sockets and its headers' plastic.
-shield_top := uno_dims.pcb_t + uno_dims.socket_h + header_dims.body_h + shield_dims.pcb_t
 
 interface Drv8871Sizes {
   w: Length, len: Length, back: Length, pcb_t: Length, n: Int
@@ -214,7 +213,10 @@ component HeaderRow(h: HeaderSizes, y: Length, n: Int, pcb_t: Length) {
 // A row of `n` male pins along x from x = x0, plugged down into the Uno's sockets under the
 // shield: the plastic between the sockets and the shield, and the pins from `plug` down in the
 // sockets up through the shield.
-component PlugRow(h: HeaderSizes, s: ShieldSizes, u: UnoSizes, x0: Length, y: Length, n: Int) {
+component PlugRow(h: HeaderSizes, s: ShieldSizes, u: UnoSizes, at: SocketPlace) {
+  x0 := at.x0
+  y := at.y
+  n := at.n
   z0 := u.pcb_t + u.socket_h                       // the sockets' tops
   pcb_t := s.pcb_t
   plug := s.plug
@@ -231,7 +233,10 @@ component PlugRow(h: HeaderSizes, s: ShieldSizes, u: UnoSizes, x0: Length, y: Le
 
 // One of the Uno's sockets along x from x = x0, `n` pins: its plastic on the Uno's top face, and
 // its pins' tails under the Uno.
-component SocketRow(u: UnoSizes, x0: Length, y: Length, n: Int) {
+component SocketRow(u: UnoSizes, at: SocketPlace) {
+  x0 := at.x0
+  y := at.y
+  n := at.n
   plastic := Box(x0: x0 - pitch / 2, x1: x0 + (n - 0.5) * pitch, y0: y - pitch / 2,
                  y1: y + pitch / 2, z0: u.pcb_t, z1: u.pcb_t + u.socket_h)
   tails := Box(x0: x0 - 0.5mm, x1: x0 + (n - 1) * pitch + 0.5mm, y0: y - 0.5mm, y1: y + 0.5mm,
@@ -251,23 +256,17 @@ component UnoR4Minima(s: UnoSizes) {
              y1: s.usb_y + s.usb_w / 2, z0: z1, z1: z1 + s.usb_h)
   icsp := Box(x0: s.icsp_x - pitch, x1: s.icsp_x + pitch, y0: s.icsp_y - 1.5 * pitch,
               y1: s.icsp_y + 1.5 * pitch, z0: z1, z1: z1 + s.icsp_h)
-  power := SocketRow(s, x0: 0mm, y: 0mm, n: 8)
-  analog := SocketRow(s, x0: s.analog_x0, y: 0mm, n: 6)
-  low := SocketRow(s, x0: s.low_x0, y: s.top_y, n: 8)
-  high := SocketRow(s, x0: s.high_x0, y: s.top_y, n: 10)
 
   board := solid(pcb.body)
   parts := solid(jack.body)
   usb.body union parts
   icsp.body union parts
-  power.plastic.body union parts
-  analog.plastic.body union parts
-  low.plastic.body union parts
-  high.plastic.body union parts
-  tails := solid(power.tails.body)
-  analog.tails.body union tails
-  low.tails.body union tails
-  high.tails.body union tails
+  tails := solid()
+  repeat at in uno_sockets {
+    socket := SocketRow(s, at)
+    socket.plastic.body union parts
+    socket.tails.body union tails
+  }
 
   usb_z := z1 + s.usb_h / 2                        // the receptacle's axis, up from its underside
   usb_x := s.x0 - s.usb_out                        // its mouth
@@ -275,37 +274,39 @@ component UnoR4Minima(s: UnoSizes) {
                   y1: s.usb_y + s.plug_w / 2, z0: usb_z - s.plug_h / 2, z1: usb_z + s.plug_h / 2)
   construction usb_plug := solid(usb_room.body)
   jack_y := (s.jack_y0 + s.jack_y1) / 2
+  jack_axis := z1 + s.jack_z                       // the jack's pin, up from its underside
   jack_room := Box(x0: s.jack_x0 - s.plug_len, x1: s.jack_x0, y0: jack_y - s.jack_plug / 2,
-                   y1: jack_y + s.jack_plug / 2, z0: z1 + s.jack_z - s.jack_plug / 2,
-                   z1: z1 + s.jack_z + s.jack_plug / 2)
+                   y1: jack_y + s.jack_plug / 2, z0: jack_axis - s.jack_plug / 2,
+                   z1: jack_axis + s.jack_plug / 2)
   construction jack_plug := solid(jack_room.body)
 }
 
 // The perfboard shield on the Uno, in the Uno's frame: its board, and the headers that plug it
-// into the Uno's power, analog and D0-D7 sockets.  Its top face is `shield_top` up from the
-// Uno's underside.
+// into the Uno's power, analog and D0-D7 sockets.  `top` is its top face, up from the Uno's
+// underside, which the breakouts stand on.
 component Shield(s: ShieldSizes, u: UnoSizes, h: HeaderSizes) {
+  top := u.pcb_t + u.socket_h + h.body_h + s.pcb_t  // over the sockets and its headers' plastic
   mx := (s.w - (s.cols - 1) * pitch) / 2           // its margins, past the outer holes
   my := (s.h - (s.rows - 1) * pitch) / 2
   pcb := Box(x0: s.col0 - mx, x1: s.col0 + (s.cols - 1) * pitch + mx, y0: s.row0 - my,
-             y1: s.row0 + (s.rows - 1) * pitch + my, z0: shield_top - s.pcb_t, z1: shield_top)
-  power := PlugRow(h, s, u, x0: 0mm, y: 0mm, n: 8)
-  analog := PlugRow(h, s, u, x0: u.analog_x0, y: 0mm, n: 6)
-  low := PlugRow(h, s, u, x0: u.low_x0, y: u.top_y, n: 8)
+             y1: s.row0 + (s.rows - 1) * pitch + my, z0: top - s.pcb_t, z1: top)
 
   board := solid(pcb.body)
-  headers := solid(power.plastic.body)
-  analog.plastic.body union headers
-  low.plastic.body union headers
-  power.pins union headers
-  analog.pins union headers
-  low.pins union headers
+  headers := solid()
+  repeat at in uno_sockets {
+    when at.shield == 1 {
+      plug := PlugRow(h, s, u, at)
+      plug.plastic.body union headers
+      plug.pins union headers
+    }
+  }
 }
 
 // The Adafruit DRV8871 breakout on its row of pins along x, its terminals toward +y.
 component Drv8871(s: Drv8871Sizes, h: HeaderSizes) {
   z0 := h.body_h
   z1 := z0 + s.pcb_t
+  top := z1 + s.block_h                            // its terminal blocks', its tallest parts
   pcb := Box(x0: -s.w / 2, x1: s.w / 2, y0: -s.back, y1: s.len - s.back, z0: z0, z1: z1)
   chip := Box(x0: s.chip_x - s.chip_w / 2, x1: s.chip_x + s.chip_w / 2,
               y0: s.chip_y - s.chip_len / 2, y1: s.chip_y + s.chip_len / 2,
@@ -363,11 +364,11 @@ preview {
     ina_at coords(du: 7 * pitch, dv: 13.5 * pitch) std.top
   }
   drv_on := point
-  drv_on raised(d: shield_top, along: std.z) drv_at
+  drv_on raised(d: shield.top, along: std.z) drv_at
   drv := Drv8871(drv8871_dims, h: header_dims)
   drv seats(turn: -90deg, up: std.z, east: std.x) drv_on
   ina_on := point
-  ina_on raised(d: shield_top, along: std.z) ina_at
+  ina_on raised(d: shield.top, along: std.z) ina_at
   ina := Ina219(ina219_dims, h: header_dims)
   ina seats(turn: -90deg, up: std.z, east: std.x) ina_on
 }

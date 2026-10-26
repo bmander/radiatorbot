@@ -265,7 +265,8 @@ gear and the wheel as blanks while changing the layout.
   - the pins' tails under the shield clear the Uno's parts, and the Uno's under it clear the
     motor and the posts.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part and measures the wheel at thirteen poses, so it takes about four minutes.
+  shaped part and measures the wheel at thirteen poses, so it takes about two and a half
+  minutes.
   - The wheel is judged against the handle at seven rolls across a whole period of the mesh
     (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
     nearly open (2 mm and 3.8 mm down the stem's travel).
