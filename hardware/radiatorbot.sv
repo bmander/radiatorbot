@@ -147,8 +147,8 @@ claim motor_rate == -handle_ratio
 // From the floor up: the ring and the last pinion, stages 5 to 1, the lid, the electronics bay
 // and its cover.  Faces are 5 mm at module 0.8, 6 at module 1 and 10 at module 1.5, with half a
 // millimetre between layers.  The motor stands face down on a pad on the lid, its shaft down
-// through both to its pinion in stage 1, high enough that its shaft's end stands a millimetre over stage 3's gear on B;
-// the boards stand beside it, so the bay is the motor's height.
+// through both to its pinion in stage 1, high enough that the shaft's end stands a millimetre
+// over stage 3's gear on B; the boards stand beside it, so the bay is the motor's height.
 floor_z0 := -0.1mm              // the base's floor, round B and D only: the wheel turns under it
 floor_z1 := floor_z0 + 3mm
 ring_z0 := 3mm                  // the ring's teeth; the web under it runs down to the wheel
@@ -493,8 +493,8 @@ pinion := motor_pinion in motor_turn
 
 // == The motor ===================================================================================
 // Face down on a pad on the lid, its boss in a recess, its shaft through the pad and the lid to
-// its pinion in stage 1; held in a cradle of its own section grown by a wall, a print's clearance inside, the
-// pad the cradle's section under it.
+// its pinion in stage 1; held in a cradle of its own section grown by a wall, a print's clearance
+// inside, the pad the cradle's section under it.
 motor_at := point
 motor_at raised(d: motor_z, along: std.z) m_c
 motor := Motor130(motor130_dims)
