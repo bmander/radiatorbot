@@ -35,7 +35,7 @@ static const char* g_test = "";
 // == A simulated valve ===========================================================================
 // The stem travels `travel_ms` of motor running between its ends.  The motor draws an inrush near
 // stall for the first 60 ms of a start, `run_a` on the way, and `stall_a` against either end.
-// Forward (PH high) opens it.
+// Forward (OUT1 high) opens it.
 struct SimValve : Motor {
   float travel_ms = 20000;
   float pos = 0.5f;           // 0 closed, 1 open
@@ -176,29 +176,46 @@ static void test_trip_wraps() {
 }
 
 // == The thermostat ==============================================================================
-static void test_stat_ac_pulses() {
-  g_test = "thermostat reads AC pulses as a call";
+static void test_stat_contact() {
+  g_test = "thermostat reads a closed contact as a call";
   Settings s;
   s.stat_settle = 3000;
   s.stat_invert = false;
   ThermostatInput in(s);
-  // 60 Hz: low for 7 ms of each 16.7 ms cycle
   uint32_t ms = 0;
-  for (; ms < 2999; ms++) {
-    in.update(ms, fmod(ms, 16.667) < 7);
+  for (; ms < 3000; ms++) {
+    in.update(ms, true);
     CHECK(!in.known());
   }
-  for (; ms < 3100; ms++) in.update(ms, fmod(ms, 16.667) < 7);
+  in.update(ms++, true);
   CHECK(in.known());
   CHECK(in.calling());
-  // the call ends: open after the presence window and the settling
+  // the contact opens: not calling once that has held for the settling time
   uint32_t end = ms;
   for (; ms < end + 3000; ms++) {
     in.update(ms, false);
     CHECK(in.calling());
   }
-  for (; ms < end + 3100; ms++) in.update(ms, false);
+  in.update(ms++, false);
   CHECK(!in.calling());
+}
+
+static void test_stat_bounce() {
+  g_test = "thermostat rides out a bouncing contact";
+  Settings s;
+  s.stat_settle = 1000;
+  s.stat_invert = false;
+  ThermostatInput in(s);
+  uint32_t ms = 0;
+  for (; ms < 2000; ms++) in.update(ms, false);
+  // the contact makes and breaks for 50 ms as it closes, then stays closed
+  for (; ms < 2050; ms++) in.update(ms, (ms / 3) % 2 == 0);
+  for (; ms < 3049; ms++) {
+    in.update(ms, true);
+    CHECK(!in.calling());
+  }
+  for (; ms < 3100; ms++) in.update(ms, true);
+  CHECK(in.calling());
 }
 
 static void test_stat_idle() {
@@ -280,11 +297,12 @@ static void test_settings_table() {
   CHECK(n > 10);
   Settings s;
   for (size_t i = 0; i < n; i++) {
-    CHECK(strlen(fs[i].name) <= 15);  // NVS keys
+    CHECK(strlen(fs[i].name) <= 15);  // the stored slots' names
     CHECK(findField(fs[i].name) == &fs[i]);
     // every default lies within its own range
     char buf[32];
     formatField(s, fs[i], buf, sizeof buf);
+    CHECK(strlen(buf) <= 15);  // and its value as text
     Settings t;
     CHECK(setField(t, fs[i], buf));
     // and it comes back from its text as it was
@@ -292,10 +310,10 @@ static void test_settings_table() {
     formatField(t, fs[i], again, sizeof again);
     CHECK(strcmp(buf, again) == 0);
   }
-  CHECK(fabs(s.cs_gain - 1.1205f) < 1e-6f);
-  char gain[32];
-  formatField(s, *findField("cs_gain"), gain, sizeof gain);
-  CHECK(strcmp(gain, "1.1205") == 0);
+  CHECK(fabs(s.motor_volts - 6.0f) < 1e-6f);
+  char volts[32];
+  formatField(s, *findField("motor_volts"), volts, sizeof volts);
+  CHECK(strcmp(volts, "6") == 0);
   CHECK(findField("nope") == nullptr);
 }
 
@@ -468,12 +486,12 @@ static void test_clear() {
 }
 
 static void test_driver_fault() {
-  g_test = "controller stops on a driver fault";
+  g_test = "controller stops on a motor fault";
   Rig r;
   r.c.setDesired(End::kOpen);
   r.v.fault_now = true;  // reported from the start: ignored for the grace, then counted
   CHECK(r.run_until([&] { return r.c.moves() == 1; }));
-  CHECK(r.c.last().outcome == Outcome::kDriverFault);
+  CHECK(r.c.last().outcome == Outcome::kMotorFault);
   CHECK(r.c.last().duration_ms == Controller::kFaultGraceMs + Controller::kFaultTicks - 1);
   CHECK(r.c.state() == State::kFault);
   CHECK(!r.v.driving);
@@ -563,7 +581,8 @@ int main() {
   test_trip_rejects_spikes();
   test_trip_through_ripple();
   test_trip_wraps();
-  test_stat_ac_pulses();
+  test_stat_contact();
+  test_stat_bounce();
   test_stat_idle();
   test_stat_glitch();
   test_stat_invert();

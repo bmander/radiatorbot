@@ -5,10 +5,11 @@
 #include <Arduino.h>
 
 #include "app.h"
+#include "port.h"
 
 class Console {
  public:
-  Console(App& app, Stream& io) : app_(app), io_(io) {}
+  Console(App& app, Port& io) : app_(app), io_(io) {}
 
   // Reads what has arrived, and runs each line as it completes.  Never blocks.
   void poll();
@@ -28,7 +29,7 @@ class Console {
   const char* statName() const;
 
   App& app_;
-  Stream& io_;
+  Port& io_;
   char line_[96];
   size_t len_ = 0;
   int last_ = 0;

@@ -1,63 +1,64 @@
 #include "storage.h"
 
-#include <Preferences.h>
+#include <EEPROM.h>
+#include <string.h>
 
 namespace storage {
 
 namespace {
-constexpr const char* kNamespace = "radiatorbot";
-}
+
+// One image, written whole (the data flash is erased and written a 1 kB block at a time): a slot a
+// field, its name and its value as the console writes it, so a firmware that adds, drops or
+// reorders fields reads what an older one stored, and a value is checked as `set` checks it.
+constexpr uint32_t kMagic = 0x544f4252;  // "RBOT"
+constexpr size_t kSlots = 24;
+
+struct Slot {
+  char name[16];
+  char value[16];
+};
+
+struct Image {
+  uint32_t magic;
+  uint32_t count;
+  Slot slots[kSlots];
+};
+
+Image image;  // off the stack: 776 bytes
+
+}  // namespace
 
 void load(valve::Settings& s) {
-  Preferences p;
-  if (!p.begin(kNamespace, true)) return;  // nothing stored yet
-  size_t n = 0;
-  const valve::Field* fs = valve::fields(&n);
-  for (size_t i = 0; i < n; i++) {
-    const valve::Field& f = fs[i];
-    if (!p.isKey(f.name)) continue;
+  EEPROM.get(0, image);
+  if (image.magic != kMagic || image.count > kSlots) return;  // nothing stored yet
+  for (size_t i = 0; i < image.count; i++) {
+    Slot& slot = image.slots[i];
+    slot.name[sizeof slot.name - 1] = '\0';
+    slot.value[sizeof slot.value - 1] = '\0';
+    const valve::Field* f = valve::findField(slot.name);
     // A stored value outside the field's range (an older firmware's) is ignored.
-    switch (f.type) {
-      case valve::FieldType::kFloat: {
-        float v = p.getFloat(f.name);
-        if (valve::inRange(f, v)) valve::floatField(s, f) = v;
-        break;
-      }
-      case valve::FieldType::kUint: {
-        uint32_t v = p.getUInt(f.name);
-        if (valve::inRange(f, v)) valve::uintField(s, f) = v;
-        break;
-      }
-      case valve::FieldType::kBool:
-        valve::boolField(s, f) = p.getBool(f.name);
-        break;
-    }
+    if (f != nullptr) valve::setField(s, *f, slot.value);
   }
-  p.end();
 }
 
 bool save(const valve::Settings& s) {
-  Preferences p;
-  if (!p.begin(kNamespace, false)) return false;
-  bool ok = true;
   size_t n = 0;
   const valve::Field* fs = valve::fields(&n);
+  if (n > kSlots) return false;
+  memset(&image, 0, sizeof image);
+  image.magic = kMagic;
+  image.count = n;
   for (size_t i = 0; i < n; i++) {
-    const valve::Field& f = fs[i];
-    switch (f.type) {
-      case valve::FieldType::kFloat:
-        ok &= p.putFloat(f.name, valve::floatField(s, f)) > 0;
-        break;
-      case valve::FieldType::kUint:
-        ok &= p.putUInt(f.name, valve::uintField(s, f)) > 0;
-        break;
-      case valve::FieldType::kBool:
-        ok &= p.putBool(f.name, valve::boolField(s, f)) > 0;
-        break;
-    }
+    Slot& slot = image.slots[i];
+    strncpy(slot.name, fs[i].name, sizeof slot.name - 1);
+    valve::formatField(s, fs[i], slot.value, sizeof slot.value);
   }
-  p.end();
-  return ok;
+  EEPROM.put(0, image);
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&image);
+  for (size_t i = 0; i < sizeof image; i++) {
+    if (EEPROM.read(i) != bytes[i]) return false;
+  }
+  return true;
 }
 
 }  // namespace storage

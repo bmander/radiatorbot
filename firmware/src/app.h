@@ -4,16 +4,16 @@
 #include <stdint.h>
 
 #include "controller.h"
-#include "drv8874.h"
+#include "drv8871.h"
 #include "mode.h"
 #include "settings.h"
 #include "thermostat.h"
 
-#define RADIATORBOT_VERSION "0.1.0"
+#define RADIATORBOT_VERSION "0.2.0"
 
 struct App {
   valve::Settings settings;
-  Drv8874 motor{settings};
+  Drv8871 motor{settings};
   valve::ThermostatInput stat{settings};
   valve::Controller ctl{motor, settings};
 

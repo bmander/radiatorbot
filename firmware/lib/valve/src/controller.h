@@ -4,7 +4,7 @@
 // The controller runs the motor toward the desired end until the current trips, then brakes and
 // puts the driver to sleep.  Between ends, or after a failure, it doesn't know where the valve is.
 //
-// A move fails if it times out without tripping or the driver reports a fault.  After a failure
+// A move fails if it times out without tripping or the motor reports a fault.  After a failure
 // the controller waits: it tries again when the desired end changes, when it's cleared, or after
 // `retry` seconds, at most `kMaxRetries` times in a row on its own.
 #pragma once
@@ -19,7 +19,7 @@ namespace valve {
 
 enum class End : uint8_t { kUnknown, kOpen, kClosed };
 enum class State : uint8_t { kIdle, kRunning, kBackoff, kFault };
-enum class Outcome : uint8_t { kNone, kReached, kTimeout, kDriverFault, kAborted };
+enum class Outcome : uint8_t { kNone, kReached, kTimeout, kMotorFault, kAborted };
 
 const char* name(End e);
 const char* name(State s);
@@ -37,7 +37,7 @@ struct MoveReport {
 class Controller {
  public:
   static constexpr uint32_t kBrakeMs = 50;        // braked before the driver sleeps
-  static constexpr uint32_t kFaultGraceMs = 10;   // the fault output ignored after a start
+  static constexpr uint32_t kFaultGraceMs = 10;   // the motor's fault ignored after a start
   static constexpr uint32_t kFaultTicks = 3;      // readings in a row that make a fault
   static constexpr uint8_t kMaxRetries = 3;
 

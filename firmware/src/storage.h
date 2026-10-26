@@ -1,4 +1,4 @@
-// The settings in flash (NVS), one key a field.
+// The settings in flash: the R4's data flash, through its EEPROM library.
 #pragma once
 
 #include "settings.h"

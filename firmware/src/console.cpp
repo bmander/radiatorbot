@@ -85,7 +85,7 @@ void Console::run(char* line) {
   } else if (strcmp(cmd, "reboot") == 0) {
     io_.println("rebooting");
     io_.flush();
-    ESP.restart();
+    NVIC_SystemReset();
   } else {
     io_.printf("unknown command `%s`; `help` lists them\n", cmd);
   }
@@ -176,16 +176,24 @@ void Console::status() {
   if (app_.mode == Mode::kManual) {
     io_.printf(" (%s)", app_.manual == End::kUnknown ? "hold" : valve::name(app_.manual));
   }
-  io_.printf("\n  thermostat  %s (input %s)\n", statName(),
-             digitalRead(pins::kThermostat) == LOW ? "low" : "high");
+  io_.printf("\n  thermostat  %s (contact %s)\n", statName(),
+             digitalRead(pins::kThermostat) == LOW ? "closed" : "open");
   io_.printf("  valve       %s\n", valve::name(c.position()));
   io_.printf("  motor       %s", valve::name(c.state()));
   if (c.state() == State::kRunning) io_.printf(" to %s", valve::name(c.target()));
   if (c.state() == State::kFault) io_.printf(" (%u in a row)", c.failures());
-  io_.printf(", driver %s%s\n", c.awake() ? "awake" : "asleep", app_.motor.fault() ? ", FAULT" : "");
-  if (c.awake()) {
-    io_.printf("  current     %.2f A (%.2f A filtered), offset %.0f mV\n", c.amps(), c.filtered(),
-               app_.motor.offset_mv());
+  io_.printf(", driver %s\n", c.awake() ? "awake" : "asleep");
+  Drv8871& m = app_.motor;
+  if (!c.moving()) m.refresh();  // while it runs, the loop reads it every tick
+  if (!m.monitor_ok()) {
+    io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A4, SCL A5)");
+  } else {
+    io_.printf("  supply      %.2f V, %.2f A%s\n", m.supply_volts(), m.supply_amps(),
+               m.fault() ? ": too low to run the motor" : "");
+  }
+  if (c.moving()) {
+    io_.printf("  current     %.2f A (%.2f A filtered) at %.0f%% PWM\n", c.amps(), c.filtered(),
+               m.pwm() * 100);
   }
   if (c.moves() > 0) {
     io_.print("  last move   ");
