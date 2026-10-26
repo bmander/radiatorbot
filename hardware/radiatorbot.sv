@@ -39,7 +39,7 @@
 unit mm
 use std
 use std (vertical, horizontal, turns, coords, seats, raised)
-use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, union_dims, handle_gap)
+use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap)
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
@@ -198,7 +198,7 @@ clamp_bolt_y := 19mm
 nut_clear := 2mm                // the clamp's relief round the outlet's union nut
 // The clamp's bolts: both rows over the hex's pocket, the lower row a millimetre and a half over
 // its top.
-clamp_bolt_z0 := body_dims.inlet_top + 0.2mm + m4_clear / 2 + 1.5mm
+clamp_bolt_z0 := body_dims.inlet_top + gap + m4_clear / 2 + 1.5mm
 clamp_bolt_z1 := clamp_z1 - 7mm
 screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
 // The Uno and its shield (boards.sv) stand beside the motor, by the Uno's frame, its power
@@ -667,32 +667,29 @@ repeat c in cover_screws {
 // A block round the inlet hex and the pipe above it, split on the stem's plane square to the
 // bot's x: the fixed half is the frame's, on the bot's side, and the cap bolts to it from the
 // other, out of the radiator's way, with four M4 bolts, their nuts in pockets in the fixed half's
-// back.  The hex's pocket stands a print's clearance off every flat, so the hex takes the
+// back.  The hex's pocket is the hex grown a print's clearance all round, so the hex takes the
 // handle's torque; the pipe's bore is the pipe's, so the closing split grips it.  The clamp hangs
 // on the hex's top face.
 //
 // With the bot a quarter turn round, the split crosses the middles of the hex's two flats square
 // to the outlet, so each half holds two whole flats and half of each of those, and a corner
 // stands in each half's middle.  Both rows of bolts grip the pipe over the hex.  The clamp's side
-// toward the radiator reaches out over the outlet's union nut,
-// whose top stands above the hex's underside, so both halves are relieved round it: the nut grown
-// `nut_clear` all round.
+// toward the radiator reaches out over the outlet's union nut, whose top stands above the hex's
+// underside, so both halves are relieved round it: the nut grown `nut_clear` all round.
 clamp_cap := Block(x0: split / 2, x1: clamp_reach, y0: -clamp_w / 2, y1: clamp_w / 2,
                    z0: clamp_z0, z1: clamp_z1) in bot
 cap_part := solid(clamp_cap.body)
 
-hex_room := HexBar(std.top.origin, valve.top_ref, af: body_dims.inlet_af + 2 * gap,
-                   phase: body_dims.inlet_phase, z0: clamp_z0 - 1mm, z1: body_dims.inlet_top + 0.2mm)
+hex_room := std.Grown(valve.body.inlet.bar, d: gap)
 pipe_room := RoundBar(std.top.origin, d: pipe_dims.d + 0.2mm, z0: body_dims.inlet_top,
                       z1: clamp_z1 + 1mm)
-hex_room.bar cut frame_part
-hex_room.bar cut cap_part
+hex_room.body cut frame_part
+hex_room.body cut cap_part
 pipe_room.bar cut frame_part
 pipe_room.bar cut cap_part
-nut_room := HexBar(valve.outlet, valve.side_ref, af: union_dims.af + 2 * nut_clear, phase: 0deg,
-                   z0: body_dims.boss_x - nut_clear, z1: clamp_w / 2 + 1mm)
-nut_room.bar cut frame_part
-nut_room.bar cut cap_part
+nut_room := std.Grown(valve.union.nut.bar, d: nut_clear)
+nut_room.body cut frame_part
+nut_room.body cut cap_part
 
 repeat 2 as i {
   bolt_lo := BoreX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z0, d: m4_clear,
@@ -709,7 +706,7 @@ repeat 2 as i {
   bolt_hi.body cut cap_part
   nut_lo.nut.bar cut frame_part
   nut_hi.nut.bar cut frame_part
-  claim bolt_lo.body clear(1mm) hex_room.bar
+  claim bolt_lo.body clear(1mm) hex_room.body
 }
 
 // == The cover ===================================================================================
