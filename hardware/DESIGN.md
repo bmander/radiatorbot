@@ -45,12 +45,13 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     fixed half's back.
   - The hex pocket takes the handle's reaction torque positively; nothing relies on friction on
     a round pipe.
-  - The split runs through two of the hex's corners, so each half holds three whole flats, and
-    the bolts close the halves square onto the middle two.
-  - Those corners stand where a bolt beside the hex would pass, so both rows of bolts grip the
-    pipe above the hex. The lower row clears the hex's pocket by 1.7 mm, and that is claimed.
-  - The clamp's radiator-side face stands beside the outlet's union nut. The clamp is 48 mm
-    across, so that face clears the nut by 2 mm.
+  - The hex has a flat square to the outlet, so the split crosses the middles of two flats: each
+    half holds two whole flats and half of each of those, with a corner in its middle.
+  - Both rows of bolts grip the pipe above the hex. The lower row clears the hex's pocket by about
+    3 mm, and at least 1 mm is claimed.
+  - The clamp is 48 mm across, so its radiator-side face reaches out over the outlet's union nut
+    (18.5 mm from the stem, 18.8 mm thick), whose top stands above the hex's underside. Both
+    halves are relieved round the nut, its hex grown 2 mm all round.
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
   the ring, and a bridge across it holds the wheel's axle, standing on the upper collar just
   above the ring.
@@ -362,11 +363,6 @@ gear and the wheel as blanks while changing the layout.
 - **Stem travel.** The model assumes the handle as measured is closed, and that it drops 4 mm on
   opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
   the pockets' straight band above the draft goes.
-- **The inlet hex's orientation** relative to the outlet. The model has a corner on ±x, so the
-  clamp's split, a quarter turn from the outlet, runs through two corners. The pocket is cut from
-  the hex, so the clamp fits it either way. If the valve's hex has flats on ±x, the split crosses
-  two flats instead and the bolts clear the pocket by more. Check it on the valve, and set it in
-  `radiator_valve.sv`.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
   must stay under the DRV8871's ~2.1 A limit.
 - **The Uno's connectors.** Its outline, sockets and holes are the Uno standard, but the R4
