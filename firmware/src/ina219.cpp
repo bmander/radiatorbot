@@ -38,10 +38,16 @@ bool Ina219::volts(float& out) {
 }
 
 bool Ina219::read(uint8_t reg, uint16_t& out) {
-  Wire.beginTransmission(address_);
-  Wire.write(reg);
-  if (Wire.endTransmission() != 0) return false;
-  if (Wire.requestFrom(address_, static_cast<size_t>(2)) != 2) return false;
+  if (pointer_ != reg) {
+    Wire.beginTransmission(address_);
+    Wire.write(reg);
+    pointer_ = Wire.endTransmission() == 0 ? reg : 0xFF;
+    if (pointer_ != reg) return false;
+  }
+  if (Wire.requestFrom(address_, static_cast<size_t>(2)) != 2) {
+    pointer_ = 0xFF;
+    return false;
+  }
   uint8_t hi = Wire.read();
   uint8_t lo = Wire.read();
   out = static_cast<uint16_t>(hi << 8 | lo);
@@ -53,5 +59,6 @@ bool Ina219::write(uint8_t reg, uint16_t value) {
   Wire.write(reg);
   Wire.write(static_cast<uint8_t>(value >> 8));
   Wire.write(static_cast<uint8_t>(value & 0xFF));
-  return Wire.endTransmission() == 0;
+  pointer_ = Wire.endTransmission() == 0 ? reg : 0xFF;
+  return pointer_ == reg;
 }

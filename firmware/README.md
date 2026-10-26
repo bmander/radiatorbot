@@ -57,14 +57,14 @@ find the board, double-tap its reset button and try again.
   - A change of mind during a move stops it; after `rest` the motor sets off the other way.
 - **At power-up** the bot doesn't know where the valve is. Once the thermostat has settled it
   drives to the matching end; if the valve is there already, it stalls at once and trips.
-- **Failures.** A move fails if it runs `timeout` (60 s) without tripping, or on a supply fault:
+- **Failures.** A move fails if it runs `timeout` (60 s) without tripping, or on a motor fault:
   the supply under 6.5 V (the adapter unplugged, or sagging below where the DRV8871 locks out),
-  or the INA219 not answering. The motor stops and the valve's position is unknown. The bot tries again after `retry` (15 min), up to 3 times in a row on its
-  own; a change in the thermostat, or the console's `clear`, `open` or `close`, tries again at
-  once.
+  or the INA219 not answering. The motor stops and the valve's position is unknown. The bot tries
+  again after `retry` (15 min), up to 3 times in a row on its own; a change in the thermostat, or
+  the console's `clear`, `open` or `close`, tries again at once.
 - The loop runs about every millisecond under a 2 s watchdog. Console output never blocks it: it
   waits in a 4 kB buffer while the host catches up, and with no host connected it's dropped.
-- Over USB alone the R4 and the console run, but the motor doesn't: every move is a supply fault
+- Over USB alone the R4 and the console run, but the motor doesn't: every move is a motor fault
   until the wall adapter is plugged in.
 
 ## The console

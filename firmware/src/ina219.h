@@ -23,4 +23,5 @@ class Ina219 {
   bool write(uint8_t reg, uint16_t value);
 
   uint8_t address_;
+  uint8_t pointer_ = 0xFF;  // the register the chip's pointer is on; reading it again needs no write
 };

@@ -8,14 +8,14 @@ namespace storage {
 namespace {
 
 // One image, written whole (the data flash is erased and written a 1 kB block at a time): a slot a
-// field, found by its name, so a firmware that adds, drops or reorders fields reads what an older
-// one stored.
+// field, its name and its value as the console writes it, so a firmware that adds, drops or
+// reorders fields reads what an older one stored, and a value is checked as `set` checks it.
 constexpr uint32_t kMagic = 0x544f4252;  // "RBOT"
-constexpr size_t kSlots = 32;
+constexpr size_t kSlots = 24;
 
 struct Slot {
   char name[16];
-  uint32_t bits;
+  char value[16];
 };
 
 struct Image {
@@ -24,7 +24,7 @@ struct Image {
   Slot slots[kSlots];
 };
 
-Image image, readback;  // off the stack: 648 bytes each
+Image image;  // off the stack: 776 bytes
 
 }  // namespace
 
@@ -34,23 +34,10 @@ void load(valve::Settings& s) {
   for (size_t i = 0; i < image.count; i++) {
     Slot& slot = image.slots[i];
     slot.name[sizeof slot.name - 1] = '\0';
+    slot.value[sizeof slot.value - 1] = '\0';
     const valve::Field* f = valve::findField(slot.name);
-    if (f == nullptr) continue;
     // A stored value outside the field's range (an older firmware's) is ignored.
-    switch (f->type) {
-      case valve::FieldType::kFloat: {
-        float v;
-        memcpy(&v, &slot.bits, sizeof v);
-        if (valve::inRange(*f, v)) valve::floatField(s, *f) = v;
-        break;
-      }
-      case valve::FieldType::kUint:
-        if (valve::inRange(*f, slot.bits)) valve::uintField(s, *f) = slot.bits;
-        break;
-      case valve::FieldType::kBool:
-        valve::boolField(s, *f) = slot.bits != 0;
-        break;
-    }
+    if (f != nullptr) valve::setField(s, *f, slot.value);
   }
 }
 
@@ -62,26 +49,16 @@ bool save(const valve::Settings& s) {
   image.magic = kMagic;
   image.count = n;
   for (size_t i = 0; i < n; i++) {
-    const valve::Field& f = fs[i];
     Slot& slot = image.slots[i];
-    strncpy(slot.name, f.name, sizeof slot.name - 1);
-    switch (f.type) {
-      case valve::FieldType::kFloat: {
-        float v = valve::floatField(s, f);
-        memcpy(&slot.bits, &v, sizeof v);
-        break;
-      }
-      case valve::FieldType::kUint:
-        slot.bits = valve::uintField(s, f);
-        break;
-      case valve::FieldType::kBool:
-        slot.bits = valve::boolField(s, f) ? 1 : 0;
-        break;
-    }
+    strncpy(slot.name, fs[i].name, sizeof slot.name - 1);
+    valve::formatField(s, fs[i], slot.value, sizeof slot.value);
   }
   EEPROM.put(0, image);
-  EEPROM.get(0, readback);
-  return memcmp(&image, &readback, sizeof image) == 0;
+  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&image);
+  for (size_t i = 0; i < sizeof image; i++) {
+    if (EEPROM.read(i) != bytes[i]) return false;
+  }
+  return true;
 }
 
 }  // namespace storage

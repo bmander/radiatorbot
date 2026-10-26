@@ -21,6 +21,7 @@ class Drv8871 : public valve::Motor {
   static constexpr float kPwmHz = 20000;     // above hearing
   static constexpr float kMinVolts = 6.5f;   // the DRV8871 locks out below about 6.4 V
   static constexpr float kMinPwm = 0.02f;    // under this the motor's current isn't worked out
+  static constexpr uint32_t kVoltsMs = 20;    // how often a move reads the supply's voltage
 
   explicit Drv8871(const valve::Settings& s);
 
@@ -34,7 +35,7 @@ class Drv8871 : public valve::Motor {
   bool fault() override;
   float amps() override;
 
-  // Reads the supply afresh, for the console.
+  // Reads the supply's current and voltage afresh.
   void refresh();
   // The INA219 answered the latest reading.
   bool monitor_ok() const { return ok_; }
@@ -52,4 +53,6 @@ class Drv8871 : public valve::Motor {
   Ina219 monitor_;
   bool ok_ = false;
   float volts_ = 0, supply_amps_ = 0, pwm_ = 0;
+  uint32_t volts_at_ = 0;
+  float in1_set_ = 0, in2_set_ = 0;  // the inputs' duty, as last written (both start low)
 };

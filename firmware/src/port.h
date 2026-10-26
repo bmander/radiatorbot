@@ -23,7 +23,7 @@ class Port : public Stream {
   using Print::write;
 
  private:
-  static constexpr size_t kSize = 4096;  // the longest reply (`help`, `get`) whole
+  static constexpr size_t kSize = 2048;  // the longest reply (`get`, ~1.4 kB) whole
 
   Stream& usb_;
   uint8_t buf_[kSize];

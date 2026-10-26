@@ -564,9 +564,9 @@ grommet := BoreX(y: 30mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm, x1: box_x0
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
                   y0: usb_y - uno_dims.plug_w / 2 - gap, y1: usb_y + uno_dims.plug_w / 2 + gap,
                   z0: usb_z - uno_dims.plug_h / 2 - gap, z1: usb_z + uno_dims.plug_h / 2 + gap)
-jack_room := uno_dims.jack_plug / 2 + gap
-jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_room,
-                   y1: jack_y + jack_room, z0: jack_z - jack_room, z1: jack_z + jack_room)
+jack_half := uno_dims.jack_plug / 2 + gap
+jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_half,
+                   y1: jack_y + jack_half, z0: jack_z - jack_half, z1: jack_z + jack_half)
 
 frame_part := solid(lid.body)
 bay_shell union frame_part
@@ -597,31 +597,27 @@ repeat 2 as i {
   }
 }
 
-// The Uno's four M3s, self-tapping into posts on the lid at its holes (the Uno R3's, in its
-// frame: by the power header, by the D8-SCL header, and two at the far end).  The posts are 5 mm
-// across, an M3 standoff's size: the one by the D8-SCL header stands 3.6 mm off its SCL pin.
-uno_hole_p := At(x: uno_ox - 13.97mm, y: uno_oy)
-uno_hole_d := At(x: uno_ox - 12.7mm, y: uno_oy + 48.26mm)
-uno_hole_e := At(x: uno_ox + 38.1mm, y: uno_oy + 33.02mm)
-uno_hole_f := At(x: uno_ox + 38.1mm, y: uno_oy + 5.08mm)
-uno_screw_p := ScrewPost(uno_hole_p.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-uno_screw_d := ScrewPost(uno_hole_d.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-uno_screw_e := ScrewPost(uno_hole_e.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-uno_screw_f := ScrewPost(uno_hole_f.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
-uno_screw_p.post union frame_part
-uno_screw_d.post union frame_part
-uno_screw_e.post union frame_part
-uno_screw_f.post union frame_part
-uno_screw_p.hole cut frame_part
-uno_screw_d.hole cut frame_part
-uno_screw_e.hole cut frame_part
-uno_screw_f.hole cut frame_part
+// The Uno's four M3s, self-tapping into posts on the lid at its holes (uno_dims): by the power
+// header and by the SCL socket at the USB end (j = 0, 1), and two at the far end.  The posts are
+// 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
+near_dx := uno_dims.hole_b_x - uno_dims.hole_a_x
+far_dy := uno_dims.hole_far_y1 - uno_dims.hole_far_y0
+repeat 2 as j {
+  near_hole := At(x: uno_ox + uno_dims.hole_a_x + j * near_dx, y: uno_oy + j * uno_dims.top_y)
+  far_hole := At(x: uno_ox + uno_dims.hole_far_x, y: uno_oy + uno_dims.hole_far_y0 + j * far_dy)
+  near_screw := ScrewPost(near_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+  far_screw := ScrewPost(far_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot, depth: 8mm)
+  near_screw.post union frame_part
+  far_screw.post union frame_part
+  near_screw.hole cut frame_part
+  far_screw.hole cut frame_part
+}
 
 // The cover's four, down through it into posts in the bay's walls, clear of the boards and of the
 // base's screws in the corners: west on the south wall by the end wall (the Uno's end comes up to
 // the end wall, its plugs either side of y = 5 mm), east by the spine, south and north clear of
 // the shield's +x end.
-cover_w := At(x: -120mm, y: box_y0 + screw_inset)
+cover_w := At(x: box_x0 + 16mm, y: box_y0 + screw_inset)
 cover_e := At(x: box_x1 - screw_inset, y: board_cy)
 cover_s := At(x: -55mm, y: box_y0 + screw_inset)
 cover_n := At(x: -55mm, y: box_y1 - screw_inset)

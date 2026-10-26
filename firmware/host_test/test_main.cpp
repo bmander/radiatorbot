@@ -302,6 +302,7 @@ static void test_settings_table() {
     // every default lies within its own range
     char buf[32];
     formatField(s, fs[i], buf, sizeof buf);
+    CHECK(strlen(buf) <= 15);  // and its value as text
     Settings t;
     CHECK(setField(t, fs[i], buf));
     // and it comes back from its text as it was
@@ -485,12 +486,12 @@ static void test_clear() {
 }
 
 static void test_driver_fault() {
-  g_test = "controller stops on a driver fault";
+  g_test = "controller stops on a motor fault";
   Rig r;
   r.c.setDesired(End::kOpen);
   r.v.fault_now = true;  // reported from the start: ignored for the grace, then counted
   CHECK(r.run_until([&] { return r.c.moves() == 1; }));
-  CHECK(r.c.last().outcome == Outcome::kDriverFault);
+  CHECK(r.c.last().outcome == Outcome::kMotorFault);
   CHECK(r.c.last().duration_ms == Controller::kFaultGraceMs + Controller::kFaultTicks - 1);
   CHECK(r.c.state() == State::kFault);
   CHECK(!r.v.driving);

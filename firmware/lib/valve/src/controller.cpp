@@ -24,7 +24,7 @@ const char* name(Outcome o) {
   switch (o) {
     case Outcome::kReached: return "reached";
     case Outcome::kTimeout: return "timed out";
-    case Outcome::kDriverFault: return "supply fault";
+    case Outcome::kMotorFault: return "motor fault";
     case Outcome::kAborted: return "stopped";
     default: return "none";
   }
@@ -44,7 +44,7 @@ void Controller::tick(uint32_t now) {
     case State::kRunning: {
       amps_ = motor_.amps();
       if (faulted(now)) {
-        finish(now, Outcome::kDriverFault);
+        finish(now, Outcome::kMotorFault);
       } else if (desired_ != target_) {
         finish(now, Outcome::kAborted);
       } else if (trip_.update(now, amps_)) {

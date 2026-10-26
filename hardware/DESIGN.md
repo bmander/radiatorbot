@@ -121,7 +121,7 @@ their makers' layouts where there is one, and placed in the bay in `radiatorbot.
   0.1 Ω shunt over I2C, ±3.2 A.
   - Reading on the high side keeps the driver's ground the Uno's.
   - It reads the supply's voltage as well. The firmware scales the PWM by it, and calls a move a
-    supply fault if the adapter is unplugged or sags under the driver's lockout.
+    motor fault if the adapter is unplugged or sags under the driver's lockout.
   - A 12-bit conversion takes 532 µs, which averages over ten periods of the 20 kHz PWM.
   - It carries the driver's whole draw: the motor's current while the bridge drives, plus the
     chip's few mA. Under the PWM that reads about the PWM's fraction times the motor's current
@@ -163,7 +163,7 @@ and through Mean Well's other distributors). Any regulated 9–12 V adapter with
   the Uno and the INA219 a few tens of mA more. The Uno's Schottky is rated 2 A.
 - A 1 A adapter, like Adafruit's 9 V (#63), runs the motor but sits at its limit at each stall.
 - A USB cable in the Uno powers it alone, for programming and the console. The motor waits for
-  the adapter; until it's in, every move is a supply fault.
+  the adapter; until it's in, every move is a motor fault.
 
 **Wiring**, all on the shield (each board's pins are listed in `boards.sv`):
 
@@ -214,7 +214,7 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
 - The thermostat's 2-way terminal stands at the shield's −x end, in column 1, rows 9 and 11, its
   wires toward the end wall's grommet.
 - The driver's terminal blocks are the tallest parts on the shield. They stand 1.4 mm under the
-  cover, which puts the bay 12.6 mm taller than it was for the XIAO's perfboard.
+  cover.
 - The cover's west screw stands on the south wall, by the end wall: the corner is the base's
   screw's, and the Uno's end is up against the end wall.
 

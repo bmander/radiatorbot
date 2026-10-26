@@ -11,7 +11,7 @@ void Drv8871::begin() {
   // Both inputs low: the chip's own pull-downs have held them so through the reset.
   in1_.begin(kPwmHz, 0.0f);
   in2_.begin(kPwmHz, 0.0f);
-  ok_ = monitor_.begin();
+  monitor_.begin();
   refresh();
 }
 
@@ -50,16 +50,23 @@ void Drv8871::sleep() {
 bool Drv8871::fault() { return !ok_ || volts_ < kMinVolts; }
 
 float Drv8871::amps() {
-  refresh();
+  // the current every tick; the supply's voltage, which moves slowly, every kVoltsMs
+  if (millis() - volts_at_ >= kVoltsMs) {
+    refresh();
+  } else {
+    ok_ = monitor_.amps(supply_amps_);
+  }
   if (!ok_ || pwm_ < kMinPwm || supply_amps_ <= 0) return 0;
   return supply_amps_ / pwm_;
 }
 
 void Drv8871::refresh() {
   ok_ = monitor_.amps(supply_amps_) && monitor_.volts(volts_);
+  volts_at_ = millis();
 }
 
 void Drv8871::set(float in1, float in2) {
-  in1_.pulse_perc(in1);
-  in2_.pulse_perc(in2);
+  // only what changed: through a move the held input stays put, and the other mostly does
+  if (in1 != in1_set_) in1_.pulse_perc(in1_set_ = in1);
+  if (in2 != in2_set_) in2_.pulse_perc(in2_set_ = in2);
 }

@@ -52,6 +52,8 @@ header_dims := {
 
 interface UnoSizes {
   x0: Length, x1: Length, y0: Length, y1: Length, pcb_t: Length, socket_h: Length, tail: Length
+  analog_x0: Length, low_x0: Length, high_x0: Length, top_y: Length
+  hole_a_x: Length, hole_b_x: Length, hole_far_x: Length, hole_far_y0: Length, hole_far_y1: Length
   jack_x0: Length, jack_x1: Length, jack_y0: Length, jack_y1: Length, jack_h: Length, jack_z: Length
   usb_w: Length, usb_h: Length, usb_in: Length, usb_out: Length, usb_y: Length
   icsp_x: Length, icsp_y: Length, icsp_h: Length
@@ -65,6 +67,15 @@ uno_dims := {
   pcb_t: 1.6mm,
   socket_h: 8.5mm,              // the female headers, over its top face
   tail: 1.5mm,                  // ~ its through-hole pins, under its underside
+  analog_x0: 22.86mm,           // the sockets' first pins (the power header's is the origin):
+  low_x0: 17.78mm,              // A0, D7 and SCL; D7 ... D0 and SCL ... D8 along y = top_y
+  high_x0: -9.14mm,
+  top_y: 48.26mm,
+  hole_a_x: -13.97mm,           // its M3 holes: by the power header (y = 0), by the SCL socket
+  hole_b_x: -12.7mm,            // (y = top_y), and two at the far end
+  hole_far_x: 38.1mm,
+  hole_far_y0: 5.08mm,
+  hole_far_y1: 33.02mm,
   jack_x0: -29.84mm,            // the barrel jack, its mouth out past the board's end
   jack_x1: -16.51mm,
   jack_y0: 0.64mm,
@@ -212,11 +223,13 @@ component HeaderRow(h: HeaderSizes, y: Length, n: Int, pcb_t: Length) {
   }
 }
 
-// A row of `n` male pins along x from x = x0, plugged down into sockets whose tops stand at z0,
-// under a board `pcb_t` thick: the plastic between the sockets and the board, and the pins from
-// `plug` down in the sockets up through the board.
-component PlugRow(h: HeaderSizes, x0: Length, y: Length, n: Int, z0: Length, pcb_t: Length,
-                  plug: Length) {
+// A row of `n` male pins along x from x = x0, plugged down into the Uno's sockets under the
+// shield: the plastic between the sockets and the shield, and the pins from `plug` down in the
+// sockets up through the shield.
+component PlugRow(h: HeaderSizes, s: ShieldSizes, u: UnoSizes, x0: Length, y: Length, n: Int) {
+  z0 := u.pcb_t + u.socket_h                       // the sockets' tops
+  pcb_t := s.pcb_t
+  plug := s.plug
   plastic := Box(x0: x0 - pitch / 2, x1: x0 + (n - 0.5) * pitch, y0: y - h.body_w / 2,
                  y1: y + h.body_w / 2, z0: z0, z1: z0 + h.body_h)
   pins := solid()
@@ -228,14 +241,13 @@ component PlugRow(h: HeaderSizes, x0: Length, y: Length, n: Int, z0: Length, pcb
   }
 }
 
-// A socket's plastic along x from x = x0, `n` pins, standing `height` on a board's top face at z0,
-// and its pins' tails under the board.
-component SocketRow(x0: Length, y: Length, n: Int, z0: Length, height: Length, pcb_t: Length,
-                    tail: Length) {
+// One of the Uno's sockets along x from x = x0, `n` pins: its plastic on the Uno's top face, and
+// its pins' tails under the Uno.
+component SocketRow(u: UnoSizes, x0: Length, y: Length, n: Int) {
   plastic := Box(x0: x0 - pitch / 2, x1: x0 + (n - 0.5) * pitch, y0: y - pitch / 2,
-                 y1: y + pitch / 2, z0: z0, z1: z0 + height)
+                 y1: y + pitch / 2, z0: u.pcb_t, z1: u.pcb_t + u.socket_h)
   tails := Box(x0: x0 - 0.5mm, x1: x0 + (n - 1) * pitch + 0.5mm, y0: y - 0.5mm, y1: y + 0.5mm,
-               z0: z0 - pcb_t - tail, z1: z0 - pcb_t)
+               z0: -u.tail, z1: 0mm)
 }
 
 // The Uno R4 Minima, in its own frame (std.top its underside), its USB and its jack toward -x:
@@ -251,14 +263,10 @@ component UnoR4Minima(s: UnoSizes) {
              y1: s.usb_y + s.usb_w / 2, z0: z1, z1: z1 + s.usb_h)
   icsp := Box(x0: s.icsp_x - pitch, x1: s.icsp_x + pitch, y0: s.icsp_y - 1.5 * pitch,
               y1: s.icsp_y + 1.5 * pitch, z0: z1, z1: z1 + s.icsp_h)
-  power := SocketRow(x0: 0mm, y: 0mm, n: 8, z0: z1, height: s.socket_h, pcb_t: s.pcb_t,
-                     tail: s.tail)
-  analog := SocketRow(x0: 9 * pitch, y: 0mm, n: 6, z0: z1, height: s.socket_h, pcb_t: s.pcb_t,
-                      tail: s.tail)
-  low := SocketRow(x0: 7 * pitch, y: 19 * pitch, n: 8, z0: z1, height: s.socket_h,
-                   pcb_t: s.pcb_t, tail: s.tail)
-  high := SocketRow(x0: -9.14mm, y: 19 * pitch, n: 10, z0: z1, height: s.socket_h,
-                    pcb_t: s.pcb_t, tail: s.tail)
+  power := SocketRow(s, x0: 0mm, y: 0mm, n: 8)
+  analog := SocketRow(s, x0: s.analog_x0, y: 0mm, n: 6)
+  low := SocketRow(s, x0: s.low_x0, y: s.top_y, n: 8)
+  high := SocketRow(s, x0: s.high_x0, y: s.top_y, n: 10)
 
   board := solid(pcb.body)
   parts := solid(jack.body)
@@ -286,21 +294,16 @@ component UnoR4Minima(s: UnoSizes) {
 }
 
 // The perfboard shield on the Uno, in the Uno's frame: its board, and the headers that plug it
-// into the Uno's power, analog and D0-D7 sockets.  `top` is its top face, up from the Uno's
-// underside: `shield_top`, for the sizes above.
+// into the Uno's power, analog and D0-D7 sockets.  Its top face is `shield_top` up from the
+// Uno's underside.
 component Shield(s: ShieldSizes, u: UnoSizes, h: HeaderSizes) {
-  z0 := u.pcb_t + u.socket_h + h.body_h            // its underside
-  top := z0 + s.pcb_t
   mx := (s.w - (s.cols - 1) * pitch) / 2           // its margins, past the outer holes
   my := (s.h - (s.rows - 1) * pitch) / 2
   pcb := Box(x0: s.col0 - mx, x1: s.col0 + (s.cols - 1) * pitch + mx, y0: s.row0 - my,
-             y1: s.row0 + (s.rows - 1) * pitch + my, z0: z0, z1: top)
-  power := PlugRow(h, x0: 0mm, y: 0mm, n: 8, z0: u.pcb_t + u.socket_h, pcb_t: s.pcb_t,
-                   plug: s.plug)
-  analog := PlugRow(h, x0: 9 * pitch, y: 0mm, n: 6, z0: u.pcb_t + u.socket_h, pcb_t: s.pcb_t,
-                    plug: s.plug)
-  low := PlugRow(h, x0: 7 * pitch, y: 19 * pitch, n: 8, z0: u.pcb_t + u.socket_h,
-                 pcb_t: s.pcb_t, plug: s.plug)
+             y1: s.row0 + (s.rows - 1) * pitch + my, z0: shield_top - s.pcb_t, z1: shield_top)
+  power := PlugRow(h, s, u, x0: 0mm, y: 0mm, n: 8)
+  analog := PlugRow(h, s, u, x0: u.analog_x0, y: 0mm, n: 6)
+  low := PlugRow(h, s, u, x0: u.low_x0, y: u.top_y, n: 8)
 
   board := solid(pcb.body)
   headers := solid(power.plastic.body)

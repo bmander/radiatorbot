@@ -189,7 +189,7 @@ void Console::status() {
     io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A4, SCL A5)");
   } else {
     io_.printf("  supply      %.2f V, %.2f A%s\n", m.supply_volts(), m.supply_amps(),
-               m.supply_volts() < Drv8871::kMinVolts ? ": too low to run the motor" : "");
+               m.fault() ? ": too low to run the motor" : "");
   }
   if (c.moving()) {
     io_.printf("  current     %.2f A (%.2f A filtered) at %.0f%% PWM\n", c.amps(), c.filtered(),
