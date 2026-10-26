@@ -25,13 +25,14 @@ use std (horizontal, vertical, turns, round)
 
 // The body casting's sizes, and the interface ValveBody reads them through.
 interface BodySizes {
-  inlet_af: Length, inlet_top: Length, inlet_h: Length
+  inlet_af: Length, inlet_phase: Angle, inlet_top: Length, inlet_h: Length
   bulge_d: Length, bulge_r: Length
   collar_d: Length, collar_top: Length, collar_bottom: Length
   boss_d: Length, boss_x: Length
 }
 body_dims := {
   inlet_af: 30.0mm,          // inlet hex, across the flats
+  inlet_phase: 30deg,        // its corners on ±y, a flat square to the outlet
   inlet_top: 73.3mm,
   inlet_h: 10mm,             // ~
   bulge_d: 33.7mm,
@@ -40,7 +41,7 @@ body_dims := {
   collar_top: 37mm,          // ~
   collar_bottom: 29.4mm,
   boss_d: 24mm,              // ~ the outlet boss
-  boss_x: 26mm,              // ~ where the boss meets the union nut
+  boss_x: 18.5mm,            // where the boss meets the union nut: the nut's near face
 }
 // ~ the outlet's axis, at the middle of the bulge
 outlet_z := (body_dims.inlet_top - body_dims.inlet_h + body_dims.collar_top) / 2
@@ -60,7 +61,7 @@ packing_dims := {
 }
 union_dims := {
   af: 33.1mm,
-  x1: 42mm,                  // ~ the nut's far face; it starts at the boss
+  t: 18.8mm,                 // the nut's thickness along the outlet; it starts at the boss
   tail_d: 24mm,              // ~ the tailpiece, nut to spud
 }
 spud_dims := {
@@ -148,7 +149,7 @@ component ValveBody(outlet: point, ref: line, s: BodySizes) {
     std.origin level(right) crown.p2
   }
   barrel := solid(section, about: std.z)
-  inlet := HexBar(std.top.origin, ref, af: s.inlet_af, phase: 0deg,
+  inlet := HexBar(std.top.origin, ref, af: s.inlet_af, phase: s.inlet_phase,
                   z0: s.inlet_top - s.inlet_h, z1: s.inlet_top)
   boss := RoundBar(outlet, d: s.boss_d, z0: 0mm, z1: s.boss_x)
 
@@ -290,7 +291,8 @@ component RadiatorValve(handle_turn: Angle) {
                         z0: 0mm, z1: packing_dims.top)
 
   union := OutletUnion(outlet, side_ref, nut_af: union_dims.af, tail_d: union_dims.tail_d,
-                       x0: body_dims.boss_x, x1: union_dims.x1, x_spud: spud_dims.x)
+                       x0: body_dims.boss_x, x1: body_dims.boss_x + union_dims.t,
+                       x_spud: spud_dims.x)
 
   radiator_spud := RoundBar(outlet, d: spud_dims.d,
                             z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
