@@ -1,0 +1,44 @@
+# Write the printed parts as STL and the whole bot as one STEP assembly (hardware/export.sh) on
+# every push that changes a model, and keep them as the run's artifacts: `radiatorbot-stl-<sha>`,
+# a zip of every printed part, and `radiatorbot-step-<sha>`, the assembly.
+name: Export
+
+on:
+  push:
+    paths:
+      - "hardware/**.sv"
+      - "hardware/export.sh"
+      - ".github/workflows/export.yml"
+  workflow_dispatch:
+
+env:
+  SOLVENTC_VERSION: v0.1.8
+
+jobs:
+  export:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install solventc ${{ env.SOLVENTC_VERSION }}
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/bmander/geomsolver/main/scripts/install-solventc.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+
+      - name: Export the parts and the assembly
+        run: sh hardware/export.sh "$RUNNER_TEMP/export"
+
+      - name: Upload the STLs
+        uses: actions/upload-artifact@v4
+        with:
+          name: radiatorbot-stl-${{ github.sha }}
+          path: ${{ runner.temp }}/export/*.stl
+          if-no-files-found: error
+
+      - name: Upload the STEP assembly
+        uses: actions/upload-artifact@v4
+        with:
+          name: radiatorbot-step-${{ github.sha }}
+          path: ${{ runner.temp }}/export/radiatorbot.step
+          if-no-files-found: error
