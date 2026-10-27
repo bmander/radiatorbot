@@ -6,8 +6,8 @@ valve under motor control.
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
-  - `radiatorbot.sv` — the bot: a 130 motor and a five-stage printed spur train turning the
-    valve's star handle through a wheel generated as the handle's conjugate. It also has the
+  - `radiatorbot.sv` — the bot: a 130 motor and a printed spur train turning the valve's star
+    handle through a socket round it, which the handle screws through as it opens. It also has the
     gearbox, an electronics bay with an Arduino Uno R4 Minima and a perfboard shield carrying the
     motor driver and its current monitor, and a split clamp round the valve's inlet hex and supply
     pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with it.

@@ -94,12 +94,12 @@ handle_dims := {
   edge_r: 0.4mm,             // ~ the top face's edge, just broken
   stem_d: 7mm,               // ~ the stem the handle is fixed to
 }
-handle_gap := 1.1mm          // bare stem between the packing nut and the handle, closed
-
-// The stem's thread: the gap under the handle measured 4.38 mm closed and 11.59 mm after three and
-// a half turns open, so the handle drops 7.21 mm over its travel, its lead a turn.
+// The handle on its stem's thread: the bare stem between the packing nut and the handle measured
+// 4.38 mm closed and 11.59 mm after three and a half turns, fully open, so the handle drops 7.21 mm
+// over its travel, its lead a turn.
+handle_gap := 4.38mm         // closed
 open_turns := 3.5
-stem_travel := 11.59mm - 4.38mm
+stem_travel := 11.59mm - handle_gap
 stem_lead := stem_travel / open_turns          // 2.06 mm a turn
 
 // == Building blocks: prisms along an axis =======================================================
