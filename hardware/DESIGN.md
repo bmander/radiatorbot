@@ -292,14 +292,14 @@ gear and the wheel as blanks while changing the layout.
   - the Uno, the shield and the driver clear the motor and its cradle, and the motor clears the
     cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part and measures the wheel at thirteen poses, so it takes about two and a half
+  shaped part and measures the wheel at fifteen poses, so it takes about two and a quarter
   minutes.
-  - The wheel is judged against the handle at seven rolls across a whole period of the mesh
-    (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
-    nearly open (2 mm and 3.8 mm down the stem's travel).
-  - Closed and half open, it clears by 0.353–0.361 mm, where the top face's broken edge passes
-    the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
-    walls below, close to the 0.3 mm the cutter was grown by.
+  - The wheel is judged against the handle as the two move, the handle screwing down its stem:
+    at seven rolls across a whole period of the mesh closed (0° to 90° open: one arm through one
+    pocket), and at four each halfway (1¾ turns open) and open (3½ turns).
+  - Closed and halfway, it clears by 0.350–0.361 mm, where the top face's broken edge passes the
+    pockets' straight band. Open, it clears by 0.293–0.337 mm against the drafted walls below,
+    close to the 0.3 mm the cutter was grown by.
   - Every gear mesh runs 0.14 mm clear between flanks.
   - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14.5,
     and its end stands 1 mm over B's second.

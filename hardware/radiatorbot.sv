@@ -360,7 +360,7 @@ component ConjugateWheel(open_top: plane, stem: line, spindle: line, c: point, s
 // redundant rows (the report's `implied:` lines): one makes this follow take minutes instead of
 // seconds (bmander/geomsolver#591).
 param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
-valve := RadiatorValve(handle_turn: -handle_open)
+valve := RadiatorValve(handle_open: handle_open)
 
 // == The bot's frame =============================================================================
 // The bot is drawn in a frame of its own, `bot`, turned `bot_turn` about the stem from the
@@ -494,28 +494,29 @@ d2_pin.gear union d2
 construction b3 := solid(b3_gear.gear)
 b3_pin.gear union b3
 
-// The train turning with the handle, at the rates worked out with the drive.
+// The train turning with the handle, at the rates worked out with the drive, each read a turn open
+// of the handle (a turn the other way), so every joint stands at `handle_open` itself.
 wheel_turn := frame
-wheel_turn turns(wheel_rate) a_spindle
-fix(value == -handle_open) wheel_turn
+wheel_turn turns(-wheel_rate) a_spindle
+fix(value == handle_open) wheel_turn
 b3_turn := frame
-b3_turn turns(b3_rate) b_spindle
-fix(value == -handle_open) b3_turn
+b3_turn turns(-b3_rate) b_spindle
+fix(value == handle_open) b3_turn
 d2_turn := frame
-d2_turn turns(d2_rate) d_spindle
-fix(value == -handle_open) d2_turn
+d2_turn turns(-d2_rate) d_spindle
+fix(value == handle_open) d2_turn
 b2_turn := frame
-b2_turn turns(b2_rate) b_spindle
-fix(value == -handle_open) b2_turn
+b2_turn turns(-b2_rate) b_spindle
+fix(value == handle_open) b2_turn
 d1_turn := frame
-d1_turn turns(d1_rate) d_spindle
-fix(value == -handle_open) d1_turn
+d1_turn turns(-d1_rate) d_spindle
+fix(value == handle_open) d1_turn
 b1_turn := frame
-b1_turn turns(b1_rate) b_spindle
-fix(value == -handle_open) b1_turn
+b1_turn turns(-b1_rate) b_spindle
+fix(value == handle_open) b1_turn
 motor_turn := frame
-motor_turn turns(motor_rate) m_spindle
-fix(value == -handle_open) motor_turn
+motor_turn turns(-motor_rate) m_spindle
+fix(value == handle_open) motor_turn
 
 wheel := wheel_part in wheel_turn
 compound_b3 := b3 in b3_turn
@@ -795,15 +796,15 @@ claim terminal.body clear(0.5mm) monitor.board
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
   repeat 7 as k {
-    construction handle_at := rest_handle.handle at(under: valve.handle) (-k * 15deg)
-    construction wheel_at := wheel_part at(under: wheel_turn) (-k * 15deg)
+    construction handle_at := rest_handle.handle at(under: valve.handle) (k * 15deg)
+    construction wheel_at := wheel_part at(under: wheel_turn) (k * 15deg)
     claim wheel_at clear(0.1mm) handle_at
   }
   repeat 4 as k {
-    construction half_at := rest_handle.handle at(under: valve.handle) (-630deg - k * 22.5deg)
-    construction wheel_half := wheel_part at(under: wheel_turn) (-630deg - k * 22.5deg)
-    construction open_at := rest_handle.handle at(under: valve.handle) (-1260deg + k * 22.5deg)
-    construction wheel_open := wheel_part at(under: wheel_turn) (-1260deg + k * 22.5deg)
+    construction half_at := rest_handle.handle at(under: valve.handle) (630deg + k * 22.5deg)
+    construction wheel_half := wheel_part at(under: wheel_turn) (630deg + k * 22.5deg)
+    construction open_at := rest_handle.handle at(under: valve.handle) (1260deg - k * 22.5deg)
+    construction wheel_open := wheel_part at(under: wheel_turn) (1260deg - k * 22.5deg)
     claim wheel_half clear(0.1mm) half_at
     claim wheel_open clear(0.1mm) open_at
   }

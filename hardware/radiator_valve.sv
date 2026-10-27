@@ -5,11 +5,10 @@
 // Coordinates: the stem's axis is std.z, running up through the supply pipe, and z = 0 is the
 // bottom face of the packing nut (the sketch's heavy line).  The radiator lies toward +x.
 //
-// The handle rides a frame screwing along the stem's axis, as the stem's thread carries it: its
-// turn `handle_turn` is right-handed about the upward axis — clockwise seen from below, looking at
-// the handle — the way a right-hand stem thread closes the valve, and raises the handle a lead a
-// turn.  0 is closed, as measured.  Scrub `handle_open`, the turns open from there (the handle
-// turned the other way, screwing down out of the bonnet).
+// The handle rides a frame screwing along the stem's axis, as the stem's thread carries it.  Scrub
+// `handle_open`, its turns open from closed (0, as measured): right-handed about the stem's axis
+// read downward — counter-clockwise seen from below, looking at the handle — the way a right-hand
+// stem thread opens the valve, the handle screwing down out of the bonnet a lead a turn.
 //
 // Every part is a component.  Each stands in the world's frame and reads its datums (std.top
 // square to the stem, std.front through it, std.side square to the outlet), so a part is drawn
@@ -267,16 +266,18 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
 
 // == The assembly ================================================================================
 // The valve as it stands on the radiator, drawn from the tables above, its handle turned
-// `handle_turn` about the stem.  A model that works on the valve (the radiator bot) draws it with
+// `handle_open` open from closed, down its stem.  A model that works on the valve (the radiator bot) draws it with
 // `use radiator_valve (RadiatorValve)` and reads its datums and parts by name: `valve.stem_axis`,
 // `valve.handle_top`, `valve.star_handle`.
-component RadiatorValve(handle_turn: Angle) {
-  // The stem's axis, which the handle turns about; the outlet's axis where it crosses the side
+component RadiatorValve(handle_open: Angle) {
+  // The stem's axis, and the same line read downward, the way the handle screws opening; the
+  // outlet's axis where it crosses the side
   // plane (x = 0), from which the outlet's parts are stationed along x; and a reference line in
   // each plane the hex parts are drawn in, their flats squared to it.
   in std.front {
     construction stem_axis := vertical line(std.origin, hint((0, 10)))
     length(10mm) stem_axis
+    construction stem_down := line(stem_axis.p2, stem_axis.p1)
   }
   in std.top {
     construction top_ref := horizontal line(std.top.origin, hint((10, 0)))
@@ -309,11 +310,12 @@ component RadiatorValve(handle_turn: Angle) {
   radiator_spud := RoundBar(outlet, d: spud_dims.d,
                             z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
 
-  // The handle's joint: a frame screwing along the stem's axis, a turn a turn and `stem_lead` up
-  // it, standing at `handle_turn`.
+  // The handle's joint: a frame screwing down the stem's axis, a turn a turn and `stem_lead` down
+  // it, standing at `handle_open`.  (Held to the turns open themselves: a joint's value held to
+  // a running parameter negated reads the other way at a stated roll, under solventc v0.1.10.)
   handle := frame
-  handle screws(stem_lead) stem_axis
-  fix(value == handle_turn) handle
+  handle screws(stem_lead) stem_down
+  fix(value == handle_open) handle
 
   // The handle's top face, square to the stem `handle_gap` below the packing nut when closed, and
   // that plane where the joint's turn puts it.
@@ -329,4 +331,4 @@ component RadiatorValve(handle_turn: Angle) {
 // The valve with its handle to scrub, closed to open.  A file that uses this one as a module draws
 // neither the valve below nor the parameter.
 param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
-valve := RadiatorValve(handle_turn: -handle_open)
+valve := RadiatorValve(handle_open: handle_open)
