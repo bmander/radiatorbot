@@ -38,7 +38,10 @@
 
 unit mm
 use std
-use std (vertical, horizontal, turns, coords, seats, raised)
+use std.place (vertical, horizontal, coords, seats, raised)
+use std.motion (turns)
+use std.shapes
+use std.rounds
 use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap)
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
@@ -255,7 +258,7 @@ component Block(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: 
   in std.top {
     c := point hint(((x0 + x1) / 2, (y0 + y1) / 2))
     c coords(du: (x0 + x1) / 2, dv: (y0 + y1) / 2) std.top
-    sq := std.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
+    sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
   body := solid(face(sq.loop), from: z0, to: z1)
 }
@@ -680,14 +683,14 @@ clamp_cap := Block(x0: split / 2, x1: clamp_reach, y0: -clamp_w / 2, y1: clamp_w
                    z0: clamp_z0, z1: clamp_z1) in bot
 cap_part := solid(clamp_cap.body)
 
-hex_room := std.Grown(valve.body.inlet.bar, d: gap)
+hex_room := std.rounds.Grown(valve.body.inlet.bar, d: gap)
 pipe_room := RoundBar(std.top.origin, d: pipe_dims.d + 0.2mm, z0: body_dims.inlet_top,
                       z1: clamp_z1 + 1mm)
 hex_room.body cut frame_part
 hex_room.body cut cap_part
 pipe_room.bar cut frame_part
 pipe_room.bar cut cap_part
-nut_room := std.Grown(valve.union.nut.bar, d: nut_clear)
+nut_room := std.rounds.Grown(valve.union.nut.bar, d: nut_clear)
 nut_room.body cut frame_part
 nut_room.body cut cap_part
 

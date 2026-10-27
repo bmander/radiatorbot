@@ -12,7 +12,7 @@ on:
   workflow_dispatch:
 
 env:
-  SOLVENTC_VERSION: v0.1.9
+  SOLVENTC_VERSION: v0.1.10
 
 jobs:
   export:

@@ -35,7 +35,8 @@
 
 unit mm
 use std
-use std (coords, seats, raised)
+use std.place (coords, seats, raised)
+use std.shapes
 
 pitch := 2.54mm                 // 0.1 in: every header's, and the perfboard's grid
 
@@ -192,7 +193,7 @@ component Box(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: Le
   in std.top {
     c := point hint((cx, cy))
     c coords(du: cx, dv: cy) std.top
-    sq := std.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
+    sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
   body := solid(face(sq.loop), from: z0, to: z1)
 }

@@ -17,7 +17,10 @@
 
 unit mm
 use std
-use std (horizontal, vertical, turns, round)
+use std.place (horizontal, vertical)
+use std.motion (turns)
+use std.rounds (round)
+use std.shapes
 
 // == Dimensions ==================================================================================
 // One table per part.  Stations along the stem (z) and along the outlet (x) are from the datums
@@ -107,7 +110,7 @@ component RoundBar(c: point, d: Length, z0: Length, z1: Length) {
 // A hexagonal bar by its width across the flats, a corner `phase` from the line `ref`.
 component HexBar(c: point, ref: line, af: Length, phase: Angle, z0: Length, z1: Length) {
   in c.plane {
-    corners := std.Polygon(c, ref, n: 6, r: af / sqrt(3), phase: phase)
+    corners := std.shapes.Polygon(c, ref, n: 6, r: af / sqrt(3), phase: phase)
     section := face(corners.v[0], corners.v[1], corners.v[2], corners.v[3], corners.v[4],
                     corners.v[5], -> close)
   }
@@ -117,7 +120,7 @@ component HexBar(c: point, ref: line, af: Length, phase: Angle, z0: Length, z1: 
 // A square bar by its width across the flats, its sides square to the line `ref`.
 component SquareBar(c: point, ref: line, w: Length, z0: Length, z1: Length) {
   in c.plane {
-    corners := std.Polygon(c, ref, n: 4, r: w / sqrt(2), phase: 45deg)
+    corners := std.shapes.Polygon(c, ref, n: 4, r: w / sqrt(2), phase: 45deg)
     section := face(corners.v[0], corners.v[1], corners.v[2], corners.v[3], -> close)
   }
   bar := solid(section, from: z0, to: z1)
