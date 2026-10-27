@@ -299,14 +299,15 @@ gear and the socket as blanks while changing the layout.
   - the Uno, the shield and the driver clear the motor and its cradle, and the motor clears the
     cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part, so it takes about CHECK_TIME.
+  shaped part, so it takes about two minutes.
   - The socket is judged against the handle closed, halfway (1¾ turns open) and open (3½ turns).
-    They turn together, so only the handle's height in the hole changes. It clears by
-    SOCKET_CLEAR, at the arms' top edges.
-  - A's compound and the stand clear the handle by A_CLEAR and STAND_CLEAR at all three.
+    They turn together, so only the handle's height in the hole changes. It clears by 0.357 mm
+    at all three, at the arms' top edges, where the top face's broken edge meets the hole's wall.
+  - A's compound clears the handle by 1.3 mm closed (its web over the handle's top face) and
+    4.8 mm open; the stand clears it by 4 mm open. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs 0.14 mm clear between flanks.
-  - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14.5,
-    and its end stands 1 mm over B's second.
+  - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14,
+    and its end clears B's second by 1.8 mm.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     pad, the base against the frame, the clamp on the pipe). Both of the clamp's halves clear the
     outlet's union nut by 2 mm and its boss by 1.2 mm.

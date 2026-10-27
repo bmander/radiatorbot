@@ -63,7 +63,7 @@ two and a half minutes. The models use its lists (`repeat h in LIST`), read numb
 instances (`shield.top`), cut clearances as a part's body grown (`std.rounds.Grown`) and import
 the standard library's words from its modules (`use std.place (coords)`, `use std.shapes`), so
 they need v0.1.10 or later. Every gear is its rack's exact sweep; the
-printed parts' STLs come to 4.7 MB and the assembly's STEP to 36 MB. v0.1.6 wrote the 16-tooth
+printed parts' STLs come to 4.0 MB and the assembly's STEP to 35 MB. v0.1.6 wrote the 16-tooth
 pinions' straight tip edges as dense B-splines, doubling the STEP (bmander/geomsolver#644).
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
