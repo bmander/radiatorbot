@@ -27,12 +27,18 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   the two turn together, and removes everything it passes through.
   That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
   conjugate to the handle by construction. The cut is exact, with no scallops.
-  - The cutter is everything the handle occupies over the stem's travel. The arms' 8° draft
+  - The cutter is everything the handle occupies over the stem's travel: 7.21 mm down over three
+    and a half turns open, as measured (the gap under the handle opens from 4.38 mm to 11.59 mm).
+    `radiator_valve.sv` draws the handle on a screw along its stem, 2.06 mm a turn. The arms' 8° draft
     leans them in toward their bottom face, so that is the star where it stands open, and above
     it a straight prism of the star's top face, which passes every height from open up to closed.
     The star where it stands closed lies inside them.
   - Each pocket's walls lean with the draft below the handle's open top face and stand straight
     above it, with no step between: the arm clears by the same 0.3 mm anywhere on its travel.
+  - The wheel stands still on its axle while the handle screws past it. So the pockets hold the
+    arm by its top edge alone, in the straight band. Closed, its flanks below stand up to 1.3 mm
+    off the drafted walls (0.3 mm plus 7.21 mm of draft). See *Open questions*: this wheel doesn't
+    keep hold of the handle well.
 - **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
 - **The gear train** has five stages on two fixed 0.311 in rods, B and D. The motor's pinion
   drives stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the
@@ -274,8 +280,8 @@ gear and the wheel as blanks while changing the layout.
 
 ## How it's checked
 
-- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
-  a full turn, and judges the design table's claims (ratio, stall torque, free speed, and the
+- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_open` from
+  closed through three and a half turns open, the handle screwing down its stem, and judges the design table's claims (ratio, stall torque, free speed, and the
   pinions' walls round their bores).
 - The boards' fit in the bay is claimed in the model and judged on every check:
   - a mated USB-C plug and a mated barrel plug each clear their window in the end wall by 0.3 mm;
@@ -360,9 +366,16 @@ gear and the wheel as blanks while changing the layout.
 
 ## Open questions
 
-- **Stem travel.** The model assumes the handle as measured is closed, and that it drops 4 mm on
-  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
-  the pockets' straight band above the draft goes.
+- **The wheel's grip.** A wheel that stands still while the handle screws 7.21 mm past it has
+  pockets cut for the arm at every height. It holds each arm only by its top edge, at one point
+  at a time, and the play reaches ±4.8° of the handle where an arm points at the wheel. A drive
+  that rides the stem's travel, or doesn't care about it, is wanted.
+- **Stem travel.** Measured: the gap under the handle is 4.38 mm closed and 11.59 mm after three
+  and a half turns. The model takes the difference as the travel, and three and a half turns as
+  fully open (`open_turns` in `radiator_valve.sv`). Check whether the valve opens further. The
+  4.38 mm gap disagrees with `handle_gap`, the 1.1 mm of bare stem under the packing nut the
+  handle was first measured at. The model keeps 1.1 mm for the closed handle's height until
+  that's settled.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
   must stay under the DRV8871's ~2.1 A limit.
 - **The Uno's connectors.** Its outline, sockets and holes are the Uno standard, but the R4

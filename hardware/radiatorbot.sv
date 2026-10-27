@@ -22,19 +22,18 @@
 //     the bot.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
-// printer's.  Scrub `handle_turn`: the wheel and the train turn with the handle.  Set `shaped` to
-// 0 to draw every gear and the wheel as blanks while the layout is worked on (building them all
-// takes a few minutes).  The design table's requirements are claims, judged before the solve;
+// printer's.  Scrub `handle_open`: the handle screws open down its stem, and the wheel and the
+// train turn with it.  Set `shaped` to 0 to draw every gear and the wheel as blanks while the
+// layout is worked on (building them all takes a few minutes).  The design table's requirements are claims, judged before the solve;
 // `solventc radiatorbot.sv --where handle_stall_torque` reads any figure back in its unit.  Set
 // `checks` to 1 to judge every clearance as well, the wheel against the handle through a whole
-// period of their mesh (about two and a half minutes more).
+// period of their mesh, closed, halfway and open (a few minutes more).
 //
 // The file runs from the numbers to the parts: the stock and the fits, the drive, the heights
 // and the plan, then the building blocks, then each part in turn, then the clearances.  Every
 // size a part is drawn to is named in the tables up top, so a change is made there.
 //
-// Numbers marked "~" are estimates to check: the motor's figures (motor130.sv) and the stem's
-// travel, which no measurement has said yet.
+// Numbers marked "~" are estimates to check: the motor's figures (motor130.sv).
 
 unit mm
 use std
@@ -42,7 +41,7 @@ use std.place (vertical, horizontal, coords, seats, raised)
 use std.motion (turns)
 use std.shapes
 use std.rounds
-use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap)
+use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap, stem_travel)
 use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
@@ -82,11 +81,11 @@ wheel_n := 6
 star_pitch_r := 24mm
 wheel_c := star_pitch_r * (1 + wheel_n / 4)            // the stem to the wheel's axle: 60 mm
 wheel_backlash := 0.6mm         // the chrome casting's arms against printed pockets
-stem_travel := 4mm              // ~ how far the handle drops opening the valve, closed to open
 
 // The handle as measured stands closed, its top face `handle_gap` under the packing nut;
-// opening, a right-hand stem screws it down `stem_travel`.  The wheel spans the arms' depth with
-// half a millimetre spare above and the rolled rim spare below.
+// opening, its right-hand stem screws it down `stem_travel` (radiator_valve.sv: 7.21 mm over three
+// and a half turns, as measured).  The wheel spans the arms' depth, closed, with half a millimetre
+// spare above and the rolled rim spare below.
 top0 := -handle_gap
 wheel_top := top0 + 0.5mm
 wheel_bottom := top0 - handle_dims.h + 1.5mm
@@ -356,11 +355,12 @@ component ConjugateWheel(open_top: plane, stem: line, spindle: line, c: point, s
 
 // == The valve ===================================================================================
 
-// The handle's turn, scrubbed: the wheel and the train turn with it.  Keep the drawing free of
+// The handle's turns open, scrubbed: the handle screws down its stem, and the wheel and the train
+// turn with it.  Keep the drawing free of
 // redundant rows (the report's `implied:` lines): one makes this follow take minutes instead of
 // seconds (bmander/geomsolver#591).
-param handle_turn: Angle over (0deg, 360deg)
-valve := RadiatorValve(handle_turn: handle_turn)
+param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
+valve := RadiatorValve(handle_turn: -handle_open)
 
 // == The bot's frame =============================================================================
 // The bot is drawn in a frame of its own, `bot`, turned `bot_turn` about the stem from the
@@ -497,25 +497,25 @@ b3_pin.gear union b3
 // The train turning with the handle, at the rates worked out with the drive.
 wheel_turn := frame
 wheel_turn turns(wheel_rate) a_spindle
-fix(value == handle_turn) wheel_turn
+fix(value == -handle_open) wheel_turn
 b3_turn := frame
 b3_turn turns(b3_rate) b_spindle
-fix(value == handle_turn) b3_turn
+fix(value == -handle_open) b3_turn
 d2_turn := frame
 d2_turn turns(d2_rate) d_spindle
-fix(value == handle_turn) d2_turn
+fix(value == -handle_open) d2_turn
 b2_turn := frame
 b2_turn turns(b2_rate) b_spindle
-fix(value == handle_turn) b2_turn
+fix(value == -handle_open) b2_turn
 d1_turn := frame
 d1_turn turns(d1_rate) d_spindle
-fix(value == handle_turn) d1_turn
+fix(value == -handle_open) d1_turn
 b1_turn := frame
 b1_turn turns(b1_rate) b_spindle
-fix(value == handle_turn) b1_turn
+fix(value == -handle_open) b1_turn
 motor_turn := frame
 motor_turn turns(motor_rate) m_spindle
-fix(value == handle_turn) motor_turn
+fix(value == -handle_open) motor_turn
 
 wheel := wheel_part in wheel_turn
 compound_b3 := b3 in b3_turn
@@ -786,37 +786,26 @@ claim terminal.body clear(0.5mm) monitor.board
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The wheel
-// is judged against the handle closed, half open and nearly open, both read at rolls of the
-// pair's generating motion across a whole period of the mesh (90deg of the handle: one arm
-// through one pocket).  Gears in mesh run 0.15 mm clear a flank; parts that rest on one another
-// (the motor on its lid, the base on the frame, the upper collar on the bridge) are not claimed
-// clear.
+// is judged against the handle as the two move, the handle screwing down its stem: at rolls across
+// a whole period of the mesh (90deg of the handle: one arm through one pocket) closed, halfway
+// open (where the handle's top face passes the pockets' straight band) and open (where the arms
+// meet the walls drafted for the star there).  Gears in mesh run 0.15 mm clear a flank; parts
+// that rest on one another (the motor on its lid, the base on the frame, the upper collar on the
+// bridge) are not claimed clear.
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
   repeat 7 as k {
-    construction handle_at := rest_handle.handle at(under: cw.gen_handle) (k * 15deg)
-    construction wheel_at := wheel_part at(under: cw.gen_wheel) (k * 15deg)
+    construction handle_at := rest_handle.handle at(under: valve.handle) (-k * 15deg)
+    construction wheel_at := wheel_part at(under: wheel_turn) (-k * 15deg)
     claim wheel_at clear(0.1mm) handle_at
   }
-  // and partway down its travel, half open and nearly open, where the pockets' walls turn from
-  // the top face's section to the open star's draft
-  half_top := plane
-  fix(origin == (0mm, 0mm, top0 - stem_travel / 2)) half_top
-  fix(dir == (1, 0, 0)) half_top.u
-  fix(dir == (0, 1, 0)) half_top.v
-  near_top := plane
-  fix(origin == (0mm, 0mm, top0 - 0.95 * stem_travel)) near_top
-  fix(dir == (1, 0, 0)) near_top.u
-  fix(dir == (0, 1, 0)) near_top.v
-  half_handle := StarHandle(half_top, s: handle_dims, stem_up: 1mm)
-  near_handle := StarHandle(near_top, s: handle_dims, stem_up: 1mm)
-  repeat 3 as k {
-    construction half_at := half_handle.handle at(under: cw.gen_handle) (k * 30deg)
-    construction near_at := near_handle.handle at(under: cw.gen_handle) (k * 30deg + 15deg)
-    construction wheel_half := wheel_part at(under: cw.gen_wheel) (k * 30deg)
-    construction wheel_near := wheel_part at(under: cw.gen_wheel) (k * 30deg + 15deg)
+  repeat 4 as k {
+    construction half_at := rest_handle.handle at(under: valve.handle) (-630deg - k * 22.5deg)
+    construction wheel_half := wheel_part at(under: wheel_turn) (-630deg - k * 22.5deg)
+    construction open_at := rest_handle.handle at(under: valve.handle) (-1260deg + k * 22.5deg)
+    construction wheel_open := wheel_part at(under: wheel_turn) (-1260deg + k * 22.5deg)
     claim wheel_half clear(0.1mm) half_at
-    claim wheel_near clear(0.1mm) near_at
+    claim wheel_open clear(0.1mm) open_at
   }
   claim wheel clear(0.5mm) valve.packing_nut.bar
   claim wheel clear(0.3mm) base

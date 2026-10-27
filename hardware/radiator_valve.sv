@@ -5,9 +5,11 @@
 // Coordinates: the stem's axis is std.z, running up through the supply pipe, and z = 0 is the
 // bottom face of the packing nut (the sketch's heavy line).  The radiator lies toward +x.
 //
-// The handle rides a frame turning about the stem's axis.  Scrub `handle_turn`: positive is
-// right-handed about the upward axis — clockwise seen from below, looking at the handle — the
-// way a right-hand stem thread closes the valve.
+// The handle rides a frame screwing along the stem's axis, as the stem's thread carries it: its
+// turn `handle_turn` is right-handed about the upward axis — clockwise seen from below, looking at
+// the handle — the way a right-hand stem thread closes the valve, and raises the handle a lead a
+// turn.  0 is closed, as measured.  Scrub `handle_open`, the turns open from there (the handle
+// turned the other way, screwing down out of the bonnet).
 //
 // Every part is a component.  Each stands in the world's frame and reads its datums (std.top
 // square to the stem, std.front through it, std.side square to the outlet), so a part is drawn
@@ -18,7 +20,7 @@
 unit mm
 use std
 use std.place (horizontal, vertical)
-use std.motion (turns)
+use std.motion (screws)
 use std.rounds (round)
 use std.shapes
 
@@ -93,7 +95,13 @@ handle_dims := {
   edge_r: 0.4mm,             // ~ the top face's edge, just broken
   stem_d: 7mm,               // ~ the stem the handle is fixed to
 }
-handle_gap := 1.1mm          // bare stem between the packing nut and the handle
+handle_gap := 1.1mm          // bare stem between the packing nut and the handle, closed
+
+// The stem's thread: the gap under the handle measured 4.38 mm closed and 11.59 mm after three and
+// a half turns open, so the handle drops 7.21 mm over its travel, its lead a turn.
+open_turns := 3.5
+stem_travel := 11.59mm - 4.38mm
+stem_lead := stem_travel / open_turns          // 2.06 mm a turn
 
 // == Building blocks: prisms along an axis =======================================================
 // Each draws its section about `c` in the plane `c` is drawn in, and extrudes it from `z0` to
@@ -301,13 +309,14 @@ component RadiatorValve(handle_turn: Angle) {
   radiator_spud := RoundBar(outlet, d: spud_dims.d,
                             z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
 
-  // The handle's joint: a frame turning about the stem's axis, standing at `handle_turn`.
+  // The handle's joint: a frame screwing along the stem's axis, a turn a turn and `stem_lead` up
+  // it, standing at `handle_turn`.
   handle := frame
-  handle turns(1) stem_axis
+  handle screws(stem_lead) stem_axis
   fix(value == handle_turn) handle
 
-  // The handle's top face, square to the stem `handle_gap` below the packing nut, and that plane
-  // where the joint's turn puts it.
+  // The handle's top face, square to the stem `handle_gap` below the packing nut when closed, and
+  // that plane where the joint's turn puts it.
   handle_top := plane
   fix(origin == (0mm, 0mm, -handle_gap)) handle_top
   fix(dir == (1, 0, 0)) handle_top.u
@@ -317,7 +326,7 @@ component RadiatorValve(handle_turn: Angle) {
   star_handle := StarHandle(turned_top, s: handle_dims, stem_up: handle_gap + packing_dims.top)
 }
 
-// The valve with its handle to scrub.  A file that uses this one as a module draws neither the
-// valve below nor the parameter.
-param handle_turn: Angle over (0deg, 360deg)
-valve := RadiatorValve(handle_turn: handle_turn)
+// The valve with its handle to scrub, closed to open.  A file that uses this one as a module draws
+// neither the valve below nor the parameter.
+param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
+valve := RadiatorValve(handle_turn: -handle_open)
