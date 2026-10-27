@@ -1,7 +1,7 @@
 # Radiator bot: mechanical design
 
 A gearmotor that clamps to the radiator valve's supply pipe and turns the star handle. A 130 motor
-drives a printed five-stage spur train, which drives a wheel conjugate to the handle. The motor's
+drives a printed spur train, which turns a socket round the handle. The motor's
 current says when the stem reaches either end of its screw. An Arduino Uno R4 Minima reads an
 old dry-contact thermostat and runs the motor through an Adafruit DRV8871 H-bridge, on a perfboard
 shield plugged into it. An INA219 current monitor in the driver's supply tells it when the motor
@@ -20,23 +20,33 @@ handle, it stands a quarter turn clockwise from where it hung before, off the ou
 about the stem. Its x runs out from the stem through the clamp's split, and the bot hangs on its
 −x side. Directions below (the bay's −y half, the driver toward +x) are that frame's.
 
-- **The wheel** turns on a ½ in axle 60 mm from the stem, at the handle's height. A collar on
-  the axle under it and another over it keep it in place. It has six pockets. The handle's four
-  arms are its teeth, so the handle turns 1.5× per wheel turn. The pockets are not designed. In
-  one statement, Solvent sweeps the measured star through the blank over a whole wheel turn, as
-  the two turn together, and removes everything it passes through.
-  That is a gear shaper's generating cut done with the handle as the cutter, so the wheel is
-  conjugate to the handle by construction. The cut is exact, with no scallops.
-  - The cutter is everything the handle occupies over the stem's travel. The arms' 8° draft
-    leans them in toward their bottom face, so that is the star where it stands open, and above
-    it a straight prism of the star's top face, which passes every height from open up to closed.
-    The star where it stands closed lies inside them.
-  - Each pocket's walls lean with the draft below the handle's open top face and stand straight
-    above it, with no step between: the arm clears by the same 0.3 mm anywhere on its travel.
-- **The ring** is a 48-tooth gear (module 1.5) printed on top of the wheel as one part.
-- **The gear train** has five stages on two fixed 0.311 in rods, B and D. The motor's pinion
-  drives stage 1 on B; stages 2–5 alternate between B and D; the last pinion, on B, drives the
+- **The socket** is a 64-tooth gear (module 1.364) round the handle, turning about the stem
+  with it. Its middle is a hole the shape of the handle's top face, grown 0.3 mm all round,
+  straight from its floor up out of its top. The handle turns it 1:1, all four arms at once.
+  - The stem screws the handle 7.21 mm down over its three and a half turns, as measured (the
+    bare stem under the packing nut opens from 4.38 mm to 11.59 mm). `radiator_valve.sv` draws
+    the handle on a screw along its stem, 2.06 mm a turn. The socket stays where it is, and the
+    handle screws up and down through its hole.
+  - The arms' 8° draft leans them in toward their bottom face, so each arm is widest at its top
+    edge. The socket's top stands 1 mm over the handle's top face when it's closed, and its hole
+    runs on down past where the handle stands open. So every arm's top edge is always in the
+    hole, 0.3 mm off its wall, and that edge, the straight length of each arm's side, drives.
+  - The arms' play in the hole is ±0.5° of the handle, and each arm is driven near its tip.
+  - Under the open handle's bottom face the socket has a 4 mm floor. It turns on a pad on the
+    stem's axis at the end of the **stand**, an arm clamped to A under its pinion.
+  - The pivot is a 6 mm pin printed up from the pad into an 8 mm blind hole in the floor's
+    middle. The pin keeps the pad under the socket and the socket over the pad.
+  - The pin is 1 mm loose all round on purpose. The handle centres the socket to 0.3 mm, and the
+    pin never fights it for the centre, however the stand is set. The pad only bears the
+    socket's weight.
+- **A** is a fixed ½ in axle 60 mm from the stem. A's compound turns on it: a 24-tooth pinion
+  driving the socket, and over it a 48-tooth ring (module 1.5) driven by the train, one print.
+  The upper collar over the ring and the stand under the pinion keep it in place.
+- **The gear train** has four stages on two fixed 0.311 in rods, B and D. The motor's pinion
+  drives stage 1 on B; stages 2–4 alternate between B and D; the last pinion, on D, drives the
   ring.
+  - B stands 45 mm beyond A, where the gearbox was laid out. D stands 32 mm from B at 69.2°, so
+    it is 45 mm from A as well.
 - **The frame** is one print: the gearbox lid, the electronics bay standing on it (the motor on a
   pad, the boards beside it), and a spine up beside the valve to the **clamp**.
   - The clamp is a block split at the stem, round the valve's inlet hex and the supply pipe above
@@ -53,8 +63,8 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     (18.5 mm from the stem, 18.8 mm thick), whose top stands above the hex's underside. Both
     halves are relieved round the nut, its hex grown 2 mm all round.
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
-  the ring, and a bridge across it holds the wheel's axle, standing on the upper collar just
-  above the ring.
+  the ring, and a bridge across it holds A's axle, standing on the upper collar just above the
+  ring.
 
 ## The drive
 
@@ -63,26 +73,32 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
 | 1 | 12 → 24 | 0.8 | motor → B | 2 |
 | 2 | 16 → 64 | 0.8 | B → D | 4 |
 | 3 | 16 → 64 | 0.8 | D → B | 4 |
-| 4 | 16 → 64 | 0.8 | B → D | 4 |
-| 5 | 16 → 48 | 1.0 | D → B | 3 |
-| ring | 12 → 48 | 1.5 | B → wheel | 4 |
-| handle | 6 → 4 | — | wheel → handle | ⅔ |
+| 4 | 16 → 48 | 1.0 | B → D | 3 |
+| ring | 12 → 48 | 1.5 | D → A | 4 |
+| socket | 24 → 64 | 1.364 | A → handle | 8⁄3 |
 
 Every pinion is profile-shifted +0.3 against undercut, and its gear −0.3, so the centre
-distances stay nominal: B–D is 32 mm and B–wheel is 45 mm.
+distances stay nominal: B–D is 32 mm, D–A 45 mm and A–stem 60 mm.
 
 The pinions on the rods have 16 teeth. A 12-tooth pinion at module 0.8 has its roots on an
 8.1 mm circle, inside the 8.25 mm bore a 0.311 in rod needs. At 16 teeth the roots stand 1.5 mm
 clear of the bore; `radiatorbot.sv` claims that wall, so a change of rod or pinion that thins it
 fails the check. Each stage keeps its ratio, so the gears grow to 64 and 48 teeth, and the
-gearbox grows to hold them: 101 × 93 mm in plan, up from 95 × 75.
+gearbox grows to hold them: 101 × 93 mm in plan.
 
-That is 1536:1 from the motor to the wheel and **1024:1 from the motor to the handle**. The
-motor's figures are estimates for a servo's 130 at 6 V (`motor130.sv`): 12 000 rpm free and
-6 mN·m stall. With printed meshes at about 0.9 each and the wheel at 0.8, that gives:
+The socket reduces 8⁄3 where the conjugate wheel it replaced stepped up 1.5. So the train has one
+16 → 64 stage fewer, a compound fewer, and stands 5.5 mm lower.
 
-- **11.7 rpm free at the handle**, so three turns of travel take 20–30 s under load;
-- **2.61 N·m at the handle at stall**, 4.9 N·m at the wheel.
+That is 384:1 from the motor to A and **1024:1 from the motor to the handle**. The motor's
+figures are estimates for a servo's 130 at 6 V (`motor130.sv`): 12 000 rpm free and 6 mN·m
+stall. With six printed meshes at about 0.9 each, and the handle in the socket a direct drive,
+that gives:
+
+- **11.7 rpm free at the handle**, so three and a half turns of travel take 20–30 s under load;
+- **3.27 N·m at the handle at stall**, 1.36 N·m at A.
+
+With one mesh fewer, the motor now turns the other way for the same handle turn. The firmware
+sets which way is open when it's commissioned (`motor_invert`, in [firmware/README.md](../firmware/README.md)).
 
 `radiatorbot.sv` states the requirements as claims, which every check judges: stall torque
 ≥ 2 N·m at the handle, free speed ≥ 6 rpm, and the 1024:1 ratio. Read any figure back in its unit,
@@ -248,20 +264,20 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | printed faces that meet or pass | 0.3 mm |
 | each gear's teeth, thinned on the pitch circle | 0.15 mm (0.3 mm backlash a mesh) |
 | each gear's tips, chamfered 45° at both faces | 0.4 mm |
-| the wheel's pockets against the chrome handle | 0.6 mm backlash |
+| the socket's hole round the chrome handle | 0.3 mm each side |
 | walls | 2.4 mm (six 0.4 mm perimeters) |
 
 - Gears print flat, face down. Module 0.8 is the finest stage; it wants a 0.4 mm nozzle and
   0.12–0.16 mm layers.
-- Print the wheel, the ring and stage 5 in PETG or ASA rather than PLA. A radiator is warm, and
+- Print the socket, A's compound and D2 in PETG or ASA rather than PLA. A radiator is warm, and
   those parts carry the torque.
 - Each compound gear (a gear with its pinion) prints as one part.
 - The chamfers keep the first layer's squash (elephant's foot) and the top edge's burr out of the
   mesh.
-- The 64-tooth gears of stages 2–4 (D1, B2, D2) are spoked: five spokes between a hub round the
-  pinion and a rim under the tooth roots, the windows' corners rounded. Stages 2 and 3 have
-  2.4 mm spokes and rim; stage 4, which carries about 0.5 N·m at stall, has 3 mm. The smaller
-  gears and the ring, which carry the most torque, stay solid.
+- The 64-tooth gears of stages 2 and 3 (D1, B2) are spoked: five 2.4 mm spokes between a hub
+  round the pinion and a 2.4 mm rim under the tooth roots, the windows' corners rounded. The
+  smaller gears, the ring and the socket, which carry the most torque, stay solid.
+- The socket prints floor down, its hole open at the top.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
 once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are
@@ -270,13 +286,14 @@ system: a part for each object (the valve as measured, the bought parts as their
 printed parts), each placed where it stands, the valve's and the boards' grouped under them. Each
 gear's teeth are the rack's exact sweep, built as one tooth sector turned round the gear; a spoked
 gear is shaped whole and its windows cut after. Set `shaped := 0` in `radiatorbot.sv` to draw every
-gear and the wheel as blanks while changing the layout.
+gear and the socket as blanks while changing the layout.
 
 ## How it's checked
 
-- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_turn` through
-  a full turn, and judges the design table's claims (ratio, stall torque, free speed, and the
-  pinions' walls round their bores).
+- `solventc hardware/radiatorbot.sv` solves the whole bot at DOF 0, follows `handle_open` from
+  closed through three and a half turns open, the handle screwing down its stem, and judges the
+  design table's claims (ratio, stall torque, free speed, and the pinions' walls round their
+  bores).
 - The boards' fit in the bay is claimed in the model and judged on every check:
   - a mated USB-C plug and a mated barrel plug each clear their window in the end wall by 0.3 mm;
   - the boards, their headers and the Uno's tall parts clear the frame, the cover and one
@@ -286,31 +303,30 @@ gear and the wheel as blanks while changing the layout.
   - the Uno, the shield and the driver clear the motor and its cradle, and the motor clears the
     cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part and measures the wheel at thirteen poses, so it takes about two and a half
-  minutes.
-  - The wheel is judged against the handle at seven rolls across a whole period of the mesh
-    (0° to 90° of the handle: one arm through one pocket), and at three rolls each half open and
-    nearly open (2 mm and 3.8 mm down the stem's travel).
-  - Closed and half open, it clears by 0.353–0.361 mm, where the top face's broken edge passes
-    the pockets' straight band. Nearly open, it clears by 0.311–0.325 mm against the drafted
-    walls below, close to the 0.3 mm the cutter was grown by.
+  shaped part, so it takes about two minutes.
+  - The socket turns with the handle and its hole is the same at every height, so only the
+    handle's height in it changes. The socket and the stand are judged against the handle open,
+    where they come nearest; A's compound against it closed. The socket clears the handle by
+    0.357 mm at the arms' top edges, where the top face's broken edge meets the hole's wall.
+  - A's compound clears the handle by 1.3 mm (its web over the handle's top face); the stand
+    clears it by 3 mm, at the pivot pin's top. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs 0.14 mm clear between flanks.
-  - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14.5,
-    and its end stands 1 mm over B's second.
+  - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14,
+    and its end clears B's second by 1.8 mm.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     pad, the base against the frame, the clamp on the pipe). Both of the clamp's halves clear the
     outlet's union nut by 2 mm and its boss by 1.2 mm.
 
 ## Bill of materials
 
-- **Printed:** frame, base, clamp cap, cover, wheel (with ring), two axle collars (one STL,
-  `collar_part`), motor pinion, and compounds B1, B2, B3, D1, D2.
-- **Drill rod:** ½ in × 68 mm (wheel axle); 0.311 in × 45 mm, two of them (B and D).
+- **Printed:** frame, base, clamp cap, cover, socket, A's compound (its pinion and the ring),
+  the stand, the upper collar (`collar_part`), motor pinion, and compounds B1, B2, D1, D2.
+- **Drill rod:** ½ in × 78 mm (A's axle); 0.311 in × 45 mm, two of them (B and D).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (base to lid, cover);
   - M3 × 8 self-tapping, four (the Uno);
-  - M3 set screws, two (collars).
+  - M3 set screws, two (the collar and the stand).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. Its pinion is a press fit on the 2 mm shaft, which runs on
   5.5 mm past the pinion, beside stage 2, and ends 1 mm over stage 3's gear on B.
@@ -337,7 +353,7 @@ gear and the wheel as blanks while changing the layout.
 1. Press the B and D rods into the base's floor and the ½ in axle into the base's bridge.
    Slide the upper collar up the axle from below, against the bridge, and tighten its set
    screw.
-2. Stack the compounds on the rods (B3, D2, B2, D1, B1) and fit the motor's pinion.
+2. Stack the compounds on the rods (D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
 4. Make the shield. Plug the male headers into the Uno's power, analog and D0–D7 sockets, lay the
@@ -352,17 +368,24 @@ gear and the wheel as blanks while changing the layout.
    through the grommet to its terminal.
 6. Slide the bot onto the valve from −y, so the inlet hex enters the clamp's pocket. Drop the
    four M4 nuts into their pockets in the fixed half's back, and bolt on the cap from +y.
-7. Turn the handle so it's closed and **push the wheel up its axle from below** into mesh with
-   both the handle and the last pinion, up against the upper collar. Fit the lower collar.
-   - The star narrows downward and each of the wheel's bands is cut for the star's widest section
-     at that band. So the wheel only ever gains clearance as it rises into place.
-   - Going in sideways, by contrast, is not assured.
+7. **Push A's compound up its axle from below**, its ring into mesh with D2's last pinion, up
+   against the upper collar.
+8. Turn the handle so it's closed. **Push the socket up over the handle from below**, its teeth
+   into mesh with A's pinion, until its top stands 1 mm over the handle's top face. Turn the
+   handle a little to bring its arms into the hole: the hole is straight and the arms narrow
+   downward, so they go in freely.
+9. Hold the socket there and slide the stand up A's axle from below, swinging its arm under the
+   socket so its pin goes up into the floor's hole. Stop when its pad bears the floor and its
+   collar stands 0.3 mm under A's compound. The pin in its hole points the arm at the stem;
+   tighten the set screw.
 
 ## Open questions
 
-- **Stem travel.** The model assumes the handle as measured is closed, and that it drops 4 mm on
-  opening (`stem_travel`). Measure it, closed to open. If the stem doesn't drop, set it to 0 and
-  the pockets' straight band above the draft goes.
+- **Under the handle.** The socket's floor stands 1.5 mm under the handle's bottom face when it's
+  open, and the pivot's hole leaves a 1 mm roof in it. The model takes that face as flat. A screw or nut holding the handle on its stem, under
+  it, would need a recess in the floor: check before printing the socket.
+- **Round the handle.** The socket reaches 44.6 mm from the stem all round, 7.5 mm past the arms'
+  tips, at the handle's height. Check that the radiator and the floor leave it room.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
   must stay under the DRV8871's ~2.1 A limit.
 - **The Uno's connectors.** Its outline, sockets and holes are the Uno standard, but the R4

@@ -6,14 +6,15 @@ valve under motor control.
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
-  - `radiatorbot.sv` — the bot: a 130 motor and a five-stage printed spur train turning the
-    valve's star handle through a wheel generated as the handle's conjugate. It also has the
+  - `radiatorbot.sv` — the bot: a 130 motor and a printed spur train turning the valve's star
+    handle through a socket round it, which the handle screws through as it opens. It also has the
     gearbox, an electronics bay with an Arduino Uno R4 Minima and a perfboard shield carrying the
     motor driver and its current monitor, and a split clamp round the valve's inlet hex and supply
-    pipe. `handle_turn` scrubs the handle and the train with it.
+    pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with it.
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
-    opened by itself, its `handle_turn` scrubs the handle about the stem.
+    opened by itself, its `handle_open` scrubs the handle open, screwing it down the stem 2.06 mm
+    a turn over three and a half turns, as measured.
   - `gears.sv` — printed spur gears, cut by a rack's exact generating sweep (true involutes,
     undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
@@ -62,7 +63,7 @@ two and a half minutes. The models use its lists (`repeat h in LIST`), read numb
 instances (`shield.top`), cut clearances as a part's body grown (`std.rounds.Grown`) and import
 the standard library's words from its modules (`use std.place (coords)`, `use std.shapes`), so
 they need v0.1.10 or later. Every gear is its rack's exact sweep; the
-printed parts' STLs come to 4.7 MB and the assembly's STEP to 36 MB. v0.1.6 wrote the 16-tooth
+printed parts' STLs come to 4.0 MB and the assembly's STEP to 35 MB. v0.1.6 wrote the 16-tooth
 pinions' straight tip edges as dense B-splines, doubling the STEP (bmander/geomsolver#644).
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
