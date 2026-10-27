@@ -42,14 +42,15 @@ use std.motion (turns)
 use std.shapes
 use std.rounds
 use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap, stem_travel)
-use radiator_valve (StarOutline, StarSizes, StarHandle, HexBar, RoundBar)
+use radiator_valve (open_turns)
+use radiator_valve (StarOutline, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
 use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, uno_holes, shield_dims)
 use boards (drv8871_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the socket; 0: blanks, for a quick look
-checks := 0                    // 1: judge every clearance (needs `shaped`; ~2.5 minutes)
+checks := 0                    // 1: judge every clearance (needs `shaped`; ~2 minutes)
 
 // == Stock =======================================================================================
 // Drill rod.  The gears turn on fixed rods; the housing holds the rods.
@@ -100,7 +101,7 @@ top0 := -handle_gap
 // between its roots and its bore.
 pa := 20deg
 pin_shift := 0.3
-m_small := 0.8mm                // stages 1-4: the finest an 0.4 mm nozzle prints well
+m_small := 0.8mm                // stages 1-3: the finest an 0.4 mm nozzle prints well
 m_s4 := 1mm                     // stage 4
 m_fin := 1.5mm                  // the ring and its pinion
 motor_pin_n := 12               // the motor's pinion, pressed on its 2 mm shaft
@@ -117,12 +118,13 @@ claim m_s4 * (pin_n + s4_n) / 2 == cd_bd                // stage 4 stands on the
 pin_wall := m_small * (pin_n / 2 + pin_shift - 1.25) - rod_bore / 2   // roots to bore, module 0.8
 claim pin_wall >= 1.5mm
 
-// The bearings of the lines of centres, from the bot's +x: B stands `cd_fin` beyond A, where the
+// The bearings of the lines of centres, from the bot's +x: B stands `ab_dist` beyond A, where the
 // gearbox was laid out round it, and D `cd_bd` from B at `bd_bearing` (69.2deg), which stands it
-// `cd_fin` from A as well, at `da_bearing` (-41.7deg) from D; B to the motor -60deg.  Each the
-// other way round is 180deg on.
-bd_bearing := acos(cd_bd / (2 * cd_fin))
-da_bearing := 2 * bd_bearing - 180deg
+// `cd_fin` from A, at `da_bearing` (-41.7deg) from D; B to the motor -60deg.  Each the other way
+// round is 180deg on.
+ab_dist := 45mm
+bd_bearing := acos((ab_dist ^ 2 + cd_bd ^ 2 - cd_fin ^ 2) / (2 * ab_dist * cd_bd))
+da_bearing := atan2(-cd_bd * sin(bd_bearing), ab_dist - cd_bd * cos(bd_bearing))
 bm_bearing := -60deg
 
 gear_ratio := s1_n / motor_pin_n * (big_n / pin_n) ^ 2 * s4_n / pin_n * ring_n / fin_n   // to A
@@ -141,15 +143,16 @@ a_stall_torque := handle_stall_torque * a_n / socket_n / 0.9      // what A's pi
 claim handle_stall_torque >= 2Nm
 claim handle_free_speed >= 6rpm
 
-// How fast each axle's part turns, in turns a turn of the handle: the socket 1, A -64/24, and
-// each compound back up the train by its mesh's ratio, reversed, up to the motor's.
-a_rate := -socket_n / a_n
+// How fast each axle's part turns about its upward axis, in turns a turn open of the handle (a
+// turn the handle makes about the downward stem): A 64/24, and each compound back up the train by
+// its mesh's ratio, reversed, up to the motor's.
+a_rate := socket_n / a_n
 d2_rate := -a_rate * ring_n / fin_n
 b2_rate := -d2_rate * s4_n / pin_n
 d1_rate := -b2_rate * big_n / pin_n
 b1_rate := -d1_rate * big_n / pin_n
 motor_rate := -b1_rate * s1_n / motor_pin_n
-claim motor_rate == handle_ratio
+claim motor_rate == -handle_ratio
 
 // == Heights =====================================================================================
 // From the floor up: the ring and the last pinion, stages 4 to 1, the lid, the electronics bay
@@ -184,8 +187,8 @@ web_z0 := socket_z1 + gap
 // up to it.
 collar_h := 6mm
 collar_r := axle_d / 2 + 5mm
-hi_collar_z0 := ring_z1 + gap
-bridge_z0 := hi_collar_z0 + collar_h
+collar_z0 := ring_z1 + gap
+bridge_z0 := collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 stand_z1 := socket_z0 - gap
 stand_z0 := stand_z1 - 4mm
@@ -332,10 +335,9 @@ component Gear(c: point, z: Length, bearing: Angle, drives: Int, N: Int, m: Leng
 // == The valve ===================================================================================
 
 // The handle's turns open, scrubbed: the handle screws down its stem, and the socket and the train
-// turn with it.  Keep the drawing free of
-// redundant rows (the report's `implied:` lines): one makes this follow take minutes instead of
-// seconds (bmander/geomsolver#591).
-param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
+// turn with it.  Keep the drawing free of redundant rows (the report's `implied:` lines): one makes
+// this follow take minutes instead of seconds (bmander/geomsolver#591).
+param handle_open: Angle over (0deg, open_turns * 360deg)  // closed to open
 valve := RadiatorValve(handle_open: handle_open)
 
 // == The bot's frame =============================================================================
@@ -358,7 +360,7 @@ fix(dir == (-sin(bot_turn), cos(bot_turn), 0)) bot.v
 // beyond it; D stands `cd_bd` from B and `cd_fin` from A, its last pinion on the ring; the motor's
 // axis M is `cd_s1` from B at `bm_bearing`, from the bot's x.
 a_r := -a_dist
-b_r := -a_dist - cd_fin
+b_r := -a_dist - ab_dist
 in std.top {
   a_c := point hint((a_r * cos(bot_turn), a_r * sin(bot_turn)))
   a_c coords(du: a_r * cos(bot_turn), dv: a_r * sin(bot_turn)) std.top
@@ -400,20 +402,18 @@ rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: lid_z1 - 1mm)
 // handle, and through it all the hole the handle turns it by: the star's top face's outline,
 // grown `socket_fit` all round, straight from the floor up out of its top.  It is drawn where the
 // handle stands closed (`valve.handle_top`), the hole square to the arms there.
-stem_at := At(x: 0mm, y: 0mm)
-socket_gear := Gear(stem_at.p, z: socket_z1 - socket_face, bearing: 0deg, drives: 0, N: socket_n,
-                    m: m_socket, face: socket_face, bore: 4mm, spokes: 0, hub: 0mm, web: 0mm)
-socket_body := Post(stem_at.p, r: socket_body_r, z0: socket_z0,
+socket_gear := Gear(std.top.origin, z: socket_z1 - socket_face, bearing: 0deg, drives: 0,
+                    N: socket_n, m: m_socket, face: socket_face, bore: 4mm, spokes: 0, hub: 0mm,
+                    web: 0mm)
+socket_body := Post(std.top.origin, r: socket_body_r, z0: socket_z0,
                     z1: socket_z1 - socket_face + bond)
-socket_grown := {span: handle_dims.span + 2 * socket_fit, waist: handle_dims.waist + 2 * socket_fit,
-                 h: handle_dims.h, tip_r: handle_dims.tip_r + socket_fit,
-                 fillet_r: handle_dims.fillet_r - socket_fit, draft: handle_dims.draft,
-                 rim_r: handle_dims.rim_r, edge_r: handle_dims.edge_r, stem_d: handle_dims.stem_d}
-socket_star := StarOutline(valve.handle_top, s: socket_grown)
-socket_hole := solid(socket_star.outline, from: socket_floor - top0, to: socket_z1 - top0 + 1mm)
+socket_star := StarOutline(valve.handle_top, s: handle_dims)
+socket_prism := solid(socket_star.outline, from: socket_floor - top0 + socket_fit,
+                      to: socket_z1 - top0 + 1mm)
+socket_hole := std.rounds.Grown(socket_prism, d: socket_fit)
 construction socket_part := solid(socket_gear.gear)
 socket_body.body union socket_part
-socket_hole cut socket_part
+socket_hole.body cut socket_part
 
 // == A's compound ================================================================================
 // The pinion that drives the socket, the web over it, and the ring the last pinion drives, one
@@ -431,9 +431,9 @@ a_bore.body cut a_part
 
 // A's compound kept on its axle: the collar over it, under the base's bridge, and the stand
 // under it.
-hi_collar := Collar(x: -a_dist, y: 0mm, r: collar_r, bore: axle_bore, z0: hi_collar_z0,
-                    z1: hi_collar_z0 + collar_h) in bot
-collar_part := solid(hi_collar.part)
+collar := Collar(x: -a_dist, y: 0mm, r: collar_r, bore: axle_bore, z0: collar_z0,
+                 z1: collar_z0 + collar_h) in bot
+collar_part := solid(collar.part)
 
 // == The stand ===================================================================================
 // A collar on A under its pinion, held on the rod by its M3 set screw, and an arm from it out
@@ -443,12 +443,11 @@ collar_part := solid(hi_collar.part)
 stand_collar := Collar(x: -a_dist, y: 0mm, r: collar_r, bore: axle_bore, z0: stand_z0,
                        z1: a_pin_z0 - gap) in bot
 stand_arm := Block(x0: -a_dist, x1: 0mm, y0: -6mm, y1: 6mm, z0: stand_z0, z1: stand_z1) in bot
-stand_pad := Post(stem_at.p, r: 8mm, z0: stand_z0, z1: socket_z0)
-stand_bore := Post(a_c, r: axle_bore / 2, z0: stand_z0 - 1mm, z1: stand_z1 + 1mm)
+stand_pad := Post(std.top.origin, r: 8mm, z0: stand_z0, z1: socket_z0)
 stand_part := solid(stand_collar.part)
 stand_arm.body union stand_part
 stand_pad.body union stand_part
-stand_bore.body cut stand_part
+stand_collar.hole.body cut stand_part
 
 // == The gear train ==============================================================================
 // Each compound is its gear and its pinion, the pinion run `bond` up into the gear so the two
@@ -490,28 +489,28 @@ construction d2 := solid(d2_gear.gear)
 d2_pin.gear union d2
 
 // The socket and the train turning with the handle, at the rates worked out with the drive, each
-// read a turn open of the handle (a turn the other way), so every joint stands at `handle_open`
-// itself.  The socket turns with the handle but stands where it is, the handle screwing through.
+// read a turn open of the handle, so every joint stands at `handle_open` itself.  The socket turns
+// with the handle but stands where it is, the handle screwing through.
 socket_turn := frame
 socket_turn turns(1) valve.stem_down
 fix(value == handle_open) socket_turn
 a_turn := frame
-a_turn turns(-a_rate) a_spindle
+a_turn turns(a_rate) a_spindle
 fix(value == handle_open) a_turn
 d2_turn := frame
-d2_turn turns(-d2_rate) d_spindle
+d2_turn turns(d2_rate) d_spindle
 fix(value == handle_open) d2_turn
 b2_turn := frame
-b2_turn turns(-b2_rate) b_spindle
+b2_turn turns(b2_rate) b_spindle
 fix(value == handle_open) b2_turn
 d1_turn := frame
-d1_turn turns(-d1_rate) d_spindle
+d1_turn turns(d1_rate) d_spindle
 fix(value == handle_open) d1_turn
 b1_turn := frame
-b1_turn turns(-b1_rate) b_spindle
+b1_turn turns(b1_rate) b_spindle
 fix(value == handle_open) b1_turn
 motor_turn := frame
-motor_turn turns(-motor_rate) m_spindle
+motor_turn turns(motor_rate) m_spindle
 fix(value == handle_open) motor_turn
 
 socket := socket_part in socket_turn
@@ -541,7 +540,7 @@ cradle_in.body cut cradle
 // == The base: the gearbox's floor and walls =====================================================
 // A box from the floor to the lid, hollowed; its floor and its walls are cut away where A's ring
 // turns under the train (the whole of its +x end, down there), and a bridge across it, standing
-// on the upper collar, holds A's axle.  Four M3 screws down through the lid
+// on the collar, holds A's axle.  Four M3 screws down through the lid
 // hold it up to the frame (below).
 base_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: floor_z0, z1: lid_z0) in bot
 base_cavity := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
@@ -783,20 +782,17 @@ claim terminal.body clear(0.5mm) monitor.board
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The socket
-// is judged against the handle closed, halfway and open: they turn together, so only the
-// handle's height in the hole changes.  Gears in mesh run 0.15 mm clear a flank; parts that rest
-// on one another (the motor on its lid, the base on the frame, the upper collar on the bridge,
-// the socket on the stand's pad) are not claimed clear.
+// and the stand are judged against the handle open, A's compound against it closed: the socket
+// turns with the handle and its hole is the same at every height, so only the handle's height
+// changes, and each comes nearest at that end.  Gears in mesh run 0.15 mm clear a flank; parts
+// that rest on one another (the motor on its lid, the base on the frame, the collar on the
+// bridge, the socket on the stand's pad) are not claimed clear.
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
-  repeat 3 as k {
-    construction handle_at := rest_handle.handle at(under: valve.handle) (k * 630deg)
-    construction socket_at := socket_part at(under: socket_turn) (k * 630deg)
-    construction a_at := a_part at(under: a_turn) (k * 630deg)
-    claim socket_at clear(0.1mm) handle_at
-    claim a_at clear(1mm) handle_at
-    claim stand_part clear(1mm) handle_at
-  }
+  construction open_handle := rest_handle.handle at(under: valve.handle) (open_turns * 360deg)
+  claim socket_part clear(0.1mm) open_handle
+  claim stand_part clear(1mm) open_handle
+  claim a_part clear(1mm) rest_handle.handle
   claim socket clear(0.05mm) a_compound
   claim socket clear(1mm) valve.packing_nut.bar
   claim socket clear(0.3mm) base
@@ -804,9 +800,9 @@ when checks == 1 {
   claim a_compound clear(0.3mm) base
   claim a_compound clear(0.3mm) frame_part
   claim a_compound clear(0.25mm) stand_part
-  claim a_compound clear(0.25mm) hi_collar.part
+  claim a_compound clear(0.25mm) collar.part
   claim a_compound clear(0.05mm) compound_d2
-  claim compound_d2 clear(1mm) hi_collar.part
+  claim compound_d2 clear(1mm) collar.part
   claim compound_d2 clear(0.05mm) compound_b2
   claim compound_b2 clear(0.05mm) compound_d1
   claim compound_d1 clear(0.05mm) compound_b1

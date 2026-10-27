@@ -300,11 +300,12 @@ gear and the socket as blanks while changing the layout.
     cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
   shaped part, so it takes about two minutes.
-  - The socket is judged against the handle closed, halfway (1¾ turns open) and open (3½ turns).
-    They turn together, so only the handle's height in the hole changes. It clears by 0.357 mm
-    at all three, at the arms' top edges, where the top face's broken edge meets the hole's wall.
-  - A's compound clears the handle by 1.3 mm closed (its web over the handle's top face) and
-    4.8 mm open; the stand clears it by 4 mm open. The socket clears the packing nut by 4.1 mm.
+  - The socket turns with the handle and its hole is the same at every height, so only the
+    handle's height in it changes. The socket and the stand are judged against the handle open,
+    where they come nearest; A's compound against it closed. The socket clears the handle by
+    0.357 mm at the arms' top edges, where the top face's broken edge meets the hole's wall.
+  - A's compound clears the handle by 1.3 mm (its web over the handle's top face); the stand
+    clears it by 4 mm. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs 0.14 mm clear between flanks.
   - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14,
     and its end clears B's second by 1.8 mm.

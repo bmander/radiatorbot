@@ -188,8 +188,8 @@ component OutletUnion(outlet: point, ref: line, nut_af: Length, nut_phase: Angle
 // The star handle's outline in plan, drawn on `top` about its origin: four arms, each with straight
 // sides, a rounded tip and a fillet where it meets the next arm.  The first arm points along
 // `top`'s u.  `span` and `waist` are measured over the rounds: across the tips, and across
-// opposite fillets.  The handle below is this outline extruded; the radiator bot's wheel is cut by
-// it at the draft's sections.
+// opposite fillets.  The handle below is this outline extruded; the radiator bot's socket is it
+// grown, straight through.
 component StarOutline(top: plane, s: StarSizes) {
   in top {
     hub := point
@@ -266,14 +266,14 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
 
 // == The assembly ================================================================================
 // The valve as it stands on the radiator, drawn from the tables above, its handle turned
-// `handle_open` open from closed, down its stem.  A model that works on the valve (the radiator bot) draws it with
-// `use radiator_valve (RadiatorValve)` and reads its datums and parts by name: `valve.stem_axis`,
-// `valve.handle_top`, `valve.star_handle`.
+// `handle_open` open from closed, down its stem.  A model that works on the valve (the radiator
+// bot) draws it with `use radiator_valve (RadiatorValve)` and reads its datums and parts by name:
+// `valve.stem_axis`, `valve.handle_top`, `valve.star_handle`.
 component RadiatorValve(handle_open: Angle) {
   // The stem's axis, and the same line read downward, the way the handle screws opening; the
-  // outlet's axis where it crosses the side
-  // plane (x = 0), from which the outlet's parts are stationed along x; and a reference line in
-  // each plane the hex parts are drawn in, their flats squared to it.
+  // outlet's axis where it crosses the side plane (x = 0), from which the outlet's parts are
+  // stationed along x; and a reference line in each plane the hex parts are drawn in, their flats
+  // squared to it.
   in std.front {
     construction stem_axis := vertical line(std.origin, hint((0, 10)))
     length(10mm) stem_axis
@@ -311,8 +311,9 @@ component RadiatorValve(handle_open: Angle) {
                             z0: spud_dims.x, z1: spud_dims.x + spud_dims.t)
 
   // The handle's joint: a frame screwing down the stem's axis, a turn a turn and `stem_lead` down
-  // it, standing at `handle_open`.  (Held to the turns open themselves: a joint's value held to
-  // a running parameter negated reads the other way at a stated roll, under solventc v0.1.10.)
+  // it, standing at `handle_open`: a right-hand thread read along the axis it opens down.  (Keep
+  // every joint held to the turns open themselves: under solventc v0.1.10, a joint's value held
+  // to a running parameter negated reads the other way at a stated roll.)
   handle := frame
   handle screws(stem_lead) stem_down
   fix(value == handle_open) handle
@@ -330,5 +331,5 @@ component RadiatorValve(handle_open: Angle) {
 
 // The valve with its handle to scrub, closed to open.  A file that uses this one as a module draws
 // neither the valve below nor the parameter.
-param handle_open: Angle over (0deg, 1260deg)              // closed to open_turns open
+param handle_open: Angle over (0deg, open_turns * 360deg)  // closed to open
 valve := RadiatorValve(handle_open: handle_open)
