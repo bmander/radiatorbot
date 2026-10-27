@@ -26,7 +26,9 @@
 
 unit mm
 use std
-use std (vertical, turns, slides, coords, on_v, raised, seats)
+use std.place (vertical, coords, on_v, raised, seats)
+use std.motion (turns, slides)
+use std.sets
 
 // A shaped spur gear: N teeth of module m and pressure angle phi, its rack drawn `shift` modules
 // out from the pitch circle (a profile shift; a pinion under 17 teeth wants about (17 - N) / 17 to
@@ -113,8 +115,8 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
   bottom_q := point
   bottom_q raised(d: z1, along: std.z) bottom_at
   when chamfer > 0mm {
-    top_cone := std.ConeThrough(spindle, top_q, lean: -45deg)
-    bottom_cone := std.ConeThrough(spindle, bottom_q, lean: 45deg)
+    top_cone := std.sets.ConeThrough(spindle, top_q, lean: -45deg)
+    bottom_cone := std.sets.ConeThrough(spindle, bottom_q, lean: 45deg)
     bicone := { p | p inside top_cone; p inside bottom_cone }
     private construction chamfers := solid(bicone)
     chamfers common shaped_blank
