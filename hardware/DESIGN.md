@@ -32,9 +32,13 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     runs on down past where the handle stands open. So every arm's top edge is always in the
     hole, 0.3 mm off its wall, and that edge, the straight length of each arm's side, drives.
   - The arms' play in the hole is ±0.5° of the handle, and each arm is driven near its tip.
-  - Under the open handle's bottom face the socket has a floor. It turns on a pad on the stem's
-    axis at the end of the **stand**, an arm clamped to A under its pinion. The socket finds its
-    own centre on the handle; the pad only bears it.
+  - Under the open handle's bottom face the socket has a 4 mm floor. It turns on a pad on the
+    stem's axis at the end of the **stand**, an arm clamped to A under its pinion.
+  - The pivot is a 6 mm pin printed up from the pad into an 8 mm blind hole in the floor's
+    middle. The pin keeps the pad under the socket and the socket over the pad.
+  - The pin is 1 mm loose all round on purpose. The handle centres the socket to 0.3 mm, and the
+    pin never fights it for the centre, however the stand is set. The pad only bears the
+    socket's weight.
 - **A** is a fixed ½ in axle 60 mm from the stem. A's compound turns on it: a 24-tooth pinion
   driving the socket, and over it a 48-tooth ring (module 1.5) driven by the train, one print.
   The upper collar over the ring and the stand under the pinion keep it in place.
@@ -305,7 +309,7 @@ gear and the socket as blanks while changing the layout.
     where they come nearest; A's compound against it closed. The socket clears the handle by
     0.357 mm at the arms' top edges, where the top face's broken edge meets the hole's wall.
   - A's compound clears the handle by 1.3 mm (its web over the handle's top face); the stand
-    clears it by 4 mm. The socket clears the packing nut by 4.1 mm.
+    clears it by 3 mm, at the pivot pin's top. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs 0.14 mm clear between flanks.
   - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14,
     and its end clears B's second by 1.8 mm.
@@ -317,7 +321,7 @@ gear and the socket as blanks while changing the layout.
 
 - **Printed:** frame, base, clamp cap, cover, socket, A's compound (its pinion and the ring),
   the stand, the upper collar (`collar_part`), motor pinion, and compounds B1, B2, D1, D2.
-- **Drill rod:** ½ in × 76 mm (A's axle); 0.311 in × 45 mm, two of them (B and D).
+- **Drill rod:** ½ in × 78 mm (A's axle); 0.311 in × 45 mm, two of them (B and D).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (base to lid, cover);
@@ -370,14 +374,15 @@ gear and the socket as blanks while changing the layout.
    into mesh with A's pinion, until its top stands 1 mm over the handle's top face. Turn the
    handle a little to bring its arms into the hole: the hole is straight and the arms narrow
    downward, so they go in freely.
-9. Hold the socket there and slide the stand up A's axle from below, until its pad bears the
-   socket's floor and its collar stands 0.3 mm under A's compound. Point its arm at the stem and
-   tighten its set screw.
+9. Hold the socket there and slide the stand up A's axle from below, swinging its arm under the
+   socket so its pin goes up into the floor's hole. Stop when its pad bears the floor and its
+   collar stands 0.3 mm under A's compound. The pin in its hole points the arm at the stem;
+   tighten the set screw.
 
 ## Open questions
 
 - **Under the handle.** The socket's floor stands 1.5 mm under the handle's bottom face when it's
-  open. The model takes that face as flat. A screw or nut holding the handle on its stem, under
+  open, and the pivot's hole leaves a 1 mm roof in it. The model takes that face as flat. A screw or nut holding the handle on its stem, under
   it, would need a recess in the floor: check before printing the socket.
 - **Round the handle.** The socket reaches 44.6 mm from the stem all round, 7.5 mm past the arms'
   tips, at the handle's height. Check that the radiator and the floor leave it room.

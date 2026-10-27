@@ -173,12 +173,19 @@ lid_z0 := s1_z0 + 5.5mm
 lid_z1 := lid_z0 + 3mm
 // Under the ring, round the handle: the socket's top a millimetre over the handle's top face
 // closed, so the arms' top edges stand in its hole all the way down the travel, and its teeth
-// `socket_face` down from there; its floor's top 1.5 mm under the handle's bottom face open.  A's
-// pinion meshes with the teeth, the web over it a print's clearance over the socket.
+// `socket_face` down from there; its floor's top 1.5 mm under the handle's bottom face open, the
+// floor thick enough for the pivot's hole up into it.  A's pinion meshes with the teeth, the web
+// over it a print's clearance over the socket.
 socket_z1 := top0 + 1mm
 socket_face := 10mm
 socket_floor := top0 - stem_travel - handle_dims.h - 1.5mm
-socket_z0 := socket_floor - 2.5mm
+socket_z0 := socket_floor - 4mm
+// The socket's pivot: a printed pin up from the stand's pad on the stem's axis, in a blind hole
+// up into the floor's middle, loose by `pivot_play` all round so that the handle, not the pin,
+// centres the socket; the pin's top half a millimetre short of the hole's, under a 1 mm roof.
+pivot_d := 6mm
+pivot_h := 2.5mm                // above the pad
+pivot_play := 1mm
 socket_body_r := m_socket * (socket_n / 2 - 1.25 - pin_shift) - 1mm   // under its teeth's roots
 a_pin_z0 := socket_z1 - socket_face + 0.5mm
 web_z0 := socket_z1 + gap
@@ -414,6 +421,9 @@ socket_hole := std.rounds.Grown(socket_prism, d: socket_fit)
 construction socket_part := solid(socket_gear.gear)
 socket_body.body union socket_part
 socket_hole.body cut socket_part
+pivot_hole := Post(std.top.origin, r: pivot_d / 2 + pivot_play, z0: socket_z0 - 1mm,
+                   z1: socket_z0 + pivot_h + 0.5mm)
+pivot_hole.body cut socket_part
 
 // == A's compound ================================================================================
 // The pinion that drives the socket, the web over it, and the ring the last pinion drives, one
@@ -437,16 +447,20 @@ collar_part := solid(collar.part)
 
 // == The stand ===================================================================================
 // A collar on A under its pinion, held on the rod by its M3 set screw, and an arm from it out
-// under the socket to a pad on the stem's axis, which the socket's floor turns on.  Point the arm
-// at the stem when the set screw goes in: the socket finds its own centre on the handle, so the
-// pad only bears it.
+// under the socket to a pad on the stem's axis, which the socket's floor turns on, and the pivot's
+// pin up from the pad into the floor's hole.  The pin keeps the pad under the socket's middle and
+// the socket over the pad; it is loose in its hole, so the socket finds its own centre on the
+// handle and the pad only bears it.  With the pin in the hole, the socket points the arm at the
+// stem: tighten the set screw then.
 stand_collar := Collar(x: -a_dist, y: 0mm, r: collar_r, bore: axle_bore, z0: stand_z0,
                        z1: a_pin_z0 - gap) in bot
 stand_arm := Block(x0: -a_dist, x1: 0mm, y0: -6mm, y1: 6mm, z0: stand_z0, z1: stand_z1) in bot
 stand_pad := Post(std.top.origin, r: 8mm, z0: stand_z0, z1: socket_z0)
+pivot_pin := Post(std.top.origin, r: pivot_d / 2, z0: stand_z1, z1: socket_z0 + pivot_h)
 stand_part := solid(stand_collar.part)
 stand_arm.body union stand_part
 stand_pad.body union stand_part
+pivot_pin.body union stand_part
 stand_collar.hole.body cut stand_part
 
 // == The gear train ==============================================================================
@@ -800,6 +814,7 @@ when checks == 1 {
   claim a_compound clear(0.3mm) base
   claim a_compound clear(0.3mm) frame_part
   claim a_compound clear(0.25mm) stand_part
+  claim pivot_pin.body clear(0.4mm) socket_part         // loose in its hole, under its roof
   claim a_compound clear(0.25mm) collar.part
   claim a_compound clear(0.05mm) compound_d2
   claim compound_d2 clear(1mm) collar.part
