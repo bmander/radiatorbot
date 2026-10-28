@@ -1,9 +1,11 @@
 #include "console.h"
 
+#include <ctype.h>
 #include <string.h>
 
 #include "pins.h"
 #include "storage.h"
+#include "wifi.h"
 
 using valve::End;
 using valve::Mode;
@@ -34,7 +36,20 @@ void Console::poll() {
   }
 }
 
+void Console::exec(const char* line) {
+  strncpy(line_, line, sizeof line_ - 1);
+  line_[sizeof line_ - 1] = '\0';
+  len_ = 0;
+  run(line_);
+}
+
 void Console::run(char* line) {
+  while (*line == ' ' || *line == '\t') line++;
+  // `wifi` takes the rest of its line whole: a network's name, or its password, may have spaces
+  if (strncmp(line, "wifi", 4) == 0 && (line[4] == '\0' || line[4] == ' ' || line[4] == '\t')) {
+    wifiCommand(line + 4);
+    return;
+  }
   const char* cmd = strtok(line, " \t");
   const char* a = strtok(nullptr, " \t");
   const char* b = strtok(nullptr, " \t");
@@ -85,7 +100,7 @@ void Console::run(char* line) {
   } else if (strcmp(cmd, "reboot") == 0) {
     io_.println("rebooting");
     io_.flush();
-    NVIC_SystemReset();
+    ESP.restart();
   } else {
     io_.printf("unknown command `%s`; `help` lists them\n", cmd);
   }
@@ -104,7 +119,43 @@ void Console::help() {
       "  save            keep the settings through reboots\n"
       "  defaults        put every setting back to its default\n"
       "  trace ms|off    print the current every `ms` during moves\n"
+      "  wifi            the network: how the link is doing\n"
+      "  wifi ssid NAME  join the network NAME (kept through reboots)\n"
+      "  wifi pass WORD  its password, and join it\n"
+      "  wifi forget     leave the network, and forget it\n"
       "  reboot\n");
+}
+
+void Console::wifiCommand(char* rest) {
+  while (*rest == ' ' || *rest == '\t') rest++;
+  char* end = rest + strlen(rest);
+  while (end > rest && isspace(static_cast<unsigned char>(end[-1]))) *--end = '\0';
+  char* arg = rest;
+  while (*arg != '\0' && *arg != ' ' && *arg != '\t') arg++;
+  if (*arg != '\0') *arg++ = '\0';
+  while (*arg == ' ' || *arg == '\t') arg++;
+
+  if (*rest == '\0') {
+    // just the link, below
+  } else if (strcmp(rest, "ssid") == 0) {
+    if (!wifi::setSsid(arg)) {
+      io_.println("wifi ssid NAME: the network's name, 1 to 32 characters");
+      return;
+    }
+  } else if (strcmp(rest, "pass") == 0) {
+    if (!wifi::setPass(arg)) {
+      io_.println("wifi pass PASSWORD: 8 to 63 characters, or none for an open network");
+      return;
+    }
+  } else if (strcmp(rest, "forget") == 0) {
+    wifi::forget();
+  } else {
+    io_.println("wifi [ssid NAME | pass PASSWORD | forget]");
+    return;
+  }
+  io_.print("wifi: ");
+  wifi::describe(io_);
+  io_.println();
 }
 
 void Console::get(const char* name) {
@@ -183,13 +234,15 @@ void Console::status() {
   if (c.state() == State::kRunning) io_.printf(" to %s", valve::name(c.target()));
   if (c.state() == State::kFault) io_.printf(" (%u in a row)", c.failures());
   io_.printf(", driver %s\n", c.awake() ? "awake" : "asleep");
-  Drv8871& m = app_.motor;
+  Tb6612& m = app_.motor;
   if (!c.moving()) m.refresh();  // while it runs, the loop reads it every tick
   if (!m.monitor_ok()) {
-    io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A4, SCL A5)");
+    io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A0, SCL A1)");
   } else {
-    io_.printf("  supply      %.2f V, %.2f A%s\n", m.supply_volts(), m.supply_amps(),
-               m.fault() ? ": too low to run the motor" : "");
+    const char* why = "";
+    if (m.supply_volts() < Tb6612::kMinVolts) why = ": too low to run the motor";
+    if (m.supply_volts() > Tb6612::kMaxVolts) why = ": too high for the TB6612, 13.5 V at most";
+    io_.printf("  supply      %.2f V, %.2f A%s\n", m.supply_volts(), m.supply_amps(), why);
   }
   if (c.moving()) {
     io_.printf("  current     %.2f A (%.2f A filtered) at %.0f%% PWM\n", c.amps(), c.filtered(),
@@ -199,6 +252,9 @@ void Console::status() {
     io_.print("  last move   ");
     printMove(c.last());
   }
+  io_.print("  wifi        ");
+  wifi::describe(io_);
+  io_.println();
 }
 
 void Console::report(uint32_t now) {
@@ -221,6 +277,16 @@ void Console::report(uint32_t now) {
       traced_ = now;
     } else if (state_ == State::kFault) {
       io_.printf("move failed (%u in a row); `clear` tries again now\n", c.failures());
+    }
+  }
+  if (wifi::connected() != linked_) {
+    linked_ = !linked_;
+    io_.print("wifi: ");
+    if (linked_) {
+      wifi::describe(io_);
+      io_.println();
+    } else {
+      io_.println("link lost");
     }
   }
   if (app_.trace_ms && c.moving() && now - traced_ >= app_.trace_ms) {

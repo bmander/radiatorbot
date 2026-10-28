@@ -1,5 +1,6 @@
-// The console on the USB serial port: a command a line (`help` lists them), and a log of what the
-// bot does as it does it.
+// The console: a command a line (`help` lists them), and a log of what the bot does as it does it.
+// One runs on the USB serial port, one for a telnet client, and one for the web page's commands
+// (remote.h).  Each is called holding the app's lock.
 #pragma once
 
 #include <Arduino.h>
@@ -13,12 +14,15 @@ class Console {
 
   // Reads what has arrived, and runs each line as it completes.  Never blocks.
   void poll();
-  // Logs what changed in the last tick: the thermostat, a move's start and end, a failure, and
-  // the trace.
+  // Logs what changed in the last tick: the thermostat, a move's start and end, a failure, the
+  // trace, and the Wi-Fi link.
   void report(uint32_t now);
+  // Runs one line, as if it had been typed.
+  void exec(const char* line);
 
  private:
   void run(char* line);
+  void wifiCommand(char* rest);
   void help();
   void status();
   void get(const char* name);
@@ -36,6 +40,7 @@ class Console {
 
   // What `report` last saw.
   bool stat_known_ = false, stat_calling_ = false;
+  bool linked_ = false;
   valve::State state_ = valve::State::kIdle;
   uint32_t moves_ = 0, traced_ = 0;
 };

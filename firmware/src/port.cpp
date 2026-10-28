@@ -21,6 +21,16 @@ void Port::pump() {
   }
 }
 
+size_t Port::take(uint8_t* out, size_t n) {
+  size_t got = 0;
+  for (; got < n && len_ > 0; got++) {
+    out[got] = buf_[start_];
+    start_ = (start_ + 1) % kSize;
+    len_--;
+  }
+  return got;
+}
+
 size_t Port::write(const uint8_t* buf, size_t n) {
   for (size_t i = 0; i < n && len_ < kSize; i++) {
     buf_[(start_ + len_) % kSize] = buf[i];

@@ -324,6 +324,7 @@ static void test_settings_parse() {
   CHECK(setField(s, *trip, "0.85"));
   CHECK_NEAR(s.trip_close, 0.85f, 1e-6f);
   CHECK(!setField(s, *trip, "9"));
+  CHECK(!setField(s, *trip, "2.5"));  // over the paralleled TB6612's 2 A: it would never trip
   CHECK(!setField(s, *trip, "abc"));
   CHECK(!setField(s, *trip, "1.0x"));
   CHECK(!setField(s, *trip, ""));

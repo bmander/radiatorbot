@@ -16,10 +16,9 @@ constexpr float kShuntLsb = 10e-6f;  // V a count, the shunt register's
 constexpr float kBusLsb = 4e-3f;     // V a count, the bus register's, above its three flag bits
 }  // namespace
 
-bool Ina219::begin() {
-  Wire.begin();
-  Wire.setClock(400000);
-  Wire.setWireTimeout(2000);  // us: a wedged bus never holds up the loop for long
+bool Ina219::begin(int sda, int scl) {
+  Wire.begin(sda, scl, 400000);
+  Wire.setTimeOut(2);  // ms: a wedged bus never holds up the loop for long
   return write(kConfig, kConfigValue);
 }
 
