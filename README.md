@@ -8,9 +8,10 @@ valve under motor control.
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
   - `radiatorbot.sv` — the bot: a 130 motor and a printed spur train turning the valve's star
     handle through a socket round it, which the handle screws through as it opens. It also has the
-    gearbox, an electronics bay with an Arduino Uno R4 Minima and a perfboard shield carrying the
-    motor driver and its current monitor, and a split clamp round the valve's inlet hex and supply
-    pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with it.
+    gearbox, an electronics bay with a SparkFun IoT RedBoard ESP32 and a perfboard shield carrying
+    the motor driver and its current monitor, and a split clamp round the valve's inlet hex and
+    supply pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with
+    it.
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_open` scrubs the handle open, screwing it down the stem 2.06 mm
@@ -18,15 +19,16 @@ valve under motor control.
   - `gears.sv` — printed spur gears, cut by a rack's exact generating sweep (true involutes,
     undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
-  - `boards.sv` — the bought boards: an Arduino Uno R4 Minima, the perfboard shield plugged into
-    it, and on the shield an Adafruit DRV8871 motor driver and an Adafruit INA219 current monitor
-    (which senses the stall), on their headers.
+  - `boards.sv` — the bought boards: a SparkFun IoT RedBoard ESP32, the perfboard shield plugged
+    into it, and on the shield an Adafruit TB6612 motor driver (its two bridges tied together) and
+    an Adafruit INA219 current monitor (which senses the stall), on their headers.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
   - `export.sh` — writes every printed part as STL, and the whole bot as one STEP assembly.
-- `firmware/` — the Uno R4 Minima's firmware, a PlatformIO project: it opens the valve while an
+- `firmware/` — the RedBoard's firmware, a PlatformIO project: it opens the valve while an
   old dry-contact thermostat calls for heat and closes it after, finding each end of travel by the
-  motor's current, with a USB serial console for setting it up. See [firmware/README.md](firmware/README.md).
+  motor's current, with a console on USB and on Wi-Fi (telnet), and a page for a phone to turn the
+  heat on or off from anywhere, over Tailscale. See [firmware/README.md](firmware/README.md).
 
 ## Tooling: Solvent
 

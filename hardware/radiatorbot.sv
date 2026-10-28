@@ -15,7 +15,7 @@
 //     above: four printed spur stages on two drill-rod axles, B and D, the 130 motor's pinion
 //     driving the first; its base's floor stops short of the ring;
 //   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, and
-//     beside it the Arduino with a perfboard shield on it carrying the motor driver and its
+//     beside it the RedBoard with a perfboard shield on it carrying the motor driver and its
 //     current monitor, the cable entries), and the spine up beside the valve to the **clamp**, a
 //     split block round the inlet hex and the supply pipe above it.  The hex takes the handle's
 //     reaction torque positively; the bolted cap closes the clamp from +x, the side away from
@@ -46,8 +46,8 @@ use radiator_valve (open_turns)
 use radiator_valve (StarOutline, StarHandle, HexBar, RoundBar)
 use gears (ShapedSpur)
 use motor130 (Motor130, MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
-use boards (UnoR4Minima, Shield, Drv8871, Ina219, uno_dims, uno_holes, shield_dims)
-use boards (drv8871_dims, ina219_dims, header_dims, pitch)
+use boards (RedBoardEsp32, Shield, Tb6612, Ina219, redboard_dims, uno_holes, shield_dims)
+use boards (tb6612_dims, ina219_dims, header_dims, pitch)
 
 shaped := 1                    // 1: shape the gears and the socket; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~2 minutes)
@@ -202,20 +202,21 @@ stand_z0 := stand_z1 - 4mm
 spine_z0 := s4_z0               // the spine's foot, over A's ring
 motor_z := s3_z0 + 5mm + 1mm + motor130_dims.shaft_len  // the motor's front face, on its pad
 claim motor_z >= lid_z1
-uno_z := lid_z1 + 6mm                                   // the Uno's underside, on its posts
-shield_z := uno_z + shield.top                          // the shield's top face
+board_z := lid_z1 + 6mm                                 // the RedBoard's underside, on its posts
+shield_z := board_z + shield.top                          // the shield's top face
 bay_z1 := motor_z + motor130_dims.len + motor130_dims.back_h + 3mm  // room over it for its leads
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
 clamp_z1 := clamp_z0 + 31.7mm
 
 // == Plan ========================================================================================
 // The housing's outline, the clamp and the spine, in plan (x, y) in the bot's frame: the box the
-// base, the lid, the bay and the cover all share.  Its end wall and its sides stand about 2.4 mm
-// off the tips of the 64-tooth gears on B (at x = -105) and on D (30.9 mm up +y).
+// base, the lid, the bay and the cover all share.  Its end wall and its -y side stand about
+// 2.4 mm off the tips of the 64-tooth gears on B (at x = -105) and on D (30.9 mm up +y); its +y
+// side 4.4 mm, for the RedBoard's 2.3 in across the bay.
 box_x0 := -136mm
 box_x1 := -35mm
 box_y0 := -31mm
-box_y1 := 62mm
+box_y1 := 64mm
 spine_x1 := -21.5mm             // 4 mm off the valve's bulge and collar
 spine_w := 28mm
 clamp_reach := 26mm             // each half of the clamp, out from the stem
@@ -227,25 +228,27 @@ nut_clear := 2mm                // the clamp's relief round the outlet's union n
 clamp_bolt_z0 := body_dims.inlet_top + gap + m4_clear / 2 + 1.5mm
 clamp_bolt_z1 := clamp_z1 - 7mm
 screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
-// The Uno and its shield (boards.sv) stand beside the motor, by the Uno's frame, its power
-// header's first pin at (uno_ox, uno_oy): its jack's mouth a millimetre in from the end wall's
-// inside face, its edge 2 mm off the motor's cradle's flat.
+// The RedBoard and its shield (boards.sv) stand beside the motor, by the RedBoard's frame, its
+// power header's first pin at (board_ox, board_oy): its jack's mouth a millimetre in from the end
+// wall's inside face, its edge 2 mm off the motor's cradle's flat.
 cradle_f := motor130_dims.flats / 2 + wall + gap        // the cradle's flats, off the motor's axis
-uno_ox := box_x0 + wall + 1mm - uno_dims.jack_x0
-uno_oy := cd_s1 * sin(bm_bearing) + cradle_f + 2mm - uno_dims.y0
-// The breakouts on the shield's grid, each at its pin field's middle, in the Uno's frame, both
-// their boards toward +x: the driver's pins in the shield's column 9 (x = 0.7 in), rows 2-5, its
-// terminals toward the bay's +x wall; the current monitor's in column 9, rows 11-16.  Column 9
-// is the Uno's VIN and D7 too, at rows 0 and 19.
-drv_cx := uno_ox + 7 * pitch
-drv_cy := uno_oy + 3.5 * pitch
-ina_cx := uno_ox + 7 * pitch
-ina_cy := uno_oy + 13.5 * pitch
-// The end wall's windows: the USB-C's axis and the jack's, as the Uno places them.
-usb_z := uno_z + uno.usb_z
-usb_y := uno_oy + uno_dims.usb_y
-jack_z := uno_z + uno.jack_axis
-jack_y := uno_oy + uno.jack_y
+board_ox := box_x0 + wall + 1mm - redboard_dims.jack_x0
+board_oy := cd_s1 * sin(bm_bearing) + cradle_f + 2mm - redboard_dims.y0
+// The breakouts on the shield's grid, each at its pin field's middle, in the RedBoard's frame:
+// the driver's two rows in the shield's rows 1 and 7, its outputs' row (columns 7-12) toward the
+// motor and its logic's (columns 5-14) toward the current monitor; the current monitor's pins in
+// column 9, rows 11-16, its board out toward +x.  Column 9 is the RedBoard's VIN and D7 too, at
+// rows 0 and 19.  The motor's terminal stands in column 17, rows 2 and 4, past the driver's +x
+// end.
+drv_cx := board_ox + 7.5 * pitch
+drv_cy := board_oy + 4 * pitch
+ina_cx := board_ox + 7 * pitch
+ina_cy := board_oy + 13.5 * pitch
+// The end wall's windows: the USB-C's axis and the jack's, as the RedBoard places them.
+usb_z := board_z + redboard.usb_z
+usb_y := board_oy + redboard_dims.usb_y
+jack_z := board_z + redboard.jack_axis
+jack_y := board_oy + redboard.jack_y
 
 // == Building blocks =============================================================================
 
@@ -606,15 +609,15 @@ motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
 motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 
 // the cable entries, in the bay's far end wall: a grommet for the thermostat's cable, low beside
-// the motor, and a window each on the Uno's barrel jack and its USB-C that a cable's moulded plug
+// the motor, and a window each on the RedBoard's barrel jack and its USB-C that a cable's moulded plug
 // passes through to mate
 grommet := BoreX(y: -14mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm,
                  x1: box_x0 + wall + 1mm) in bot
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
-                  y0: usb_y - uno_dims.plug_w / 2 - gap, y1: usb_y + uno_dims.plug_w / 2 + gap,
-                  z0: usb_z - uno_dims.plug_h / 2 - gap,
-                  z1: usb_z + uno_dims.plug_h / 2 + gap) in bot
-jack_half := uno_dims.jack_plug / 2 + gap
+                  y0: usb_y - redboard_dims.plug_w / 2 - gap, y1: usb_y + redboard_dims.plug_w / 2 + gap,
+                  z0: usb_z - redboard_dims.plug_h / 2 - gap,
+                  z1: usb_z + redboard_dims.plug_h / 2 + gap) in bot
+jack_half := redboard_dims.jack_plug / 2 + gap
 jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_half,
                    y1: jack_y + jack_half, z0: jack_z - jack_half, z1: jack_z + jack_half) in bot
 
@@ -632,7 +635,7 @@ grommet.body cut frame_part
 usb_slot.body cut frame_part
 jack_slot.body cut frame_part
 
-// == The screws: the base to the lid, the Uno, the cover =========================================
+// == The screws: the base to the lid, the RedBoard, the cover ====================================
 // The base's four, up from posts in its corners through the lid, their heads in the bay.
 repeat 2 as i {
   repeat 2 as j {
@@ -647,20 +650,20 @@ repeat 2 as i {
   }
 }
 
-// The Uno's four M3s, self-tapping into posts on the lid at its holes (boards.sv).  The posts are
-// 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off its SCL pin.
-// Each hole runs a millimetre on into the lid.
+// The RedBoard's four M3s, self-tapping into posts on the lid at its holes (boards.sv), the Uno's.
+// The posts are 5 mm across, an M3 standoff's size: the one by the SCL socket stands 3.6 mm off
+// its SCL pin.  Each hole runs a millimetre on into the lid.
 repeat h in uno_holes {
-  uno_hole := At(x: uno_ox + h.x, y: uno_oy + h.y) in bot
-  uno_screw := ScrewPost(uno_hole.p, r: 2.5mm, z0: lid_z1, z1: uno_z, hole_d: pilot,
-                         depth: uno_z - lid_z1 + 1mm) in bot
-  uno_screw.post union frame_part
-  uno_screw.hole cut frame_part
+  board_hole := At(x: board_ox + h.x, y: board_oy + h.y) in bot
+  board_screw := ScrewPost(board_hole.p, r: 2.5mm, z0: lid_z1, z1: board_z, hole_d: pilot,
+                           depth: board_z - lid_z1 + 1mm) in bot
+  board_screw.post union frame_part
+  board_screw.hole cut frame_part
 }
 
 // The cover's four, down through it into posts in the bay's walls, clear of the boards, the motor
 // and the base's screws in the corners: west on the south wall by the end wall, between the
-// corner's screw and the motor (the Uno's end comes up to the end wall), east by the spine, south
+// corner's screw and the motor (the RedBoard's end comes up to the end wall), east by the spine, south
 // and north clear of the shield's +x end.
 cover_screws := [
   (box_x0 + 16mm, box_y0 + screw_inset),           // west
@@ -733,66 +736,79 @@ repeat c in cover_screws {
 }
 
 // == The electronics =============================================================================
-// An Arduino Uno R4 Minima screwed down beside the motor, and a perfboard shield plugged into it
-// (boards.sv) carrying the two breakouts and the thermostat's terminal (~ size):
-//   - the Uno, its USB-C and its barrel jack to the end wall's windows: the wall adapter's 9 V in,
-//     its own 5 V, programming and the console;
-//   - an Adafruit DRV8871 breakout: the H-bridge, off the Uno's VIN, its terminals toward the
-//     bay's +x wall;
+// A SparkFun IoT RedBoard ESP32 screwed down beside the motor, and a perfboard shield plugged
+// into it (boards.sv) carrying the two breakouts and the thermostat's and the motor's terminals
+// (~ size):
+//   - the RedBoard, its USB-C and its barrel jack to the end wall's windows: the wall adapter's
+//     9 V in, its own 5 V and 3.3 V, Wi-Fi, programming and the console;
+//   - an Adafruit TB6612 breakout, its two bridges tied together on the shield: the H-bridge,
+//     off the RedBoard's VIN;
 //   - an Adafruit INA219 breakout in the driver's supply: the motor's current over I2C, which the
-//     Uno reads for the end-of-travel sensing;
+//     ESP32 reads for the end-of-travel sensing;
 //   - a 2-way 5.08 mm screw terminal for the thermostat's two wires, at the shield's -x end by
-//     the grommet, its pins in the shield's column 1, rows 7 and 9.
-uno_c := At(x: uno_ox, y: uno_oy) in bot
-uno_at := point
-uno_at raised(d: uno_z, along: std.z) uno_c.p
-uno := UnoR4Minima(uno_dims)
-uno seats(turn: bot_turn, up: std.z, east: std.x) uno_at
-shield := Shield(shield_dims, u: uno_dims, h: header_dims)
-shield seats(turn: bot_turn, up: std.z, east: std.x) uno_at
+//     the grommet, its pins in the shield's column 1, rows 7 and 9;
+//   - another for the motor's leads, at its +x end, its pins in column 17, rows 2 and 4.
+board_c := At(x: board_ox, y: board_oy) in bot
+board_at := point
+board_at raised(d: board_z, along: std.z) board_c.p
+redboard := RedBoardEsp32(redboard_dims)
+redboard seats(turn: bot_turn, up: std.z, east: std.x) board_at
+shield := Shield(shield_dims, u: redboard_dims, h: header_dims)
+shield seats(turn: bot_turn, up: std.z, east: std.x) board_at
 drv_c := At(x: drv_cx, y: drv_cy) in bot
 ina_c := At(x: ina_cx, y: ina_cy) in bot
 drv_at := point
 drv_at raised(d: shield_z, along: std.z) drv_c.p
-driver := Drv8871(drv8871_dims, h: header_dims)
-driver seats(turn: bot_turn - 90deg, up: std.z, east: std.x) drv_at
+driver := Tb6612(tb6612_dims, h: header_dims)
+driver seats(turn: bot_turn + 180deg, up: std.z, east: std.x) drv_at
 ina_at := point
 ina_at raised(d: shield_z, along: std.z) ina_c.p
 monitor := Ina219(ina219_dims, h: header_dims)
 monitor seats(turn: bot_turn - 90deg, up: std.z, east: std.x) ina_at
-terminal := Block(x0: uno_ox - pitch - 3.8mm, x1: uno_ox - pitch + 3.8mm, y0: uno_oy + 6 * pitch,
-                  y1: uno_oy + 10 * pitch, z0: shield_z, z1: shield_z + 10mm) in bot
+terminal := Block(x0: board_ox - pitch - 3.8mm, x1: board_ox - pitch + 3.8mm,
+                  y0: board_oy + 6 * pitch, y1: board_oy + 10 * pitch, z0: shield_z,
+                  z1: shield_z + 10mm) in bot
+motor_terminal := Block(x0: board_ox + 15 * pitch - 3.8mm, x1: board_ox + 15 * pitch + 3.8mm,
+                        y0: board_oy + pitch, y1: board_oy + 5 * pitch, z0: shield_z,
+                        z1: shield_z + 10mm) in bot
 
 // The boards in the bay: a mated cable's plug through each of the end wall's windows, and the
-// boards, the Uno's parts and the pins' tails clear of the frame, the motor and the cover, and of
-// one another.  The motor clears the cover over it.
-claim uno.usb_plug clear(0.2mm) frame_part
-claim uno.jack_plug clear(0.2mm) frame_part
-claim uno.parts clear(0.5mm) frame_part
-claim uno.tails clear(0.5mm) frame_part
-claim uno.board clear(1mm) cradle
-claim uno.board clear(1mm) motor.motor
-claim uno.parts clear(1mm) motor.motor
-claim uno.tails clear(0.5mm) motor.motor
+// boards, the RedBoard's parts and the pins' tails clear of the frame, the motor and the cover,
+// and of one another.  The motor clears the cover over it.
+claim redboard.usb_plug clear(0.2mm) frame_part
+claim redboard.jack_plug clear(0.2mm) frame_part
+claim redboard.parts clear(0.5mm) frame_part
+claim redboard.tails clear(0.5mm) frame_part
+claim redboard.board clear(1mm) cradle
+claim redboard.board clear(1mm) bay_shell
+claim redboard.board clear(1mm) motor.motor
+claim redboard.parts clear(1mm) motor.motor
+claim redboard.tails clear(0.5mm) motor.motor
 claim shield.board clear(1mm) motor.motor
 claim shield.board clear(1mm) cradle
 claim driver.board clear(1mm) motor.motor
 claim motor.motor clear(1mm) cover_part
 claim shield.board clear(0.5mm) frame_part
 claim shield.headers clear(0.5mm) frame_part
-claim shield.board clear(0.3mm) uno.parts
+claim shield.board clear(0.3mm) redboard.parts
 claim driver.board clear(0.5mm) frame_part
 claim driver.headers clear(0.5mm) frame_part
 claim monitor.board clear(0.5mm) frame_part
 claim monitor.headers clear(0.5mm) frame_part
-claim driver.headers clear(0.3mm) uno.parts
-claim monitor.headers clear(0.3mm) uno.parts
+claim driver.headers clear(0.3mm) redboard.parts
+claim monitor.headers clear(0.3mm) redboard.parts
 claim driver.board clear(1mm) cover_part
 claim monitor.board clear(1mm) cover_part
 claim terminal.body clear(1mm) cover_part
 claim terminal.body clear(0.5mm) frame_part
+claim motor_terminal.body clear(1mm) cover_part
+claim motor_terminal.body clear(0.5mm) frame_part
 claim driver.board clear(0.5mm) monitor.board
+claim driver.board clear(0.5mm) motor_terminal.body
+claim driver.board clear(0.5mm) shield.headers
 claim terminal.body clear(0.5mm) monitor.board
+claim terminal.body clear(0.5mm) driver.board
+claim motor_terminal.body clear(0.5mm) shield.headers
 
 // == Clearances ==================================================================================
 // With `checks` 1, every part's clearance is judged, which builds every shaped part.  The socket
