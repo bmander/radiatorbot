@@ -20,6 +20,7 @@ constexpr int kIn2 = 17;        // its AIN2 and BIN2
 constexpr int kPwm = 25;        // its PWMA and PWMB, at 20 kHz (pulled down on the shield)
 constexpr int kSda = 33;        // A5: the INA219's SDA
 constexpr int kScl = 32;        // A4: its SCL
+constexpr int kButton = 0;      // the board's BOOT button, pulled up on it: the factory reset
 
 constexpr uint8_t kMonitorAddress = 0x40;  // the INA219, its A0 and A1 open
 

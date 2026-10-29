@@ -122,7 +122,8 @@ void Console::help() {
       "  wifi            the network: how the link is doing\n"
       "  wifi ssid NAME  join the network NAME (kept through reboots)\n"
       "  wifi pass WORD  its password, and join it\n"
-      "  wifi forget     leave the network, and forget it\n"
+      "  wifi forget     leave the network, and forget it (the setup network opens)\n"
+      "  wifi setup      open the setup network, radiatorbot-setup; `wifi setup off` closes it\n"
       "  reboot\n");
 }
 
@@ -149,8 +150,12 @@ void Console::wifiCommand(char* rest) {
     }
   } else if (strcmp(rest, "forget") == 0) {
     wifi::forget();
+  } else if (strcmp(rest, "setup") == 0 && *arg == '\0') {
+    wifi::openSetup();
+  } else if (strcmp(rest, "setup") == 0 && strcmp(arg, "off") == 0) {
+    wifi::closeSetup();
   } else {
-    io_.println("wifi [ssid NAME | pass PASSWORD | forget]");
+    io_.println("wifi [ssid NAME | pass PASSWORD | forget | setup [off]]");
     return;
   }
   io_.print("wifi: ");
@@ -287,6 +292,15 @@ void Console::report(uint32_t now) {
       io_.println();
     } else {
       io_.println("link lost");
+    }
+  }
+  if (wifi::inSetup() != setup_) {
+    setup_ = !setup_;
+    if (setup_) {
+      io_.printf("wifi: setup network %s open: join it, and open http://%s/\n", wifi::kSetupSsid,
+                 wifi::setupAddress().toString().c_str());
+    } else {
+      io_.println("wifi: setup network closed");
     }
   }
   if (app_.trace_ms && c.moving() && now - traced_ >= app_.trace_ms) {

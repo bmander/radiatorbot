@@ -68,4 +68,12 @@ bool save(const valve::Settings& s) {
   return ok;
 }
 
+bool erase() {
+  Preferences prefs;
+  if (!prefs.begin(kSpace, false)) return false;
+  bool ok = prefs.clear();
+  prefs.end();
+  return ok;
+}
+
 }  // namespace storage

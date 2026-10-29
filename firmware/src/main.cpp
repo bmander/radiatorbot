@@ -13,6 +13,7 @@
 #include <freertos/task.h>
 
 #include "app.h"
+#include "button.h"
 #include "console.h"
 #include "pins.h"
 #include "port.h"
@@ -53,6 +54,7 @@ void setup() {
   app_lock = xSemaphoreCreateMutex();
   app.motor.begin();
   pinMode(pins::kThermostat, INPUT_PULLUP);
+  button::begin();
   Serial.begin(115200);
 
   storage::load(app.settings);
@@ -78,6 +80,7 @@ void loop() {
     console.poll();
   }
   port.pump();
+  button::poll(now, port);
   wifi::poll(now);
   remote.poll(now);
   delay(1);

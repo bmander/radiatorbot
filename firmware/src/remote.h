@@ -8,6 +8,10 @@
 // `X-Radiatorbot` header is turned away, so another site open in a browser on the same network
 // can't send one.
 //
+// On the setup network (wlan.h), which is open, the page is the setup page alone: it lists the
+// networks in range and joins one, and every other address there is sent to it, as a captive
+// portal.  The valve's page, its commands and telnet answer only on the bot's own network.
+//
 // One client at a time on each, served by the loop, which never holds the app's lock while it
 // waits on the network.
 #pragma once
@@ -54,13 +58,17 @@ class Remote {
                               web_console_(app, web_port_) {}
 
   // Serves the network: call every loop, not holding the app's lock.  The servers start once the
-  // bot first joins a network.
+  // bot first joins a network, or raises its setup network.
   void poll(uint32_t now);
 
  private:
   void pollTelnet(uint32_t now);
   void pollWeb(uint32_t now);
   void respond();
+  void respondSetup(const char* method, const char* path, const char* body);
+  void sendNetworks();
+  void sendTrial();
+  void sendRedirect(const char* location);
   void sendStatus();
   void sendCommand(const char* body);
   void sendText(const char* status, const char* text);

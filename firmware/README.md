@@ -47,14 +47,31 @@ starts.
 
 ## Getting it on the network
 
-Plug in USB-C, open the console (`pio device monitor -d firmware`), and give it your network:
+With no network kept, the bot opens one of its own, **radiatorbot-setup**, an open network. Join
+it from a phone and the setup page opens by itself (as a hotel's Wi-Fi sign-in does; if it
+doesn't, open `http://192.168.4.1/`). It lists the networks in range, strongest first: choose
+yours, give its password, and **Join**. It needs a 2.4 GHz network: the ESP32 has no 5 GHz.
+
+- The bot tries the network before it keeps it, so a mistyped password leaves it as it was: the
+  page says so, and you try again.
+- Once it has joined, the page gives its address and `radiatorbot.local`, and the setup network
+  closes a minute later. Joining moves the bot to your network's channel, and the phone may drop
+  off the setup network as it does: rejoin your own network and open
+  `http://radiatorbot.local/`.
+- On the setup network the page is the setup page alone: the valve's page, its commands and
+  telnet answer only on your own network.
+- `wifi setup` at the console opens it again (to move the bot to another network), and
+  `wifi setup off` closes it; `wifi forget` forgets the network and opens it.
+
+Or give it your network at the console, over USB-C (`pio device monitor -d firmware`):
 
 ```
 wifi ssid My Home Network
 wifi pass correct horse battery staple
 ```
 
-Both are kept in flash, and the bot rejoins on every boot. It logs the link as it comes up:
+Either way it's kept in flash, and the bot rejoins on every boot. It logs the link as it comes
+up:
 
 ```
 wifi: on My Home Network as 192.168.1.50 (radiatorbot.local), -58 dBm
@@ -172,7 +189,8 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 | `wifi` | how the link is doing: the network, the bot's address and the signal |
 | `wifi ssid NAME` | join the network NAME, kept in flash (it may have spaces) |
 | `wifi pass PASSWORD` | its password, kept in flash, and join it |
-| `wifi forget` | leave the network and forget it |
+| `wifi forget` | leave the network and forget it; the setup network opens |
+| `wifi setup` / `wifi setup off` | open the setup network, radiatorbot-setup, or close it |
 | `reboot` | |
 
 ## Settings
