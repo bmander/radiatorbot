@@ -146,12 +146,19 @@ wins; a home network on an unusual range, such as 192.168.47.x, avoids it. With
   `blank` (the inrush is near stall), the current, low-passed over `filter`, must stay over the
   trip (`trip_open` or `trip_close`) for `hold` to mark the end. Then the motor brakes, the driver
   sleeps 50 ms later, and the bot knows which end it's at.
+  - **Breaking away.** A valve left at an end takes more than the trip to start: the seat's
+    friction on top of the torque that seated it. So until the motor gets going (the current
+    falls under the trip) the trip waits, for up to `breakaway` (1 s) from the start, and the
+    motor may pull up to its stall to break the valve free. Once it's going the trip is the trip
+    again, and the far end is found at the gentle torque.
   - Optionally it runs back for `backoff_open` / `backoff_close` ms after an end, to ease the
     printed train. Both are off by default: backing off the closed end unseats the valve.
   - A change of mind during a move stops it; after `rest` the motor sets off the other way.
 - **At power-up** the bot doesn't know where the valve is. Once the thermostat has settled it
-  drives to the matching end; if the valve is there already, it stalls at once and trips.
-- **Failures.** A move fails if it runs `timeout` (60 s) without tripping, or on a motor fault:
+  drives to the matching end; if the valve is there already, it stalls at once and trips once
+  the breakaway's over.
+- **Failures.** A move fails if it runs `timeout` (60 s) without tripping; if it sets off from
+  one end and never gets going (`stuck`: more than the stall will turn), or on a motor fault:
   the supply under 6.5 V (the adapter unplugged, or sagging), over 13.5 V (more than the TB6612
   takes), or the INA219 not answering. The motor stops and the valve's position is unknown. The
   bot tries again after `retry` (15 min), up to 3 times in a row on its own; a change in the
@@ -201,6 +208,7 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 | `trip_close` | 1.0 A | the current that marks the closed end: it sets the torque that seats the valve |
 | `hold` | 50 ms | how long the current must stay over the trip |
 | `blank` | 150 ms | how long after a start the trip is ignored |
+| `breakaway` | 1000 ms | how long a start may pull past the trip, up to the stall, to break a seated valve free |
 | `filter` | 10 ms | the current's low-pass time constant |
 | `timeout` | 60 s | the longest a move may take |
 | `duty` | 1.0 | the motor's speed, 0.1–1 of `motor_volts` |
@@ -231,6 +239,9 @@ them with the valve in hand, well under the stall.
    close and open a few times and check each move ends `reached`, in about the same time.
    - If moves end early, mid-travel, the trip is too low for a stiff stretch of the stem.
    - A stall reads about 1.2 A. Nothing but the trip stops it, so keep the trips well under.
+   - Keep `trip_close` well under the stall, too, for the opening's sake: a valve seated at it
+     takes more to unseat, and the opening has only the stall to do it with. If an opening ends
+     `stuck`, `trip_close` seated it too hard: lower it.
 4. **The thermostat.** `auto`, and turn the thermostat up and down. `status` shows its contact
    and the settled state; if they're backwards, `set stat_invert 1`.
 5. `save`.

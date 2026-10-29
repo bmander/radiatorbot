@@ -3,13 +3,15 @@
 namespace valve {
 
 void TripDetector::start(uint32_t now_ms, float trip_a, uint32_t blank_ms, uint32_t hold_ms,
-                         uint32_t filter_ms) {
+                         uint32_t filter_ms, uint32_t breakaway_ms) {
   trip_ = trip_a;
   start_ = last_ = now_ms;
   blank_ = blank_ms;
   hold_ = hold_ms;
   filter_ = filter_ms;
+  breakaway_ = breakaway_ms;
   first_ = true;
+  moved_ = false;
   above_ = false;
   filtered_ = peak_ = running_sum_ = 0;
   running_n_ = 0;
@@ -31,11 +33,13 @@ bool TripDetector::update(uint32_t now_ms, float amps) {
 
   if (filtered_ > peak_) peak_ = filtered_;
   if (filtered_ < trip_) {
+    moved_ = true;
     above_ = false;
     running_sum_ += filtered_;
     running_n_++;
     return false;
   }
+  if (!moved_ && now_ms - start_ < breakaway_) return false;  // breaking away: the hold waits
   if (!above_) {
     above_ = true;
     above_since_ = now_ms;

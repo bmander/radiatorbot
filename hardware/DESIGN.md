@@ -275,6 +275,10 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
 - Set the trip with the valve in hand, well under stall (see *The drive*). The torque at the trip
   is what seats the valve.
 - Ignore the first ~100 ms after each start: the inrush current is near stall.
+- Break the valve free first. A valve left at an end takes more torque to start than the trip
+  that seated it, so until the motor gets going the trip waits (up to a second), and the motor
+  may pull up to its stall; then the trip applies. That's why the closing trip stays well under
+  the stall: the opening needs the difference to unseat what the closing seated.
 - The INA219's 12-bit conversion averages the PWM's ripple out.
 
 **In the bay.**
