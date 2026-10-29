@@ -14,12 +14,13 @@
 //   - on A, a pinion drives the socket and a 48-tooth ring over it is driven by the **gearbox**
 //     above: four printed spur stages on two drill-rod axles, B and D, the 130 motor's pinion
 //     driving the first; its base's floor stops short of the ring;
-//   - the **frame** is the gearbox's lid, the electronics bay standing on it (the motor, and
+//   - the **frame** is the gearbox's lid and the electronics bay standing on it (the motor, and
 //     beside it the RedBoard with a perfboard shield on it carrying the motor driver and its
-//     current monitor, the cable entries), and the spine up beside the valve to the **clamp**, a
-//     split block round the inlet hex and the supply pipe above it.  The hex takes the handle's
-//     reaction torque positively; the bolted cap closes the clamp from +x, the side away from
-//     the bot.
+//     current monitor, the cable entries), a dovetail rail up its end wall;
+//   - the **mount**, a print of its own snapped and glued onto the rail, is the spine up beside
+//     the valve and the **clamp**'s fixed half, a split block round the inlet hex and the supply
+//     pipe above it.  The hex takes the handle's reaction torque positively; the bolted cap
+//     closes the clamp from +x, the side away from the bot.
 //
 // Everything is printed but the drill rod the gears turn on, so the fits below are an FDM
 // printer's.  Scrub `handle_open`: the handle screws open down its stem, and the socket and the
@@ -70,6 +71,7 @@ m3_clear := 3.4mm
 m4_clear := 4.6mm
 m4_nut_af := 7.3mm              // an M4 nut's pocket across the flats
 split := 1mm                    // the clamp's halves stand apart this much before the bolts close it
+slip := 0.15mm                  // a glued joint's printed faces, apart each side
 
 axle_bore := axle_d + run       // A's compound's bore, and the collars'
 rod_bore := rod_d + run         // every compound's bore
@@ -199,7 +201,11 @@ bridge_z0 := collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 stand_z1 := socket_z0 - gap
 stand_z0 := stand_z1 - 4mm
-spine_z0 := s4_z0               // the spine's foot, over A's ring
+// The mount's joint: the frame's rail stands on the lid, its foot on the mount's shelf, which is
+// flush with the lid's underside; the snap's finger hangs in the slot's floor, its barb's
+// underside 3 mm up the rail, over a lip of it.
+rail_z0 := lid_z0 + 3mm
+finger_z0 := rail_z0 + 3mm
 motor_z := s3_z0 + 5mm + 1mm + motor130_dims.shaft_len  // the motor's front face, on its pad
 claim motor_z >= lid_z1
 board_z := lid_z1 + 6mm                                 // the RedBoard's underside, on its posts
@@ -219,6 +225,25 @@ box_y0 := -31mm
 box_y1 := 64mm
 spine_x1 := -21.5mm             // 4 mm off the valve's bulge and collar
 spine_w := 28mm
+// The mount's joint, on the end wall's outside about the bot's x: a dovetail rail `dove_root`
+// across at the wall, its flanks `dove_angle` off square, standing `dove_h` out; the mount's slot
+// is it grown `slip` all round.  The snap is a finger in the slot's floor along z, `finger_t`
+// thick and `finger_w` across, its free end down, a slit round it and a relief behind it; the
+// barb at its foot stands `barb_h` into the slot, square underneath and ramped over, and falls
+// into a notch in the rail's face.
+dove_h := 5mm
+dove_root := 12mm
+dove_angle := 15deg
+dove_tip := dove_root + 2 * dove_h * tan(dove_angle)
+slot_floor := box_x1 + dove_h + slip
+finger_t := 1.6mm
+finger_w := 6mm
+finger_len := 20mm
+finger_slit := 0.8mm
+finger_relief := 1mm
+barb_h := 0.6mm
+barb_flat := 1mm
+barb_ramp := 3mm
 clamp_reach := 26mm             // each half of the clamp, out from the stem
 clamp_w := 48mm                 // its side toward the radiator over the outlet's union nut
 clamp_bolt_y := 19mm
@@ -287,6 +312,34 @@ component Block(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: 
     sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
   body := solid(face(sq.loop), from: z0, to: z1)
+}
+
+// A dovetail up z from z0 to z1 about y = 0, standing out along x: `w0` across at x0, `w1` at x1.
+component Dovetail(x0: Length, x1: Length, w0: Length, w1: Length, z0: Length, z1: Length) {
+  a := At(x: x0, y: -w0 / 2)
+  b := At(x: x1, y: -w1 / 2)
+  c := At(x: x1, y: w1 / 2)
+  d := At(x: x0, y: w0 / 2)
+  body := solid(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1)
+}
+
+// A snap's barb on a face square to x at `x`, `w` across about y = 0: it stands `h` out toward -x,
+// square on its underside at `z`, flat for `flat` and then ramped back into the face over `ramp`,
+// and runs half a millimetre back into the face to join it.
+component Barb(x: Length, z: Length, h: Length, w: Length, flat: Length, ramp: Length) {
+  in std.front {
+    a := point hint((x - h, z))
+    a coords(du: x - h, dv: z) std.front
+    b := point hint((x + 0.5mm, z))
+    b coords(du: x + 0.5mm, dv: z) std.front
+    c := point hint((x + 0.5mm, z + flat + ramp))
+    c coords(du: x + 0.5mm, dv: z + flat + ramp) std.front
+    d := point hint((x, z + flat + ramp))
+    d coords(du: x, dv: z + flat + ramp) std.front
+    e := point hint((x - h, z + flat))
+    e coords(du: x - h, dv: z + flat) std.front
+  }
+  body := solid(face(a, b, c, d, e, -> close), from: -w / 2, to: w / 2)
 }
 
 // A bore along x at (y, z), from x0 to x1; and a nut's hexagonal pocket so.
@@ -584,10 +637,9 @@ base_hole_a.body cut base
 base_hole_b.body cut base
 base_hole_d.body cut base
 
-// == The frame: the lid, the bay, the spine and the clamp's fixed half ===========================
-// One print, the bot's backbone: A's axle and the train's rods stand in its lid, the
-// electronics bay stands on it, and the spine carries it all up beside the valve to the clamp
-// round the inlet hex and the pipe.
+// == The frame: the lid and the bay ===============================================================
+// One print, the bot's backbone, printed on its lid: A's axle and the train's rods stand in its
+// lid, the electronics bay stands on it, and the mount is glued onto the rail up its end wall.
 lid := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z0, z1: lid_z1) in bot
 bay_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z1, z1: bay_z1) in bot
 bay_room := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
@@ -595,10 +647,13 @@ bay_room := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: b
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
 
-spine := Block(x0: box_x1, x1: spine_x1, y0: -spine_w / 2, y1: spine_w / 2, z0: spine_z0,
-               z1: clamp_z1) in bot
-clamp_main := Block(x0: -clamp_reach, x1: -split / 2, y0: -clamp_w / 2, y1: clamp_w / 2,
-                    z0: clamp_z0, z1: clamp_z1) in bot
+// the mount's rail, from the lid up the end wall to its top, and the notch the snap's barb falls
+// into, over the rail's lip
+rail := Dovetail(x0: box_x1 - 1mm, x1: box_x1 + dove_h, w0: dove_root - 2mm * tan(dove_angle),
+                 w1: dove_tip, z0: rail_z0, z1: bay_z1) in bot
+rail_notch := Block(x0: box_x1 + dove_h - barb_h - slip, x1: box_x1 + dove_h + 1mm,
+                    y0: -finger_w / 2 - gap, y1: finger_w / 2 + gap, z0: finger_z0 - slip,
+                    z1: finger_z0 + barb_flat + barb_ramp + gap) in bot
 
 // the rods' holes, the motor's boss and shaft
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
@@ -623,8 +678,7 @@ jack_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm, y0: jack_y - jack_
 
 frame_part := solid(lid.body)
 bay_shell union frame_part
-spine.body union frame_part
-clamp_main.body union frame_part
+rail.body union frame_part
 cradle union frame_part
 lid_hole_a.body cut frame_part
 lid_hole_b.body cut frame_part
@@ -634,6 +688,45 @@ motor_shaft_room.body cut frame_part
 grommet.body cut frame_part
 usb_slot.body cut frame_part
 jack_slot.body cut frame_part
+rail_notch.body cut frame_part
+
+// == The mount: the spine and the clamp's fixed half =============================================
+// A print of its own, so that neither part needs support: the frame prints on its lid, the mount
+// on its top, the clamp's and the spine's.  The spine stands on the end wall's outside from the
+// lid's underside up to the clamp's top, and carries the frame up beside the valve to the clamp
+// round the inlet hex and the pipe.
+//
+// It slides up onto the frame's rail from below, the rail in a dovetail slot up the spine's back,
+// open at its top, until the rail's foot sits on the shelf closing the slot's bottom: the frame
+// hangs on the shelf.  There the barb at the foot of a finger in the slot's floor, pushed out by
+// the rail's lip in the last few millimetres, snaps into the rail's notch, and holds the two
+// together while the glue in the slot sets.  The dovetail's flanks take the handle's reaction
+// sideways and outward, the glue the rest.
+spine := Block(x0: box_x1 + slip, x1: spine_x1, y0: -spine_w / 2, y1: spine_w / 2, z0: lid_z0,
+               z1: clamp_z1) in bot
+clamp_main := Block(x0: -clamp_reach, x1: -split / 2, y0: -clamp_w / 2, y1: clamp_w / 2,
+                    z0: clamp_z0, z1: clamp_z1) in bot
+slot := Dovetail(x0: box_x1 - 1mm,
+                 x1: slot_floor,
+                 w0: dove_root - 2mm * tan(dove_angle) + 2 * slip / cos(dove_angle),
+                 w1: dove_tip + 2 * slip * tan(dove_angle) + 2 * slip / cos(dove_angle),
+                 z0: rail_z0 - slip, z1: clamp_z1 + 1mm) in bot
+finger_room := Block(x0: slot_floor - 1mm, x1: slot_floor + finger_t + finger_relief,
+                     y0: -finger_w / 2 - finger_slit, y1: finger_w / 2 + finger_slit,
+                     z0: finger_z0 - finger_slit, z1: finger_z0 + finger_len) in bot
+finger := Block(x0: slot_floor, x1: slot_floor + finger_t, y0: -finger_w / 2, y1: finger_w / 2,
+                z0: finger_z0, z1: finger_z0 + finger_len + 1mm) in bot
+barb := Barb(x: slot_floor, z: finger_z0, h: barb_h, w: finger_w, flat: barb_flat,
+             ramp: barb_ramp) in bot
+
+mount_shell := solid(spine.body)
+clamp_main.body union mount_shell
+slot.body cut mount_shell
+finger_room.body cut mount_shell
+mount_part := solid(mount_shell)
+finger.body union mount_part
+barb.body union mount_part
+claim frame_part clear(0.1mm) mount_part              // the joint: the glue's room, all round
 
 // == The screws: the base to the lid, the RedBoard, the cover ====================================
 // The base's four, up from posts in its corners through the lid, their heads in the bay.
@@ -681,7 +774,7 @@ repeat c in cover_screws {
 
 // == The clamp ===================================================================================
 // A block round the inlet hex and the pipe above it, split on the stem's plane square to the
-// bot's x: the fixed half is the frame's, on the bot's side, and the cap bolts to it from the
+// bot's x: the fixed half is the mount's, on the bot's side, and the cap bolts to it from the
 // other, out of the radiator's way, with four M4 bolts, their nuts in pockets in the fixed half's
 // back.  The hex's pocket is the hex grown a print's clearance all round, so the hex takes the
 // handle's torque; the pipe's bore is the pipe's, so the closing split grips it.  The clamp hangs
@@ -699,12 +792,12 @@ cap_part := solid(clamp_cap.body)
 hex_room := std.rounds.Grown(valve.body.inlet.bar, d: gap)
 pipe_room := RoundBar(std.top.origin, d: pipe_dims.d + 0.2mm, z0: body_dims.inlet_top,
                       z1: clamp_z1 + 1mm)
-hex_room.body cut frame_part
+hex_room.body cut mount_part
 hex_room.body cut cap_part
-pipe_room.bar cut frame_part
+pipe_room.bar cut mount_part
 pipe_room.bar cut cap_part
 nut_room := std.rounds.Grown(valve.union.nut.bar, d: nut_clear)
-nut_room.body cut frame_part
+nut_room.body cut mount_part
 nut_room.body cut cap_part
 
 repeat 2 as i {
@@ -716,12 +809,12 @@ repeat 2 as i {
                  x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm) in bot
   nut_hi := NutX(y: (2 * i - 1) * clamp_bolt_y, z: clamp_bolt_z1, af: m4_nut_af,
                  x0: -clamp_reach - 1mm, x1: -clamp_reach + 4mm) in bot
-  bolt_lo.body cut frame_part
+  bolt_lo.body cut mount_part
   bolt_lo.body cut cap_part
-  bolt_hi.body cut frame_part
+  bolt_hi.body cut mount_part
   bolt_hi.body cut cap_part
-  nut_lo.nut.bar cut frame_part
-  nut_hi.nut.bar cut frame_part
+  nut_lo.nut.bar cut mount_part
+  nut_hi.nut.bar cut mount_part
   claim bolt_lo.body clear(1mm) hex_room.body
 }
 
@@ -816,7 +909,8 @@ claim motor_terminal.body clear(0.5mm) shield.headers
 // turns with the handle and its hole is the same at every height, so only the handle's height
 // changes, and each comes nearest at that end.  Gears in mesh run 0.15 mm clear a flank; parts
 // that rest on one another (the motor on its lid, the base on the frame, the collar on the
-// bridge, the socket on the stand's pad) are not claimed clear.
+// bridge, the socket on the stand's pad) are not claimed clear; the mount clears the base, whose
+// end wall stands under its foot's edge.
 when checks == 1 {
   rest_handle := StarHandle(valve.handle_top, s: handle_dims, stem_up: 1mm)
   construction open_handle := rest_handle.handle at(under: valve.handle) (open_turns * 360deg)
@@ -846,17 +940,20 @@ when checks == 1 {
   claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
   claim compound_d1 clear(0.2mm) motor.motor
   claim compound_b2 clear(0.5mm) motor.motor            // the shaft's end, 1 mm over its spokes
-  claim frame_part clear(0.05mm) valve.supply_pipe.bar
+  claim mount_part clear(0.05mm) valve.supply_pipe.bar
   claim cap_part clear(0.05mm) valve.supply_pipe.bar
-  claim frame_part clear(0.15mm) valve.body.casting
+  claim mount_part clear(0.15mm) valve.body.casting
   claim cap_part clear(0.15mm) valve.body.casting
+  claim mount_part clear(2mm) valve.bonnet.bonnet
+  claim mount_part clear(2mm) valve.packing_nut.bar
   claim frame_part clear(2mm) valve.bonnet.bonnet
   claim frame_part clear(2mm) valve.packing_nut.bar
+  claim mount_part clear(0.1mm) base
   claim base clear(2mm) valve.bonnet.bonnet
   claim base clear(2mm) valve.packing_nut.bar
   claim base clear(0.3mm) valve.star_handle.handle
-  claim frame_part clear(1mm) valve.union.nut.bar
+  claim mount_part clear(1mm) valve.union.nut.bar
   claim cap_part clear(1mm) valve.union.nut.bar
-  claim frame_part clear(1mm) valve.body.boss.bar
+  claim mount_part clear(1mm) valve.body.boss.bar
   claim cap_part clear(1mm) valve.body.boss.bar
 }
