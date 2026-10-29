@@ -20,7 +20,7 @@ struct Settings {
   // The drive.  The PWM is scaled to the supply, so the motor sees `motor_volts` on average at
   // full `duty` whatever the wall adapter gives.
   float duty = 1.0f;          // the motor's speed, 0-1 of `motor_volts`
-  float motor_volts = 6.0f;   // V, the motor's rating: the 130's 6 V
+  float motor_volts = 9.0f;   // V: the 130 measured at 9 V (hardware/motor130.sv)
   uint32_t ramp = 80;         // ms to ramp the duty up from 0 at a start
   uint32_t backoff_open = 0;  // ms to run back after reaching the open end, easing the train
   uint32_t backoff_close = 0; // ms to run back after reaching the closed end

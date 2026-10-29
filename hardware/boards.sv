@@ -3,7 +3,7 @@
 //
 // The RedBoard and its shield are drawn about the RedBoard's own frame: std.top is its underside,
 // which stands on its posts, and the origin is its power header's first pin, so the shield's grid
-// has a hole on every one of its pins but the D8-SCL header's (which stands 0.06 in off it).  Its
+// has a hole on every one of its pins but the SCL-26 header's (which stands 0.06 in off it).  Its
 // sockets and holes are the Uno's, so the frame is the Uno's too.
 // The breakouts on the shield are each drawn about their own std.origin as they stand on it:
 // std.top is the shield's top face, which a header's plastic stands on, and the origin is the
@@ -19,8 +19,8 @@
 //     each side, past its sockets' outer rows of plated holes.  Its 3.3 V logic takes no 5 V.
 //   - **The shield**: a 5 x 7 cm perfboard, 18 x 24 holes, cut down to 18 x 20 (two rows off each
 //     end, which no part uses) so it's no wider than the Uno's sockets, on male headers plugged
-//     down into the RedBoard's power, analog and D0-D7 sockets.  Its rows run from the power
-//     header's to the D0-D7 socket's; it stands off the RedBoard's jack end.
+//     down into the RedBoard's power, analog and 25-RX sockets.  Its rows run from the power
+//     header's to the 25-RX socket's; it stands off the RedBoard's jack end.
 //   - **Adafruit TB6612 breakout** (Adafruit #2448, $5): two H-bridges of 1.2 A each, 4.5-13.5 V,
 //     a polarity FET on its motor supply and its STBY pulled up.  19.05 x 26.67 mm, on two rows
 //     of pins 0.6 in apart: 10 of supply and logic, and 6 of the two bridges' outputs and ground.
@@ -105,24 +105,26 @@ redboard_dims := {
 }
 
 // The RedBoard's sockets, the Uno's, looking down on it, its USB toward -x, each place given as
-// the ESP32's GPIO it carries:
+// its silkscreen labels it (the digital pins by their GPIO, the analog ones by their ADC
+// channel):
 //   y = 48.26: SCL SDA 3V3 GND 18 19 23 5 27 26 (the Uno's SCL ... D8, x = -9.14 to 13.72), then
 //              25 17 16 14 13 4 1 3 (D7 ... D0, x = 17.78 to 35.56, on the 0.1 in grid with the
 //              rest)
-//   y = 0:     LED EN 3V3 3V3 5V GND GND VIN (the Uno's NC IOREF RESET 3V3 5V GND GND VIN, x = 0
-//              to 17.78), then 33 32 35 34 39 36 (A0 ... A5, x = 22.86 to 35.56)
+//   y = 0:     LED REF RST 3V3 5V GND GND VIN (the Uno's NC IOREF RESET 3V3 5V GND GND VIN, x = 0
+//              to 17.78), then A5 A4 A7 A6 A3 A0 (GPIO33 32 35 34 39 36, the Uno's A0 ... A5,
+//              x = 22.86 to 35.56)
 // SDA and SCL are GPIO21 and GPIO22, the Qwiic socket's too, and aren't on the analog socket as
-// an Uno's are: its A4 and A5 places, GPIO39 and GPIO36, only read.  GPIO34 to 39 only read.  VIN
+// an Uno's are.  A7, A6, A3 and A0, GPIO34 to 39, only read.  VIN
 // is the jack's voltage, through the board's Schottky.
 // Each socket as its first pin, its count, and whether the shield plugs into it: all but the
-// D8-SCL socket, which stands 0.06 in off the others' grid.
+// SCL-26 socket, which stands 0.06 in off the others' grid.
 interface SocketPlace { x0: Length, y: Length, n: Int, shield: Int }
 uno_top_y := 48.26mm            // the far row of sockets
 uno_sockets := [
   {x0: 0mm, y: 0mm, n: 8, shield: 1},              // power
   {x0: 22.86mm, y: 0mm, n: 6, shield: 1},          // analog
-  {x0: 17.78mm, y: uno_top_y, n: 8, shield: 1},    // D7-D0
-  {x0: -9.14mm, y: uno_top_y, n: 10, shield: 0},   // SCL-D8
+  {x0: 17.78mm, y: uno_top_y, n: 8, shield: 1},    // 25-RX
+  {x0: -9.14mm, y: uno_top_y, n: 10, shield: 0},   // SCL-26
 ]
 
 // The Uno's M3 holes, the RedBoard's: by the power header, by the SCL socket, and two at the far
@@ -303,7 +305,7 @@ component RedBoardEsp32(s: RedBoardSizes) {
 }
 
 // The perfboard shield on the RedBoard, in its frame: its board, and the headers that plug it
-// into the RedBoard's power, analog and D0-D7 sockets.  `top` is its top face, up from the
+// into the RedBoard's power, analog and 25-RX sockets.  `top` is its top face, up from the
 // RedBoard's underside, which the breakouts stand on.
 component Shield(s: ShieldSizes, u: RedBoardSizes, h: HeaderSizes) {
   top := u.pcb_t + u.socket_h + h.body_h + s.pcb_t  // over the sockets and its headers' plastic

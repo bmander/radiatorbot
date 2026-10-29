@@ -18,7 +18,7 @@
 #include "port.h"
 #include "remote.h"
 #include "storage.h"
-#include "wifi.h"
+#include "wlan.h"
 
 static constexpr uint32_t kWatchdogMs = 2000;
 static constexpr UBaseType_t kControlPriority = 5;  // the Arduino loop's is 1

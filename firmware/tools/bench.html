@@ -1,0 +1,867 @@
+<!doctype html>
+<!--
+  The radiator bot on the bench: drive the motor either way at any throttle, watch its current,
+  hear its speed, and characterize it, over the console on the USB-C (Web Serial and the
+  microphone; open this file in Chrome or Edge).
+
+  It drives through the console's own commands: `open` and `close` are the directions, `stop`
+  stops, and `set duty` is the throttle, which the control loop reads every tick.  On each boot
+  it raises the trips to their 2 A top and the timeout to 600 s, so a move runs until it's
+  stopped, and traces the current every 50 ms.  None of that is saved: a reboot drops it, and
+  `save` from here would keep it, so don't.
+
+  The motor's voltage is `duty` x `motor_volts`: the firmware scales the PWM by the supply it
+  reads so that's its average.  Its speed is heard: the microphone's spectrum, its fundamental
+  found by a harmonic product spectrum, divided by the lines it makes a revolution.  From a sweep
+  of the throttle, free-running, and the resistance from a stall, the motor's DC model follows:
+
+      V = I R + ke w        T = kt (I - I0),  kt = ke in SI units
+
+  and from it the stall torque and free speed at any voltage, which motor130.sv takes, and the
+  gearbox's figures at the handle.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radiator Bot Bench</title>
+<style>
+  :root {
+    --bg: #f7f6f3; --panel: #ffffff; --ink: #1d1d1b; --muted: #6b6a66; --line: #e2e0da;
+    --accent: #c2410c; --raw: #e8b08f; --blue: #1f6fb4; --ok: #2f6d3a; --bad: #b91c1c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #161614; --panel: #1f1f1c; --ink: #ecebe6; --muted: #9b9a94; --line: #34332f;
+      --accent: #fb923c; --raw: #7c4a2b; --blue: #6aaee8; --ok: #6fbf7b; --bad: #f27b7b;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font: 15px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  }
+  main { max-width: 1040px; margin: 0 auto; padding: 20px 16px 40px; display: grid; gap: 14px; }
+  header { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  h1 { font-size: 20px; margin: 0; flex: 1; }
+  h2 { font-size: 15px; margin: 0 0 10px; }
+  .panel { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 14px; min-width: 0; }
+  button, select {
+    font: inherit; padding: 8px 14px; border-radius: 8px; border: 1px solid var(--line);
+    background: var(--panel); color: var(--ink); cursor: pointer;
+  }
+  button:disabled { opacity: 0.45; cursor: default; }
+  button.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+  button.small { padding: 3px 10px; font-size: 13px; }
+  input[type=number] {
+    font: inherit; width: 6.5em; padding: 5px 6px; border-radius: 6px; border: 1px solid var(--line);
+    background: var(--bg); color: var(--ink);
+  }
+  #conn { font-size: 13px; color: var(--muted); }
+  #conn.on { color: var(--ok); }
+  .readouts { display: grid; grid-template-columns: repeat(auto-fit, minmax(128px, 1fr)); gap: 10px; }
+  .readout .label { font-size: 12px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.04em; }
+  .readout .value { font-size: 26px; font-weight: 600; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .readout .unit { font-size: 14px; color: var(--muted); font-weight: 400; }
+  #state.running { color: var(--accent); }
+  #state.failed { color: var(--bad); }
+  canvas { width: 100%; display: block; }
+  #chart { height: 220px; }
+  #spectrum { height: 200px; }
+  #fitplot { height: 240px; }
+  .controls { display: grid; grid-template-columns: auto 1fr; gap: 14px 18px; align-items: center; }
+  .dir { display: flex; }
+  .dir button { border-radius: 0; min-width: 120px; padding: 12px 14px; font-weight: 600; }
+  .dir button:first-child { border-radius: 10px 0 0 10px; }
+  .dir button:last-child { border-radius: 0 10px 10px 0; }
+  .dir button.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+  .dir button.stop.active { background: var(--ink); border-color: var(--ink); color: var(--panel); }
+  .throttle { display: flex; align-items: center; gap: 12px; }
+  .throttle input { flex: 1; accent-color: var(--accent); }
+  #duty-out { min-width: 12ch; text-align: right; font-variant-numeric: tabular-nums; }
+  .hint { font-size: 13px; color: var(--muted); }
+  .row { display: flex; flex-wrap: wrap; gap: 8px 16px; align-items: center; margin-bottom: 10px; }
+  .row label { font-size: 13px; color: var(--muted); display: flex; align-items: center; gap: 6px; }
+  .two { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  table { border-collapse: collapse; width: 100%; font-size: 13px; font-variant-numeric: tabular-nums; }
+  th, td { text-align: right; padding: 3px 8px; border-bottom: 1px solid var(--line); }
+  th { color: var(--muted); font-weight: 500; }
+  .tablewrap { max-height: 220px; overflow-y: auto; }
+  tbody tr { cursor: pointer; }
+  tbody tr.off td { opacity: 0.4; text-decoration: line-through; }
+  dl { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 14px; }
+  dt { color: var(--muted); }
+  dd { margin: 0; font-variant-numeric: tabular-nums; }
+  .pass { color: var(--ok); font-weight: 600; }
+  .fail { color: var(--bad); font-weight: 600; }
+  pre.snippet {
+    margin: 10px 0 0; padding: 10px; border-radius: 8px; background: var(--bg);
+    font: 12px/1.5 ui-monospace, Menlo, monospace; white-space: pre-wrap;
+  }
+  #log {
+    height: 160px; overflow-y: auto; margin: 0; font: 12px/1.45 ui-monospace, Menlo, monospace;
+    white-space: pre-wrap; color: var(--muted);
+  }
+  #log .tx { color: var(--accent); }
+  #log .ev { color: var(--ink); font-weight: 600; }
+  form { display: flex; gap: 8px; margin-top: 8px; }
+  form input {
+    flex: 1; min-width: 0; font: 13px ui-monospace, Menlo, monospace; padding: 8px;
+    border-radius: 8px; border: 1px solid var(--line); background: var(--bg); color: var(--ink);
+  }
+  #unsupported { display: none; color: var(--bad); }
+  @media (max-width: 760px) {
+    .controls, .two { grid-template-columns: 1fr; }
+    .dir button { min-width: 0; flex: 1; }
+  }
+</style>
+</head>
+<body>
+<main>
+  <header>
+    <h1>Radiator bot bench</h1>
+    <span id="conn">not connected</span>
+    <button id="connect" class="primary">Connect</button>
+  </header>
+  <p id="unsupported" class="panel">This browser has no Web Serial: open this file in Chrome or Edge.</p>
+
+  <section class="panel readouts">
+    <div class="readout"><div class="label">Current</div><div class="value"><span id="amps">–</span> <span class="unit">A</span></div></div>
+    <div class="readout"><div class="label">Peak</div><div class="value"><span id="peak">–</span> <span class="unit">A</span></div></div>
+    <div class="readout"><div class="label">Motor</div><div class="value"><span id="mvolts">–</span> <span class="unit">V</span></div></div>
+    <div class="readout"><div class="label">Power in</div><div class="value"><span id="power">–</span> <span class="unit">W</span></div></div>
+    <div class="readout"><div class="label">Speed</div><div class="value"><span id="rpm">–</span> <span class="unit">rpm</span></div></div>
+    <div class="readout"><div class="label">Supply</div><div class="value"><span id="volts">–</span> <span class="unit">V</span></div></div>
+    <div class="readout"><div class="label">State</div><div class="value" id="state">–</div></div>
+  </section>
+
+  <section class="panel">
+    <canvas id="chart"></canvas>
+    <div class="hint">The motor's current over the last 20 s: the filtered current bold, each reading faint.
+      <button id="reset-peak" class="small" style="margin-left:8px">Reset peak</button></div>
+  </section>
+
+  <section class="panel controls">
+    <div class="dir" role="group" aria-label="Direction">
+      <button id="rev" disabled>◀ Reverse</button>
+      <button id="stop" class="stop active" disabled>■ Stop</button>
+      <button id="fwd" disabled>Forward ▶</button>
+    </div>
+    <div class="throttle">
+      <label for="duty">Throttle</label>
+      <input id="duty" type="range" min="10" max="100" step="5" value="50" disabled>
+      <span id="duty-out"></span>
+    </div>
+    <div class="hint" style="grid-column:1/-1">Forward is the console's <code>open</code>, reverse its
+      <code>close</code>. The throttle is <code>duty</code>, 10–100% of <code>motor_volts</code>
+      (<span id="mv-hint">?</span> V); a change of direction stops the motor and rests it half a
+      second first. Space stops.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Speed, by ear</h2>
+    <div class="row">
+      <button id="mic">Microphone on</button>
+      <label>Find <select id="pick"><option value="ear">near the ear's</option><option value="hps">the fundamental</option><option value="peak">the loudest line</option></select></label>
+      <label>by ear <input id="ref-hz" type="number" value="220" min="1" step="1"> Hz at <input id="ref-v" type="number" value="9" min="0.5" step="0.5"> V</label>
+      <label>Lines a revolution <select id="lines"><option>1</option><option>2</option><option>3</option><option>6</option></select></label>
+      <label>From <input id="fmin" type="number" value="40" min="10" step="10"> Hz</label>
+      <label>to <input id="fmax" type="number" value="4000" min="100" step="100"> Hz</label>
+      <span class="hint">heard: <b id="hz">–</b> Hz</span>
+    </div>
+    <canvas id="spectrum"></canvas>
+    <div class="hint">The microphone's spectrum, log frequency. The bold line is the frequency taken as the
+      speed, the faint ones its multiples: they should sit on the spectrum's peaks, and no peak should
+      stand below the bold line on its own. The motor's sound repeats once a revolution, so its
+      fundamental is its speed (1 line a revolution), but this motor sounds mostly its even multiples, and
+      its speed and twice it look alike to the spectrum. So match its pitch once by ear against a tone, at
+      one voltage, and enter it: "near the ear's" then looks only around where that puts the speed now,
+      which rules out the half and the double. Hold the laptop's microphone near the motor.</div>
+  </section>
+
+  <section class="panel">
+    <h2>Characterize</h2>
+    <div class="row">
+      <label>Sweep <input id="sw-from" type="number" value="20" min="10" max="100" step="5">%</label>
+      <label>to <input id="sw-to" type="number" value="100" min="10" max="100" step="5">%</label>
+      <label>by <input id="sw-step" type="number" value="10" min="5" max="50" step="5">%</label>
+      <label>settle <input id="sw-settle" type="number" value="1.5" min="0.5" step="0.5"> s</label>
+      <label>measure <input id="sw-measure" type="number" value="2" min="0.5" step="0.5"> s</label>
+      <button id="sweep" class="primary" disabled>Run sweep</button>
+      <button id="point" disabled>Record a point</button>
+      <button id="clear">Clear</button>
+      <button id="csv">CSV</button>
+    </div>
+    <div class="row">
+      <label>Winding R <input id="res" type="number" value="6.9" min="0.1" step="0.1"> Ω</label>
+      <button id="stall" class="small" disabled>Take R from a stall</button>
+      <span class="hint">hold the shaft still, running, then press: R = V / I</span>
+    </div>
+    <div class="row">
+      <label>At <input id="vop" type="number" value="9" min="1" max="12" step="0.5"> V</label>
+      <label>ratio <input id="ratio" type="number" value="1024" min="1" step="1">:1</label>
+      <label>meshes <input id="meshes" type="number" value="6" min="0" step="1"></label>
+      <label>at <input id="eff" type="number" value="0.9" min="0.1" max="1" step="0.01"> each</label>
+    </div>
+    <div class="two">
+      <div>
+        <canvas id="fitplot"></canvas>
+        <div class="hint">Free-running speed against the motor's voltage, and the model's line.</div>
+      </div>
+      <div>
+        <dl id="fit"></dl>
+        <pre class="snippet" id="snippet"></pre>
+      </div>
+    </div>
+    <div class="tablewrap" style="margin-top:12px">
+      <table>
+        <thead><tr><th>duty</th><th>V</th><th>I (A)</th><th>P (W)</th><th>heard (Hz)</th><th>rpm</th></tr></thead>
+        <tbody id="points"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="panel">
+    <pre id="log"></pre>
+    <form id="send"><input id="line" placeholder="a console command, e.g. status" autocomplete="off" disabled><button disabled>Send</button></form>
+  </section>
+</main>
+
+<script>
+const WINDOW_S = 20;  // the current chart's span
+const BOOT_BANNER = /`help` lists the commands/;
+const TRACE = /^\s*([\d.]+) s\s+(-?[\d.]+) A\s+\((-?[\d.]+) A filtered\)/;
+const MOVE_END = /^(open|close): (reached|timed out|motor fault|stopped)/;
+const SUPPLY = /^\s*supply\s+(-?[\d.]+) V/;
+const SETTING = /^\s*(duty|motor_volts)\s+(-?[\d.]+)\s/;
+
+const $ = (id) => document.getElementById(id);
+const num = (id) => parseFloat($(id).value);
+const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
+const clock = () => performance.now() / 1000;
+const median = (xs) => {
+  if (!xs.length) return null;
+  const s = [...xs].sort((a, b) => a - b), m = s.length >> 1;
+  return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+};
+const mean = (xs) => (xs.length ? xs.reduce((a, b) => a + b, 0) / xs.length : null);
+
+let port = null, writer = null, reader = null;
+let samples = [];      // the trace: {t (s, page clock), a (raw), f (filtered)}
+let heard = [];        // the microphone: {t, hz}, hz the fundamental before the lines' division
+let points = [];       // the characterization: {duty, v, i, hz}
+let peak = 0;
+let dir = "stop";      // what the buttons last asked for
+let running = false;   // the console says a move is under way
+let motorVolts = null, supplyVolts = null;
+let sweeping = false, abortSweep = false;
+let sendChain = Promise.resolve();
+
+// --- the serial link ---
+
+function send(cmd) {
+  // One line at a time, a little apart, so the console's line buffer never overruns.
+  sendChain = sendChain.then(async () => {
+    if (!writer) return;
+    log(cmd, "tx");
+    await writer.write(new TextEncoder().encode(cmd + "\r\n"));
+    await sleep(40);
+  }).catch((e) => log("send failed: " + e.message, "ev"));
+  return sendChain;
+}
+
+function setup() {
+  // After every boot: hold still, free-run settings (unsaved), the trace, and where things stand.
+  send("stop");
+  send("set trip_open 2");
+  send("set trip_close 2");
+  send("set timeout 600");
+  send("set duty " + ($("duty").value / 100).toFixed(2));
+  send("get motor_volts");
+  send("trace 50");
+  send("status");
+  setDir("stop", false);
+}
+
+async function connect() {
+  try {
+    port = await navigator.serial.requestPort();
+    await port.open({ baudRate: 115200 });
+    // Both lines released: the RedBoard's auto-reset circuit holds EN and GPIO0 high.
+    await port.setSignals({ dataTerminalReady: false, requestToSend: false });
+  } catch (e) {
+    log("couldn't open the port: " + e.message, "ev");
+    port = null;
+    return;
+  }
+  writer = port.writable.getWriter();
+  setConnected(true);
+  // Opening the port may or may not reset the board; set up now, and again on any boot banner.
+  setTimeout(setup, 300);
+  readLoop();
+}
+
+async function disconnect() {
+  if (!port) return;
+  abortSweep = true;
+  try { await send("stop"); } catch (_) {}
+  try { await reader?.cancel(); } catch (_) {}
+  try { writer?.releaseLock(); } catch (_) {}
+  try { await port.close(); } catch (_) {}
+  port = writer = reader = null;
+  setConnected(false);
+}
+
+async function readLoop() {
+  const decoder = new TextDecoder();
+  let pending = "";
+  try {
+    reader = port.readable.getReader();
+    for (;;) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      pending += decoder.decode(value, { stream: true });
+      let nl;
+      while ((nl = pending.search(/\r?\n/)) >= 0) {
+        const line = pending.slice(0, nl);
+        pending = pending.slice(nl + (pending[nl] === "\r" ? 2 : 1));
+        onLine(line);
+      }
+    }
+  } catch (e) {
+    log("link lost: " + e.message, "ev");
+  } finally {
+    try { reader?.releaseLock(); } catch (_) {}
+    if (port) { try { await port.close(); } catch (_) {} port = writer = reader = null; setConnected(false); }
+  }
+}
+
+// --- what the console says ---
+
+function onLine(line) {
+  let m;
+  if ((m = TRACE.exec(line))) {
+    const a = parseFloat(m[2]), f = parseFloat(m[3]);
+    samples.push({ t: clock(), a, f });
+    if (f > peak) { peak = f; $("peak").textContent = peak.toFixed(2); }
+    return;  // the trace is the chart's, not the log's
+  }
+  if (BOOT_BANNER.test(line)) { log(line, "ev"); log("the board booted: setting it up again", "ev"); setup(); return; }
+  if (line === "opening" || line === "closing") { running = true; setState(line, "running"); }
+  if ((m = MOVE_END.exec(line))) {
+    // "stopped" is a move cut short, by Stop or by a change of direction (which then sets off the
+    // other way after its rest); the others end it, and the buttons go back to Stop.
+    running = false;
+    const outcome = m[2];
+    if (outcome === "stopped") {
+      setState(dir === "stop" ? "stopped" : "reversing", "");
+    } else {
+      setState(outcome, outcome === "reached" ? "" : "failed");
+      setDir("stop", false);
+    }
+    log(line, "ev");
+    return;
+  }
+  if (/^holding/.test(line)) { running = false; setState("stopped", ""); }
+  if ((m = SUPPLY.exec(line))) { supplyVolts = parseFloat(m[1]); $("volts").textContent = supplyVolts.toFixed(2); }
+  if ((m = SETTING.exec(line)) && m[1] === "motor_volts") {
+    motorVolts = parseFloat(m[2]);
+    $("mv-hint").textContent = motorVolts;
+    onDutyLabel();
+  }
+  log(line);
+}
+
+// The motor's average voltage at a duty: the firmware gives it duty x motor_volts, up to the supply.
+function motorV(duty) {
+  if (motorVolts == null) return null;
+  const v = duty * motorVolts;
+  return supplyVolts != null ? Math.min(v, supplyVolts) : v;
+}
+
+// --- the controls ---
+
+function setDir(d, command = true) {
+  dir = d;
+  for (const [id, name] of [["rev", "close"], ["stop", "stop"], ["fwd", "open"]]) {
+    $(id).classList.toggle("active", (d === "stop" ? "stop" : d) === name);
+  }
+  if (command) send(d);
+}
+
+function setState(text, cls) {
+  $("state").textContent = text;
+  $("state").className = "value " + (cls || "");
+}
+
+function setConnected(on) {
+  $("conn").textContent = on ? "connected" : "not connected";
+  $("conn").classList.toggle("on", on);
+  $("connect").textContent = on ? "Disconnect" : "Connect";
+  $("connect").classList.toggle("primary", !on);
+  for (const id of ["rev", "stop", "fwd", "duty", "line", "sweep", "point", "stall"]) $(id).disabled = !on;
+  $("send").querySelector("button").disabled = !on;
+  if (!on) { running = false; setState("–", ""); }
+}
+
+function onDutyLabel() {
+  const d = $("duty").value / 100, v = motorV(d);
+  $("duty-out").textContent = $("duty").value + "%" + (v != null ? ` · ${v.toFixed(1)} V` : "");
+}
+
+let dutyTimer = null;
+function onDuty() {
+  onDutyLabel();
+  clearTimeout(dutyTimer);
+  dutyTimer = setTimeout(() => send("set duty " + ($("duty").value / 100).toFixed(2)), 120);
+}
+
+function setDuty(d) {
+  $("duty").value = Math.round(d * 100);
+  onDutyLabel();
+  send("set duty " + d.toFixed(2));
+}
+
+// --- the microphone ---
+
+let audio = null;  // {ctx, analyser, db}
+
+async function toggleMic() {
+  if (audio) {
+    audio.stream.getTracks().forEach((t) => t.stop());
+    await audio.ctx.close();
+    audio = null;
+    $("mic").textContent = "Microphone on";
+    return;
+  }
+  try {
+    // Raw: no echo cancelling, noise suppression or gain riding, which would eat a steady hum.
+    const stream = await navigator.mediaDevices.getUserMedia({
+      audio: { echoCancellation: false, noiseSuppression: false, autoGainControl: false },
+    });
+    const ctx = new AudioContext();
+    const analyser = ctx.createAnalyser();
+    analyser.fftSize = 16384;              // ~2.9 Hz bins at 48 kHz, a third of a second
+    analyser.smoothingTimeConstant = 0.3;
+    ctx.createMediaStreamSource(stream).connect(analyser);
+    audio = { stream, ctx, analyser, db: new Float32Array(analyser.frequencyBinCount) };
+    $("mic").textContent = "Microphone off";
+  } catch (e) {
+    log("no microphone: " + e.message, "ev");
+  }
+}
+
+// The fundamental in the spectrum, in Hz, or null if nothing stands out of the noise.
+function listen() {
+  if (!audio) return null;
+  const { analyser, db } = audio;
+  analyser.getFloatFrequencyData(db);
+  const binHz = audio.ctx.sampleRate / analyser.fftSize;
+  const kmin = Math.max(2, Math.ceil(num("fmin") / binHz));
+  const kmax = Math.min(db.length - 2, Math.floor(num("fmax") / binHz));
+  if (kmax <= kmin) return null;
+  const floor = median(Array.from(db.subarray(kmin, kmax + 1)));
+
+  const pred = $("pick").value === "ear" ? predictHz() : null;
+  if (pred) return listenNear(db, binHz, kmin, kmax, floor, pred);
+
+  let best = kmin;
+  if ($("pick").value === "peak") {
+    for (let k = kmin; k <= kmax; k++) if (db[k] > db[best]) best = k;
+  } else {
+    // The harmonic product spectrum: in dB, the sum over the first four multiples, each taken as
+    // the loudest of its bin and the two beside it.  The fundamental is where they all line up.
+    let bestScore = -Infinity;
+    for (let k = kmin; k <= kmax; k++) {
+      let score = db[k];
+      for (let h = 2; h <= 4; h++) {
+        const j = h * k;
+        if (j + 1 >= db.length) { score = -Infinity; break; }
+        score += Math.max(db[j - 1], db[j], db[j + 1]);
+      }
+      if (score > bestScore) { bestScore = score; best = k; }
+    }
+  }
+  // It must stand 10 dB over the band's median, or it's only the room.
+  if (db[best] - floor < 10) return null;
+  return interp(db, best) * binHz;
+}
+
+// A peak's place between bins, by a parabola through its three.
+function interp(db, k) {
+  const a = db[k - 1], b = db[k], c = db[k + 1];
+  const den = a - 2 * b + c;
+  return k + (den ? Math.max(-0.5, Math.min(0.5, (0.5 * (a - c)) / den)) : 0);
+}
+
+// Where the fundamental should be now, from the ear's reference: the speed goes as V - I R.
+function predictHz() {
+  const fr = num("ref-hz"), vr = num("ref-v"), R = num("res");
+  if (!running || !(fr > 0) || !(vr > 0) || !(R > 0)) return null;
+  const v = motorV($("duty").value / 100);
+  if (v == null) return null;
+  const now = clock();
+  const v0 = (mean(samples.filter((s) => now - s.t <= 0.5).map((s) => s.f)) || 0.06) * R;
+  return v > v0 && vr > v0 ? (fr * (v - v0)) / (vr - v0) : null;
+}
+
+// The fundamental near the prediction.  This motor sounds mostly its even multiples, so from the
+// spectrum alone its speed and twice it look alike; a window from 0.8 to 1.25 of the prediction
+// rules out both the half and the double.  In it, each candidate scores the sum of its first six
+// multiples' heights over the floor, so a quiet fundamental still counts, and the frequency is
+// read off the loudest of those multiples, divided down.
+function listenNear(db, binHz, kmin, kmax, floor, pred) {
+  const lo = Math.max(kmin, Math.floor((pred * 0.8) / binHz));
+  const hi = Math.min(kmax, Math.ceil((pred * 1.25) / binHz));
+  const near = (j) => { let p = j; for (const q of [j - 1, j + 1]) if (db[q] > db[p]) p = q; return p; };
+  let best = -1, bestScore = 0;
+  for (let k = lo; k <= hi; k++) {
+    let score = 0;
+    for (let h = 1; h <= 6 && h * k + 1 < db.length; h++) score += Math.max(0, db[near(h * k)] - floor);
+    if (score > bestScore) { bestScore = score; best = k; }
+  }
+  if (best < 0) return null;
+  let loudH = 1, loudK = near(best);
+  for (let h = 2; h <= 6 && h * best + 1 < db.length; h++) {
+    const p = near(h * best);
+    if (db[p] > db[loudK]) { loudH = h; loudK = p; }
+  }
+  if (db[loudK] - floor < 10) return null;
+  return (interp(db, loudK) * binHz) / loudH;
+}
+
+const lines = () => parseInt($("lines").value, 10);
+const toRpm = (hz) => (hz * 60) / lines();
+
+// --- the characterization ---
+
+function window_(t0, t1) {
+  const amps = samples.filter((s) => s.t >= t0 && s.t <= t1).map((s) => s.f);
+  const hz = heard.filter((h) => h.t >= t0 && h.t <= t1).map((h) => h.hz);
+  return { i: mean(amps), hz: median(hz) };
+}
+
+function record(t0, t1, duty) {
+  const { i, hz } = window_(t0, t1);
+  const v = motorV(duty);
+  if (i == null || v == null) { log("no point: no current traced, or motor_volts unknown", "ev"); return; }
+  points.push({ duty, v, i, hz });
+  renderFit();
+}
+
+async function runSweep() {
+  if (sweeping) { abortSweep = true; return; }
+  if (!audio) { log("turn the microphone on first: the sweep hears the speed", "ev"); return; }
+  const from = num("sw-from"), to = num("sw-to"), step = num("sw-step");
+  const settle = num("sw-settle") * 1000, measure = num("sw-measure") * 1000;
+  const duties = [];
+  for (let p = from; p <= to + 1e-9; p += step) duties.push(Math.min(100, p) / 100);
+  if (!duties.length) return;
+  // Top down: started at a low duty, the motor may not break away from rest and only stall, but
+  // once it's turning it keeps turning on far less.
+  duties.reverse();
+  sweeping = true; abortSweep = false;
+  $("sweep").textContent = "Stop sweep";
+  setDuty(duties[0]);
+  if (dir !== "open") setDir("open");
+  for (const d of duties) {
+    setDuty(d);
+    await sleep(settle);
+    if (abortSweep || !running) break;
+    const t0 = clock();
+    await sleep(measure);
+    if (abortSweep || !running) break;
+    record(t0, clock(), d);
+  }
+  if (abortSweep || !running) log("sweep cut short", "ev");
+  setDir("stop");
+  sweeping = false;
+  $("sweep").textContent = "Run sweep";
+}
+
+// The model from the points heard: ke by least squares through the origin on
+// V - I R = ke w, and I0 the mean free-running current.
+function fit() {
+  const R = num("res");
+  const pts = points.filter((p) => !p.off && p.hz != null && p.hz > 0);
+  if (pts.length < 2 || !(R > 0)) return null;
+  const w = pts.map((p) => (2 * Math.PI * p.hz) / lines());
+  let sxy = 0, sxx = 0;
+  pts.forEach((p, n) => { sxy += w[n] * (p.v - p.i * R); sxx += w[n] * w[n]; });
+  const ke = sxy / sxx;
+  const i0 = mean(pts.map((p) => p.i));
+  const rms = Math.sqrt(mean(pts.map((p, n) => {
+    const model = ((p.v - i0 * R) / ke) * 60 / (2 * Math.PI);
+    return (model - (w[n] * 60) / (2 * Math.PI)) ** 2;
+  })));
+  return { R, ke, i0, rms, n: pts.length };
+}
+
+function renderFit() {
+  const tbody = $("points");
+  tbody.innerHTML = "";
+  for (const p of points) {
+    const tr = document.createElement("tr");
+    // a click leaves a point out of the fit, or puts it back: a stall, say, or the room heard
+    if (p.off) tr.className = "off";
+    tr.title = p.off ? "left out of the fit: click to put it back" : "click to leave it out of the fit";
+    tr.onclick = () => { p.off = !p.off; renderFit(); };
+    const cells = [
+      Math.round(p.duty * 100) + "%", p.v.toFixed(2), p.i.toFixed(3), (p.v * p.i).toFixed(2),
+      p.hz != null ? p.hz.toFixed(1) : "–", p.hz != null ? Math.round(toRpm(p.hz)) : "–",
+    ];
+    for (const c of cells) { const td = document.createElement("td"); td.textContent = c; tr.appendChild(td); }
+    tbody.appendChild(tr);
+  }
+
+  const f = fit();
+  const dl = $("fit");
+  dl.innerHTML = "";
+  const row = (k, v, cls) => {
+    const dt = document.createElement("dt"); dt.textContent = k;
+    const dd = document.createElement("dd"); dd.innerHTML = v; if (cls) dd.className = cls;
+    dl.append(dt, dd);
+  };
+  if (!f) {
+    row("model", "two points heard, free-running, and a winding R, make one");
+    $("snippet").textContent = "";
+    return;
+  }
+  const V = num("vop"), ratio = num("ratio"), eff = num("eff") ** num("meshes");
+  const stallA = V / f.R;
+  const stallT = f.ke * (stallA - f.i0);                    // N·m
+  const freeW = (V - f.i0 * f.R) / f.ke;                    // rad/s
+  const freeRpm = (freeW * 60) / (2 * Math.PI);
+  const pMax = (stallT * freeW) / 4;                        // W, at half the free speed
+  const handleRpm = freeRpm / ratio;
+  const handleT = stallT * ratio * eff;
+  const pf = (ok) => (ok ? '<span class="pass">✓</span>' : '<span class="fail">✗</span>');
+  row("ke = kt", `${(f.ke * 1000).toFixed(3)} mV·s/rad = mN·m/A`);
+  row("I0", `${(f.i0 * 1000).toFixed(0)} mA`);
+  row("fit", `${f.n} points, ${f.rms.toFixed(0)} rpm rms`);
+  row(`at ${V} V: free`, `${Math.round(freeRpm)} rpm`);
+  row("stall", `${(stallT * 1000).toFixed(2)} mN·m, ${stallA.toFixed(2)} A`);
+  row("most power out", `${pMax.toFixed(2)} W`);
+  row("handle: free", `${handleRpm.toFixed(1)} rpm ${pf(handleRpm >= 6)} <span class="hint">(≥ 6)</span>`);
+  row("handle: stall", `${handleT.toFixed(2)} N·m ${pf(handleT >= 2)} <span class="hint">(≥ 2, at ${(eff * 100).toFixed(0)}% through the train)</span>`);
+  $("snippet").textContent =
+    `// hardware/motor130.sv, measured: ${f.n} points, R ${f.R} Ω, ${lines()} line(s) a revolution\n` +
+    `motor130_volts := ${V}V\n` +
+    `motor130_free := ${Math.round(freeRpm)}rpm\n` +
+    `motor130_stall_torque := ${stallT.toPrecision(3)}Nm\n` +
+    `motor130_stall_amps := ${stallA.toFixed(2)}A`;
+}
+
+function csv() {
+  const head = "duty,volts,amps,watts,hz,rpm,in_fit\n";
+  const body = points.map((p) => [p.duty, p.v.toFixed(3), p.i.toFixed(4), (p.v * p.i).toFixed(3),
+    p.hz != null ? p.hz.toFixed(2) : "", p.hz != null ? toRpm(p.hz).toFixed(0) : "",
+    p.off ? 0 : 1].join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([head + body + "\n"], { type: "text/csv" }));
+  a.download = "motor-sweep.csv";
+  a.click();
+}
+
+// --- the log and the drawing ---
+
+function log(text, cls) {
+  const el = $("log");
+  const atBottom = el.scrollHeight - el.scrollTop - el.clientHeight < 8;
+  const span = document.createElement("span");
+  if (cls) span.className = cls;
+  span.textContent = (cls === "tx" ? "> " : "") + text + "\n";
+  el.appendChild(span);
+  while (el.childNodes.length > 400) el.removeChild(el.firstChild);
+  if (atBottom) el.scrollTop = el.scrollHeight;
+}
+
+function canvas2d(id) {
+  const c = $(id), dpr = window.devicePixelRatio || 1;
+  const w = c.clientWidth, h = c.clientHeight;
+  if (c.width !== Math.round(w * dpr) || c.height !== Math.round(h * dpr)) {
+    c.width = Math.round(w * dpr); c.height = Math.round(h * dpr);
+  }
+  const g = c.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, h);
+  g.font = "11px -apple-system, sans-serif";
+  return { g, w, h };
+}
+
+const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+function gridY(g, w, L, R, y, from, to, step, fmt) {
+  g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  g.textAlign = "right"; g.textBaseline = "middle";
+  for (let v = from; v <= to + 1e-9; v += step) {
+    g.beginPath(); g.moveTo(L, y(v)); g.lineTo(w - R, y(v)); g.stroke();
+    g.fillText(fmt(v), L - 6, y(v));
+  }
+}
+
+function niceStep(span, ticks) {
+  const raw = span / ticks, mag = 10 ** Math.floor(Math.log10(raw));
+  return [1, 2, 2.5, 5, 10].map((m) => m * mag).find((s) => s >= raw);
+}
+
+function drawCurrent(now) {
+  const { g, w, h } = canvas2d("chart");
+  samples = samples.filter((s) => now - s.t <= Math.max(WINDOW_S + 1, sweeping ? 600 : 0));
+  const shown = samples.filter((s) => now - s.t <= WINDOW_S + 1);
+  const top = Math.max(1, ...shown.map((s) => s.a)) * 1.1;
+  const L = 40, R = 8, T = 8, B = 22;
+  const x = (t) => L + (w - L - R) * (1 - (now - t) / WINDOW_S);
+  const y = (a) => T + (h - T - B) * (1 - Math.max(0, a) / top);
+  gridY(g, w, L, R, y, 0, top, top > 2 ? 0.5 : 0.25, (v) => v.toFixed(2));
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (let s = 0; s <= WINDOW_S; s += 5) g.fillText(s ? `−${s} s` : "now", x(now - s), h - B + 6);
+  // a gap wherever the trace paused (the motor idle) for more than a quarter second
+  const series = (key, stroke, width) => {
+    g.strokeStyle = stroke; g.lineWidth = width; g.lineJoin = "round";
+    g.beginPath();
+    let prev = null;
+    for (const s of shown) {
+      if (!prev || s.t - prev.t > 0.25) g.moveTo(x(s.t), y(s[key])); else g.lineTo(x(s.t), y(s[key]));
+      prev = s;
+    }
+    g.stroke();
+  };
+  series("a", css("--raw"), 1);
+  series("f", css("--accent"), 2.2);
+}
+
+function drawSpectrum(hz) {
+  const { g, w, h } = canvas2d("spectrum");
+  const L = 40, R = 8, T = 8, B = 22;
+  const fmin = num("fmin"), fmax = num("fmax");
+  const x = (f) => L + (w - L - R) * (Math.log(f / fmin) / Math.log(fmax / fmin));
+  g.fillStyle = css("--muted"); g.strokeStyle = css("--line"); g.lineWidth = 1;
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (const f of [50, 100, 200, 500, 1000, 2000, 5000, 10000]) {
+    if (f < fmin || f > fmax) continue;
+    g.beginPath(); g.moveTo(x(f), T); g.lineTo(x(f), h - B); g.stroke();
+    g.fillText(f >= 1000 ? f / 1000 + " kHz" : f + " Hz", x(f), h - B + 6);
+  }
+  if (!audio) {
+    g.textAlign = "center"; g.textBaseline = "middle";
+    g.fillText("the microphone is off", w / 2, h / 2);
+    return;
+  }
+  const { db } = audio, binHz = audio.ctx.sampleRate / audio.analyser.fftSize;
+  const k0 = Math.max(1, Math.floor(fmin / binHz)), k1 = Math.min(db.length - 1, Math.ceil(fmax / binHz));
+  let hi = -Infinity;
+  for (let k = k0; k <= k1; k++) hi = Math.max(hi, db[k]);
+  const top = hi + 5, bottom = hi - 75;
+  const y = (d) => T + (h - T - B) * (1 - (Math.max(bottom, d) - bottom) / (top - bottom));
+  g.strokeStyle = css("--blue"); g.lineWidth = 1.2;
+  g.beginPath();
+  for (let k = k0; k <= k1; k++) { const px = x(k * binHz), py = y(db[k]); k === k0 ? g.moveTo(px, py) : g.lineTo(px, py); }
+  g.stroke();
+  if (hz) {
+    for (let n = 1; n * hz <= fmax; n++) {
+      g.strokeStyle = css("--accent"); g.globalAlpha = n === 1 ? 1 : 0.35; g.lineWidth = n === 1 ? 2 : 1;
+      g.beginPath(); g.moveTo(x(n * hz), T); g.lineTo(x(n * hz), h - B); g.stroke();
+    }
+    g.globalAlpha = 1;
+  }
+}
+
+function drawFit() {
+  const { g, w, h } = canvas2d("fitplot");
+  const L = 48, R = 10, T = 10, B = 24;
+  const pts = points.filter((p) => p.hz != null);
+  const f = fit();
+  const vmax = Math.max(num("vop") || 0, ...points.map((p) => p.v), 1) * 1.05;
+  let rmax = Math.max(1000, ...pts.map((p) => toRpm(p.hz)));
+  if (f) rmax = Math.max(rmax, ((vmax - f.i0 * f.R) / f.ke) * 60 / (2 * Math.PI));
+  rmax *= 1.1;
+  const x = (v) => L + (w - L - R) * (v / vmax);
+  const y = (r) => T + (h - T - B) * (1 - r / rmax);
+  gridY(g, w, L, R, y, 0, rmax, niceStep(rmax, 5), (v) => (v >= 1000 ? v / 1000 + "k" : v));
+  g.textAlign = "center"; g.textBaseline = "top";
+  for (let v = 0; v <= vmax; v += niceStep(vmax, 6)) g.fillText(v + " V", x(v), h - B + 6);
+  if (f) {
+    g.strokeStyle = css("--accent"); g.lineWidth = 1.5; g.setLineDash([5, 4]);
+    const v0 = f.i0 * f.R;  // the model's speed is nil until the voltage covers the friction's drop
+    g.beginPath(); g.moveTo(x(v0), y(0)); g.lineTo(x(vmax), y(((vmax - v0) / f.ke) * 60 / (2 * Math.PI))); g.stroke();
+    g.setLineDash([]);
+  }
+  // the points in the fit solid, those left out hollow
+  g.fillStyle = g.strokeStyle = css("--ink"); g.lineWidth = 1;
+  for (const p of pts) {
+    g.beginPath(); g.arc(x(p.v), y(toRpm(p.hz)), 3.5, 0, 2 * Math.PI);
+    p.off ? g.stroke() : g.fill();
+  }
+}
+
+function frame() {
+  const now = clock();
+  const hz = listen();
+  if (hz) heard.push({ t: now, hz });
+  heard = heard.filter((x) => now - x.t <= 600);
+  // the readouts: the last quarter second's trace and hearing
+  const recentI = mean(samples.filter((s) => now - s.t <= 0.25).map((s) => s.f));
+  const recentHz = median(heard.filter((x) => now - x.t <= 0.4).map((x) => x.hz));
+  const i = running && recentI != null ? recentI : 0;
+  const v = running ? motorV($("duty").value / 100) : 0;
+  if (port) {
+    $("amps").textContent = i.toFixed(2);
+    $("mvolts").textContent = v != null ? v.toFixed(2) : "–";
+    $("power").textContent = v != null ? (v * i).toFixed(2) : "–";
+  }
+  $("hz").textContent = recentHz ? recentHz.toFixed(1) : "–";
+  $("rpm").textContent = recentHz ? Math.round(toRpm(recentHz)) : "–";
+  drawCurrent(now);
+  drawSpectrum(hz);
+  drawFit();
+  requestAnimationFrame(frame);
+}
+
+// --- wiring it up ---
+
+if (!("serial" in navigator)) {
+  $("unsupported").style.display = "block";
+  $("connect").disabled = true;
+}
+$("connect").onclick = () => (port ? disconnect() : connect());
+$("fwd").onclick = () => setDir("open");
+$("rev").onclick = () => setDir("close");
+$("stop").onclick = () => { abortSweep = true; setDir("stop"); };
+$("duty").oninput = onDuty;
+$("reset-peak").onclick = () => { peak = 0; $("peak").textContent = "0.00"; };
+$("mic").onclick = toggleMic;
+$("sweep").onclick = runSweep;
+$("point").onclick = () => {
+  if (!running) { log("run the motor first: a point is the last couple of seconds of a move", "ev"); return; }
+  const now = clock();
+  record(now - num("sw-measure"), now, $("duty").value / 100);
+};
+$("stall").onclick = () => {
+  const now = clock();
+  const i = mean(samples.filter((s) => now - s.t <= 0.5).map((s) => s.f));
+  const v = motorV($("duty").value / 100);
+  if (!running || !i || v == null) { log("run the motor and hold it still first", "ev"); return; }
+  $("res").value = (v / i).toFixed(2);
+  log(`R from a stall: ${v.toFixed(2)} V / ${i.toFixed(3)} A = ${(v / i).toFixed(2)} Ω`, "ev");
+  renderFit();
+};
+$("clear").onclick = () => { points = []; renderFit(); };
+$("csv").onclick = csv;
+for (const id of ["res", "vop", "ratio", "meshes", "eff", "lines"]) $(id).addEventListener("input", renderFit);
+$("send").onsubmit = (e) => {
+  e.preventDefault();
+  const v = $("line").value.trim();
+  if (v) { send(v); $("line").value = ""; }
+};
+document.addEventListener("keydown", (e) => {
+  const typing = e.target.tagName === "INPUT" && e.target.type !== "range";
+  if (e.code === "Space" && port && !typing) { e.preventDefault(); abortSweep = true; setDir("stop"); }
+});
+window.addEventListener("beforeunload", () => { if (writer) writer.write(new TextEncoder().encode("stop\r\n")); });
+onDutyLabel();
+renderFit();
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

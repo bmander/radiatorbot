@@ -237,7 +237,7 @@ board_oy := cd_s1 * sin(bm_bearing) + cradle_f + 2mm - redboard_dims.y0
 // The breakouts on the shield's grid, each at its pin field's middle, in the RedBoard's frame:
 // the driver's two rows in the shield's rows 1 and 7, its outputs' row (columns 7-12) toward the
 // motor and its logic's (columns 5-14) toward the current monitor; the current monitor's pins in
-// column 9, rows 11-16, its board out toward +x.  Column 9 is the RedBoard's VIN and D7 too, at
+// column 9, rows 11-16, its board out toward +x.  Column 9 is the RedBoard's VIN and 25 too, at
 // rows 0 and 19.  The motor's terminal stands in column 17, rows 2 and 4, past the driver's +x
 // end.
 drv_cx := board_ox + 7.5 * pitch

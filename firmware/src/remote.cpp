@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "pins.h"
-#include "wifi.h"
+#include "wlan.h"
 
 using valve::End;
 using valve::Mode;

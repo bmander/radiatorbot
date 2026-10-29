@@ -24,7 +24,7 @@ struct Image {
   Slot slots[kSlots];
 };
 
-constexpr const char* kSpace = "radiatorbot";  // the NVS namespace, shared with wifi.cpp's keys
+constexpr const char* kSpace = "radiatorbot";  // the NVS namespace, shared with wlan.cpp's keys
 constexpr const char* kKey = "settings";
 
 Image image;  // off the stack: 776 bytes

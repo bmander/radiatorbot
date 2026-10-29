@@ -19,7 +19,7 @@ const Field kFields[] = {
     FIELD(filter, kUint, 0, 200, "ms", "the current's low-pass time constant"),
     FIELD(timeout, kUint, 1, 600, "s", "longest a move may take"),
     FIELD(duty, kFloat, 0.1f, 1.0f, "", "the motor's speed, 0-1 of motor_volts"),
-    FIELD(motor_volts, kFloat, 1.0f, 12.0f, "V", "the motor's rating: the PWM gives it this"),
+    FIELD(motor_volts, kFloat, 1.0f, 12.0f, "V", "the motor's voltage: the PWM gives it this"),
     FIELD(ramp, kUint, 0, 2000, "ms", "soft start"),
     FIELD(backoff_open, kUint, 0, 5000, "ms", "run back after reaching the open end"),
     FIELD(backoff_close, kUint, 0, 5000, "ms", "run back after reaching the closed end"),

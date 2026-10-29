@@ -5,7 +5,7 @@
 
 #include "pins.h"
 #include "storage.h"
-#include "wifi.h"
+#include "wlan.h"
 
 using valve::End;
 using valve::Mode;
@@ -237,7 +237,7 @@ void Console::status() {
   Tb6612& m = app_.motor;
   if (!c.moving()) m.refresh();  // while it runs, the loop reads it every tick
   if (!m.monitor_ok()) {
-    io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A0, SCL A1)");
+    io_.println("  supply      the INA219 doesn't answer: check its wiring (SDA A5, SCL A4)");
   } else {
     const char* why = "";
     if (m.supply_volts() < Tb6612::kMinVolts) why = ": too low to run the motor";
