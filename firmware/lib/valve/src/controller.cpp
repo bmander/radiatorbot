@@ -26,6 +26,7 @@ const char* name(Outcome o) {
     case Outcome::kTimeout: return "timed out";
     case Outcome::kMotorFault: return "motor fault";
     case Outcome::kAborted: return "stopped";
+    case Outcome::kStuck: return "stuck";
     default: return "none";
   }
 }
@@ -48,7 +49,8 @@ void Controller::tick(uint32_t now) {
       } else if (desired_ != target_) {
         finish(now, Outcome::kAborted);
       } else if (trip_.update(now, amps_)) {
-        finish(now, Outcome::kReached);
+        bool stuck = !trip_.moved() && from_end_;
+        finish(now, stuck ? Outcome::kStuck : Outcome::kReached);
       } else if (now - started_ >= s_.timeout * 1000) {
         finish(now, Outcome::kTimeout);
       } else {
@@ -87,11 +89,15 @@ void Controller::begin(uint32_t now, End target) {
     awake_ = true;
   }
   target_ = target;
+  from_end_ = position_ != End::kUnknown;
   position_ = End::kUnknown;
   started_ = now;
   fault_ticks_ = 0;
   amps_ = 0;
-  trip_.start(now, tripAt(target), s_.blank, s_.hold, s_.filter);
+  // Blanked through the soft start too: on its low duty even a stall reads under the trip, which
+  // would pass for the motor getting going.
+  uint32_t blank = s_.blank > s_.ramp ? s_.blank : s_.ramp;
+  trip_.start(now, tripAt(target), blank, s_.hold, s_.filter, s_.breakaway);
   state_ = State::kRunning;
   motor_.drive(forward(target_), ramped(0));
 }

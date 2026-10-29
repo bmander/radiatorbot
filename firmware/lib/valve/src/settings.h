@@ -14,6 +14,7 @@ struct Settings {
   float trip_close = 1.0f;    // A, at the closed end: what seats the valve
   uint32_t hold = 50;         // ms the current must stay over the trip
   uint32_t blank = 150;       // ms after a start that the trip ignores (the inrush is near stall)
+  uint32_t breakaway = 1000;  // ms a start may pull up to the stall to break a seated valve free
   uint32_t filter = 10;       // ms, the current's low-pass time constant (the PWM's ripple)
   uint32_t timeout = 60;      // s a move may take before it's given up as a failure
 

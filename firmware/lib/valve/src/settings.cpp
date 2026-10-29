@@ -16,6 +16,7 @@ const Field kFields[] = {
     FIELD(trip_close, kFloat, 0.05f, 2.0f, "A", "current that marks the closed end (seats the valve)"),
     FIELD(hold, kUint, 1, 1000, "ms", "time over the trip before it counts"),
     FIELD(blank, kUint, 0, 2000, "ms", "time after a start that the trip ignores"),
+    FIELD(breakaway, kUint, 0, 5000, "ms", "time a start may pull past the trip, breaking free"),
     FIELD(filter, kUint, 0, 200, "ms", "the current's low-pass time constant"),
     FIELD(timeout, kUint, 1, 600, "s", "longest a move may take"),
     FIELD(duty, kFloat, 0.1f, 1.0f, "", "the motor's speed, 0-1 of motor_volts"),

@@ -4,9 +4,12 @@
 // The controller runs the motor toward the desired end until the current trips, then brakes and
 // puts the driver to sleep.  Between ends, or after a failure, it doesn't know where the valve is.
 //
-// A move fails if it times out without tripping or the motor reports a fault.  After a failure
-// the controller waits: it tries again when the desired end changes, when it's cleared, or after
-// `retry` seconds, at most `kMaxRetries` times in a row on its own.
+// A move that sets off from an end and never gets going (trip_detector.h, "breaking away") has
+// found the valve stuck; from an unknown place it's taken as at the end already.
+//
+// A move fails if it times out without tripping, finds the valve stuck, or the motor reports a
+// fault.  After a failure the controller waits: it tries again when the desired end changes, when
+// it's cleared, or after `retry` seconds, at most `kMaxRetries` times in a row on its own.
 #pragma once
 
 #include <stdint.h>
@@ -19,7 +22,7 @@ namespace valve {
 
 enum class End : uint8_t { kUnknown, kOpen, kClosed };
 enum class State : uint8_t { kIdle, kRunning, kBackoff, kFault };
-enum class Outcome : uint8_t { kNone, kReached, kTimeout, kMotorFault, kAborted };
+enum class Outcome : uint8_t { kNone, kReached, kTimeout, kMotorFault, kAborted, kStuck };
 
 const char* name(End e);
 const char* name(State s);
@@ -89,6 +92,7 @@ class Controller {
 
   End desired_ = End::kUnknown;
   End position_ = End::kUnknown;
+  bool from_end_ = false;  // the move under way set off from an end
   End target_ = End::kUnknown;
   State state_ = State::kIdle;
   bool awake_ = false;
