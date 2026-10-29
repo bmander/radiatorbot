@@ -3,6 +3,9 @@
 Hardware and software for automating a cast-iron radiator: turning its angle
 valve under motor control.
 
+[Open in Solvent IDE](https://bmander.github.io/geomsolver/?github=bmander/radiatorbot/blob/main/hardware/radiatorbot.sv)
+— the `hardware/` models in the browser, opened on `radiatorbot.sv`, read from `main`.
+
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
