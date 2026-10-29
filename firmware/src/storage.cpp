@@ -1,15 +1,15 @@
 #include "storage.h"
 
-#include <EEPROM.h>
+#include <Preferences.h>
 #include <string.h>
 
 namespace storage {
 
 namespace {
 
-// One image, written whole (the data flash is erased and written a 1 kB block at a time): a slot a
-// field, its name and its value as the console writes it, so a firmware that adds, drops or
-// reorders fields reads what an older one stored, and a value is checked as `set` checks it.
+// One image, written whole as one NVS blob: a slot a field, its name and its value as the console
+// writes it, so a firmware that adds, drops or reorders fields reads what an older one stored, and
+// a value is checked as `set` checks it.
 constexpr uint32_t kMagic = 0x544f4252;  // "RBOT"
 constexpr size_t kSlots = 24;
 
@@ -24,13 +24,21 @@ struct Image {
   Slot slots[kSlots];
 };
 
+constexpr const char* kSpace = "radiatorbot";  // the NVS namespace, shared with wifi.cpp's keys
+constexpr const char* kKey = "settings";
+
 Image image;  // off the stack: 776 bytes
 
 }  // namespace
 
 void load(valve::Settings& s) {
-  EEPROM.get(0, image);
-  if (image.magic != kMagic || image.count > kSlots) return;  // nothing stored yet
+  Preferences prefs;
+  memset(&image, 0, sizeof image);
+  if (!prefs.begin(kSpace, true)) return;  // read-only: the namespace isn't there until a save
+  size_t got = prefs.getBytes(kKey, &image, sizeof image);
+  prefs.end();
+  // nothing stored yet
+  if (got != sizeof image || image.magic != kMagic || image.count > kSlots) return;
   for (size_t i = 0; i < image.count; i++) {
     Slot& slot = image.slots[i];
     slot.name[sizeof slot.name - 1] = '\0';
@@ -53,12 +61,11 @@ bool save(const valve::Settings& s) {
     strncpy(slot.name, fs[i].name, sizeof slot.name - 1);
     valve::formatField(s, fs[i], slot.value, sizeof slot.value);
   }
-  EEPROM.put(0, image);
-  const uint8_t* bytes = reinterpret_cast<const uint8_t*>(&image);
-  for (size_t i = 0; i < sizeof image; i++) {
-    if (EEPROM.read(i) != bytes[i]) return false;
-  }
-  return true;
+  Preferences prefs;
+  if (!prefs.begin(kSpace, false)) return false;
+  bool ok = prefs.putBytes(kKey, &image, sizeof image) == sizeof image;
+  prefs.end();
+  return ok;
 }
 
 }  // namespace storage

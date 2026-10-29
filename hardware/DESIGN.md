@@ -2,15 +2,16 @@
 
 A gearmotor that clamps to the radiator valve's supply pipe and turns the star handle. A 130 motor
 drives a printed spur train, which turns a socket round the handle. The motor's
-current says when the stem reaches either end of its screw. An Arduino Uno R4 Minima reads an
-old dry-contact thermostat and runs the motor through an Adafruit DRV8871 H-bridge, on a perfboard
-shield plugged into it. An INA219 current monitor in the driver's supply tells it when the motor
-stalls. A 9 V wall adapter in the Uno's barrel jack powers it all.
+current says when the stem reaches either end of its screw. A SparkFun IoT RedBoard ESP32 reads
+an old dry-contact thermostat and runs the motor through an Adafruit TB6612 H-bridge, on a
+perfboard shield plugged into it. An INA219 current monitor in the driver's supply tells it when
+the motor stalls. A 9 V wall adapter in the RedBoard's barrel jack powers it all, and its Wi-Fi
+puts the bot on the home network, for a phone.
 
 Everything is FDM-printed except the drill rod the gears turn on and the screws. The model is
 `radiatorbot.sv`. The valve it fits is `radiator_valve.sv`, and the parts libraries are
-`gears.sv`, `motor130.sv` and `boards.sv` (the Uno, its shield, the motor driver and the current
-monitor).
+`gears.sv`, `motor130.sv` and `boards.sv` (the RedBoard, its shield, the motor driver and the
+current monitor).
 
 ## How it works
 
@@ -84,7 +85,8 @@ The pinions on the rods have 16 teeth. A 12-tooth pinion at module 0.8 has its r
 8.1 mm circle, inside the 8.25 mm bore a 0.311 in rod needs. At 16 teeth the roots stand 1.5 mm
 clear of the bore; `radiatorbot.sv` claims that wall, so a change of rod or pinion that thins it
 fails the check. Each stage keeps its ratio, so the gears grow to 64 and 48 teeth, and the
-gearbox grows to hold them: 101 × 93 mm in plan.
+gearbox grows to hold them: 101 × 95 mm in plan, 2 mm of that for the RedBoard in the bay
+over it.
 
 The socket reduces 8⁄3 where the conjugate wheel it replaced stepped up 1.5. So the train has one
 16 → 64 stage fewer, a compound fewer, and stands 5.5 mm lower.
@@ -110,53 +112,68 @@ voltage), put them in `motor130.sv`, and the figures and claims follow.
 
 ## The electronics
 
-An Arduino stands beside the motor with a cut-down 5 × 7 cm perfboard shield plugged into it, and
-two bought boards and the thermostat's terminal soldered to the shield. All are modelled in
-`boards.sv`, from their makers' layouts where there is one, and placed in the bay in
-`radiatorbot.sv`.
+A SparkFun IoT RedBoard ESP32 stands beside the motor with a cut-down 5 × 7 cm perfboard shield
+plugged into it, and two bought boards and two screw terminals soldered to the shield. All are
+modelled in `boards.sv`, from their makers' layouts, and placed in the bay in `radiatorbot.sv`.
 
 | board | what it does | price | where |
 |---|---|---|---|
-| [Arduino Uno R4 Minima](https://store.arduino.cc/products/uno-r4-minima) (ABX00080) | the controller: barrel jack 6–24 V, its own 5 V, USB-C | $20 | Arduino, Digi-Key, Mouser, SparkFun |
-| [Adafruit DRV8871 breakout](https://www.adafruit.com/product/3190) (#3190) | H-bridge, 6.5–45 V, current limited at ~2.1 A | $7.50 | Adafruit, Digi-Key |
+| [SparkFun IoT RedBoard ESP32](https://www.sparkfun.com/products/19177) (WRL-19177) | the controller: Wi-Fi, barrel jack 7–15 V, its own 5 V and 3.3 V, USB-C | ~$30 | SparkFun, Digi-Key |
+| [Adafruit TB6612 breakout](https://www.adafruit.com/product/2448) (#2448) | two H-bridges of 1.2 A, 4.5–13.5 V, tied together here as one of 2 A | $5 | Adafruit, Digi-Key |
 | [Adafruit INA219 breakout](https://www.adafruit.com/product/904) (#904) | high-side current and voltage over I2C, 0.1 Ω shunt, ±3.2 A | ~$10 | Adafruit, Digi-Key |
 
 **Why these.**
-- The Uno R4 Minima takes the wall adapter itself. Its barrel jack takes 6–24 V through a 2 A
-  Schottky diode (PMEG6020) to its VIN pin and to its own 1.2 A buck, which makes the board's
-  5 V. The driver runs off VIN, so one adapter powers everything, and there are no buck modules to
-  set with a meter.
-  - Its outline, its sockets and its four M3 holes are the Uno's, the most copied board there is.
-    The model takes them from KiCad's Uno R3 footprint.
-  - Its USB-C gives programming and the console, and powers the board alone (not the motor).
-  - It has no Wi-Fi. The firmware uses none.
-  - The XIAO ESP32-C3 the bot had before was a fifth of the price, but it took a 7.5 V buck
-    module for the motor, a Mini-360 set to 5.3 V with a Schottky for itself, and, to run off a
-    thermostat's 24 VAC, a bridge rectifier and an optocoupler.
-- The DRV8871 is the H-bridge. Adafruit publishes its Eagle layout, which the model is taken
-  from: a 20.3 × 24.1 mm board on one row of four pins, with two 3.5 mm screw terminals at the
-  far end.
-  - **It needs 6.5 V or more** and locks out below about 6.4 V, so USB's 5 V can't run the motor.
-    Off the 9 V adapter, the 130 (rated for 6 V) would be overdriven, so the firmware scales the
-    PWM to the supply the INA219 reads: two thirds at 9 V, half at 12 V. The motor sees 6 V on
-    average whatever the adapter, and its stall current is 6 V's.
-  - The 30 kΩ on its ILIM pin limits the current to about 2.1 A, above the 130's ~1.8 A stall.
-    The hardware never cuts in before the firmware's trip does.
+- The RedBoard takes the wall adapter itself. Its barrel jack takes 7–15 V through a 3 A
+  Schottky diode (B340A) to its VIN pin, and to the LM1117 that makes the board's 5 V, from which
+  a 700 mA regulator makes its 3.3 V. The driver runs off VIN, so one adapter powers everything.
+  - Its sockets and its four M3 holes are the Uno's, so a shield made for an Uno's sockets plugs
+    in. The board itself is 0.1 in wider each side, 2.7 × 2.3 in: the bay is 2 mm wider for it.
+  - Its ESP32 has Wi-Fi: the bot's console is on the network as well as on the USB-C, and it
+    serves a page for a phone (see [firmware/README.md](../firmware/README.md)).
+  - Its USB-C, through a CH340C serial bridge, gives programming and the console, and powers the
+    board alone (not the motor).
+  - **It's 3.3 V logic, and no pin takes 5 V.** Everything on the shield runs off its 3V3.
+  - Its I2C pins, GPIO21 and GPIO22, aren't on the analog socket as an Uno's are. They're on its
+    Qwiic socket, whose mouth faces the bay's end wall 3 mm away, and on the D8–SCL socket, off
+    the shield's grid. The ESP32 puts I2C on any two pins that drive, so the INA219 is on the
+    analog socket's first two, GPIO33 and GPIO32. Its A4 and A5 places, GPIO39 and GPIO36, only
+    read.
+  - The linear 5 V regulator turns the adapter's extra volts to heat: about 0.4 W at 9 V with
+    the Wi-Fi up, twice that at 12 V. 9 V is the adapter to use.
+  - The Uno R4 Minima the bot had before had no Wi-Fi.
+- The TB6612 is the H-bridge. Adafruit publishes its Eagle layout, which the model is taken from:
+  a 19.05 × 26.67 mm board on two rows of pins 0.6 in apart, 10 of supply and logic and 6 of the
+  outputs.
+  - **Its two bridges are tied together**, input to input and output to output, as one bridge of
+    twice the current. Each is rated 1.2 A, and every move ends in a stall: the 130 stalls near
+    1.8 A at 6 V. Paralleled, the chip's rated about 2 A continuous, which is what Pololu
+    recommends for a motor that stalls. The three logic pins drive both bridges at once.
+  - Its motor supply takes 4.5–13.5 V (15 V at most), so the adapter stays at 12 V or under. Off
+    the 9 V adapter, the 130 (rated for 6 V) would be overdriven, so the firmware scales the PWM
+    to the supply the INA219 reads: two thirds at 9 V, half at 12 V. The motor sees 6 V on average
+    whatever the adapter, and its stall current is 6 V's.
+  - **It has no current limit**, only a thermal shutdown. The firmware's trip is all that stops
+    a stall, so it takes trips of 2 A at most: a trip over the stall would never trip, and the
+    motor would stall on to the move's timeout.
   - It has no current output. That's what the INA219 is for.
-  - Its inputs are pulled down on the chip, so the motor stays off while the Uno boots. Both
-    inputs low coasts the motor and puts the chip to sleep after 1 ms. There is no sleep pin or
-    fault pin to wire.
+  - IN1 high and IN2 low drives one way while the PWM input is high, the other way with them
+    swapped. PWM low, or both inputs high, brakes; both low coasts. STBY low sleeps the chip, its
+    outputs off; the breakout pulls it up.
+  - A 10 kΩ on the shield pulls the PWM input down, so while the ESP32 boots, its pins
+    floating, the bridge can only brake or coast.
+  - Its logic takes 2.7–5.5 V, and runs off the RedBoard's 3V3.
 - The INA219 sits in the driver's supply, on the high side. It reads the current through its
   0.1 Ω shunt over I2C, ±3.2 A.
-  - Reading on the high side keeps the driver's ground the Uno's.
+  - Reading on the high side keeps the driver's ground the RedBoard's.
   - It reads the supply's voltage as well. The firmware scales the PWM by it, and calls a move a
-    motor fault if the adapter is unplugged or sags under the driver's lockout.
+    motor fault if the adapter is unplugged, sags under 6.5 V, or is over the TB6612's 13.5 V.
   - A 12-bit conversion takes 532 µs, which averages over ten periods of the 20 kHz PWM.
   - It carries the driver's whole draw: the motor's current while the bridge drives, plus the
     chip's few mA. Under the PWM that reads about the PWM's fraction times the motor's current
     (a stall at 9 V reads about 1.2 A), and the firmware divides the fraction back out. The
     currents the console shows, and the trips, are the motor's own.
-  - Its bus input is rated to 26 V, so keep the adapter at 24 V or under (the Uno's limit too).
+  - It runs off the RedBoard's 3V3, so its 10 kΩ pull-ups hold I2C at 3.3 V. Two 4.7 kΩ on the
+    shield stiffen them for 400 kHz.
   - Its STEMMA QT sockets go unused, and so does its screw terminal: VIN+ and VIN− are on its
     pins too.
 
@@ -164,16 +181,16 @@ two bought boards and the thermostat's terminal soldered to the shield. All are 
 a bimetal snap switch, the kind on the wall of a house built in the 1960s or 70s, or out of
 architectural salvage. It's a dry contact that closes on a call for heat. It makes no voltage of
 its own: in the house it came from, the boiler's 24 V transformer or a standing pilot's thermopile
-drove its loop. Here the Uno drives it.
-- Its two wires go to a screw terminal on the shield: one to ground, one to D2 through 1 kΩ. A
-  4.7 kΩ resistor pulls D2 up to 5 V and a 100 nF capacitor holds it to ground. The contact
-  closed reads low.
+drove its loop. Here the RedBoard drives it.
+- Its two wires go to a screw terminal on the shield: one to ground, one to D2 (GPIO4) through
+  1 kΩ. A 4.7 kΩ resistor pulls D2 up to 3.3 V and a 100 nF capacitor holds it to ground. The
+  contact closed reads low.
   - The resistors and the capacitor are for the wire's length: they keep noise and a static spark
-    off the pin. The 1 mA through the contact is plenty for mercury, which doesn't tarnish.
+    off the pin. The 0.7 mA through the contact is plenty for mercury, which doesn't tarnish.
   - The firmware acts on a state only once it has held for 3 s, so a bounce as the mercury rolls,
     or the thermostat's own chatter, never runs the motor.
 - Its heat anticipator, a small adjustable heater in series with the contact, sees only that
-  1 mA, so it never warms. The thermostat then swings a degree or two wider than it would on a
+  0.7 mA, so it never warms. The thermostat then swings a degree or two wider than it would on a
   boiler. A radiator is slow enough not to mind. Its setting doesn't matter.
 - Mount it level, as it was on the wall: a mercury switch works by tilting. If its bulb ever
   breaks, the mercury is hazardous waste.
@@ -182,37 +199,67 @@ drove its loop. Here the Uno drives it.
   wrong part.
 - **Don't wire a thermostat that also runs a boiler** to D2: its loop carries the boiler's 24 VAC.
   Sharing one would need an optocoupler between the two.
+- From the phone page or the console, the bot can be told to open or close regardless, and
+  handed back to the thermostat after. It can't change the thermostat's setting.
 
-**Power.** A 9 V, 2 A wall adapter with a 5.5 × 2.1 mm centre-positive plug goes into the Uno's
-barrel jack: the Mean Well GST18U09-P1J (9 V, 2 A, US wall plug, its P1J plug that size;
+**Power.** A 9 V, 2 A wall adapter with a 5.5 × 2.1 mm centre-positive plug goes into the
+RedBoard's barrel jack: the Mean Well GST18U09-P1J (9 V, 2 A, US wall plug, its P1J plug that size;
 [$14.10 at Jameco](https://www.jameco.com/z/GST18U09-P1J-MEAN-WELL-18-Watt-9V-2A-AC-DC-High-Reliability-Industrial-Wall-Adapter-2-1mm-Plug-Level-VI_2225609.html),
 and through Mean Well's other distributors). Any regulated 9–12 V adapter with that plug and
-1.5 A or more serves.
+1.5 A or more serves; 9 V keeps the RedBoard's regulator cool.
 - At a stall the motor draws about 1.8 A at 6 V, so the adapter carries about 1.2 A at 9 V, and
-  the Uno and the INA219 a few tens of mA more. The Uno's Schottky is rated 2 A.
+  the RedBoard (its Wi-Fi up) and the INA219 a hundred mA or so more. The RedBoard's Schottky is
+  rated 3 A.
 - A 1 A adapter, like Adafruit's 9 V (#63), runs the motor but sits at its limit at each stall.
-- A USB cable in the Uno powers it alone, for programming and the console. The motor waits for
-  the adapter; until it's in, every move is a motor fault.
+- A USB cable in the RedBoard powers it alone, for programming and the console. The motor waits
+  for the adapter; until it's in, every move is a motor fault.
 
-**Wiring**, all on the shield (each board's pins are listed in `boards.sv`):
+**Wiring**, all on the shield (each board's pins are listed in `boards.sv`; the RedBoard's places
+are named for the Uno's, the ESP32 GPIO each carries in brackets). The same as a schematic:
+
+![The shield's wiring: the RedBoard's pins, the INA219, the TB6612 and the two terminals](wiring.svg)
 
 | from | to | |
 |---|---|---|
-| Uno VIN | INA219 VIN+ | the adapter's 9 V, through the Uno's Schottky |
-| INA219 VIN− | DRV8871 VM | the driver's supply, through the shunt |
-| Uno 5V | INA219 VCC; a 4.7 kΩ to D2 | the INA219 pulls I2C up to it, the R4's 5 V logic |
-| Uno GND | DRV8871 GND, INA219 GND, the thermostat terminal; a 100 nF to D2 | one ground |
-| Uno A4 (SDA) | INA219 SDA | I2C; address 0x40 |
-| Uno A5 (SCL) | INA219 SCL | |
-| Uno D5 | DRV8871 IN1 | PWM (GPT2) |
-| Uno D6 | DRV8871 IN2 | PWM (GPT0) |
-| Uno D2 | the thermostat terminal, through 1 kΩ | the contact to ground |
-| DRV8871 OUT1, OUT2 | the motor | the driver's motor terminal |
+| RedBoard VIN | INA219 VIN+ | the adapter's 9 V, through the RedBoard's Schottky |
+| INA219 VIN− | TB6612 VM | the driver's supply, through the shunt |
+| RedBoard 3V3 | INA219 VCC, TB6612 VCC; a 4.7 kΩ each to D2, A0 and A1 | the 3.3 V logic; nothing on the shield sees 5 V |
+| RedBoard GND | TB6612 GND (all three), INA219 GND, the thermostat terminal; a 100 nF to D2; a 10 kΩ to D7 | one ground |
+| RedBoard A0 (GPIO33) | INA219 SDA | I2C at 400 kHz; address 0x40 |
+| RedBoard A1 (GPIO32) | INA219 SCL | |
+| RedBoard D3 (GPIO13) | TB6612 STBY | low sleeps the driver |
+| RedBoard D5 (GPIO16) | TB6612 AIN1 and BIN1 | the direction |
+| RedBoard D6 (GPIO17) | TB6612 AIN2 and BIN2 | |
+| RedBoard D7 (GPIO25) | TB6612 PWMA and PWMB | the 20 kHz PWM, pulled down |
+| RedBoard D2 (GPIO4) | the thermostat terminal, through 1 kΩ | the contact to ground |
+| TB6612 AO1 and BO1 | the motor terminal's first way | the bridges' outputs, tied |
+| TB6612 AO2 and BO2 | its second way | |
 
-To drive, hold one input high and pull the other low for the PWM's on-time (slow decay). The
-bridge brakes through the off-time, so the motor's speed follows the PWM, and the supply carries
-the motor's current only while the bridge drives. Which input is held high sets the direction.
-Both inputs high brakes; both low coasts.
+**On the shield's grid**, looking down on it, columns 0–17 from its −x end (the jack's) and rows
+0–19 from the power header's, as `radiatorbot.sv` places them:
+
+| where | pins, in order |
+|---|---|
+| row 0, columns 2–9 | the RedBoard's power socket: LED, EN, 3V3, 3V3, 5V, GND, GND, VIN |
+| row 0, columns 11–16 | its analog socket: A0 (GPIO33), A1 (GPIO32), A2, A3, A4, A5 |
+| row 19, columns 9–16 | its D7–D0 socket: D7 (GPIO25), D6 (17), D5 (16), D4 (14), D3 (13), D2 (4), D1, D0 |
+| row 1, columns 7–12 | the TB6612's outputs: BO1, BO2, GND, GND, AO2, AO1 |
+| row 7, columns 5–14 | its logic: VM, VCC, GND, PWMB, BIN2, BIN1, STBY, AIN1, AIN2, PWMA |
+| column 9, rows 11–16 | the INA219: VIN+, VIN−, SDA, SCL, GND, VCC |
+| column 1, rows 7 and 9 | the thermostat's terminal |
+| column 17, rows 2 and 4 | the motor's terminal |
+
+Each of the TB6612's twins stands in the same row as the other: PWMB in column 8
+and PWMA in 14, BIN2 in 9 and AIN2 in 13, BIN1 in 10 and AIN1 in 12; BO1 in 7 and AO1 in 12, BO2
+in 8 and AO2 in 11. The resistors and the capacitor go where they're short and clear of the
+breakouts' boards, which stand over the shield: the TB6612's covers columns 4–14, rows 1–8, and
+the INA219's columns 8–16, rows 9–18.
+
+Tie each pair of the TB6612's pins with a short wire or a solder bridge on the shield's
+underside, so both bridges always see the same inputs and drive the same leads. To drive, hold
+the direction on AIN1/AIN2 and pull PWM low for the off-time (slow decay). The bridge brakes
+through the off-time, so the motor's speed follows the PWM, and the supply carries the motor's
+current only while the bridge drives.
 
 **End of travel.** Drive until the motor's current crosses the trip current, held for some tens
 of milliseconds so the start-up surge doesn't trip it, then stop.
@@ -223,35 +270,38 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
 
 **In the bay.**
 - The motor stands in the bay's −y half, on a 2.8 mm pad on the lid, and the boards stand beside
-  it in the +y half, so the bay is only as tall as the motor. Over the Uno it was 25 mm taller.
-- The Uno stands on four 6 mm posts on the lid, at its holes. Its edge stands 2 mm off the
-  motor's cradle, and its board 4.7 mm off the motor. The post by its D8–SCL socket stands about
-  0.6 mm off its SCL pin's tail.
-- Its jack's mouth stands 1 mm in from the end wall, its USB-C's 1.9 mm. The end wall has a
+  it in the +y half, so the bay is only as tall as the motor.
+- The RedBoard stands on four 6 mm posts on the lid, at its holes. Its edge stands 2 mm off the
+  motor's cradle, its board 4.7 mm off the motor, and its far edge 1.8 mm off the bay's +y wall.
+  The post by its D8–SCL socket stands about 0.6 mm off its SCL pin's tail.
+- Its jack's mouth stands 1 mm in from the end wall, its USB-C's 2.6 mm. The end wall has a
   window on each, a plug's moulded body plus the print clearance: 11 mm square on the jack,
   12.5 × 7 mm on the USB-C.
-- The shield is the perfboard, its 7 cm across the Uno, on male headers plugged into the Uno's
+- Its microSD socket, by its end, stays empty: a card in it would stand into the end wall.
+- The shield is the perfboard, its 7 cm across the RedBoard, on male headers plugged into its
   power, analog and D0–D7 sockets (8, 6 and 8 pins).
   - It's cut down to 18 × 20 holes, two rows off each end, which no part used. Its rows then run
-    from the power header's (row 0) to the D0–D7 socket's (row 19), and it's no wider than the
-    Uno, so it clears the motor's cradle by 3.3 mm. Whole, it would overhang the cradle.
+    from the power header's (row 0) to the D0–D7 socket's (row 19), and it clears the motor's
+    cradle by 5.8 mm.
   - Its first column is two holes out from the power header's first pin, and its first row is
-    that header's, so all three sockets fall on its grid. It misses the D8–SCL socket, which stands 0.06 in off the grid, and
-    stands clear of the jack.
-  - Its underside stands 12.6 mm over the Uno's, 2.5 mm over the tops of the Uno's sockets and
-    its ICSP header.
-- The driver stands in the shield's column 9, rows 2–5, its board out toward +x. Its screw
-  terminals face the bay's +x wall, with about 26 mm of room for the motor's leads.
-- The INA219 stands in column 9, rows 11–16, its board out toward +x beside the driver's.
-- Each Adafruit board stands on one row of pins, with the rest of it held out over the
-  shield. A dab of hot glue under its far end stops it rocking.
+    that header's, so all three sockets fall on its grid. It misses the D8–SCL socket, which
+    stands 0.06 in off the grid, and stands clear of the jack.
+  - Its underside stands 12.6 mm over the RedBoard's, 2.5 mm over the tops of the sockets.
+- The TB6612 stands on both its rows: its outputs' row in the shield's row 1, columns 7–12, toward
+  the motor, and its logic's in row 7, columns 5–14. It clears the plug pins in row 0 by 1.8 mm.
+- The INA219 stands in column 9, rows 11–16, its board out toward +x, 1.3 mm clear of the
+  TB6612's. It stands on one row of pins, the rest of it held out over the shield; a dab of hot
+  glue under its far end stops it rocking.
 - The thermostat's 2-way terminal stands at the shield's −x end, in column 1, rows 7 and 9. The
-  end wall's grommet is low beside the motor, and the wires come in there and over the Uno's end.
+  end wall's grommet is low beside the motor, and the wires come in there and over the
+  RedBoard's end.
+- The motor's 2-way terminal stands at its +x end, in column 17, rows 2 and 4, 1.9 mm past the
+  TB6612's end, with 14 mm of room for the leads before the bay's +x wall.
 - The motor sets the bay's height: the cover stands 3 mm over its end bell's boss, for its
-  terminals and leads. The driver's terminal blocks, the tallest parts on the shield, stand 5.6 mm
-  under it.
+  terminals and leads. The screw terminals, the tallest parts on the shield, stand 8.2 mm under
+  it.
 - The cover's west screw stands on the south wall, between the base's screw in the corner and the
-  motor; the Uno's end is up against the end wall.
+  motor; the RedBoard's end is up against the end wall.
 
 ## Printing
 
@@ -296,12 +346,13 @@ gear and the socket as blanks while changing the layout.
   bores).
 - The boards' fit in the bay is claimed in the model and judged on every check:
   - a mated USB-C plug and a mated barrel plug each clear their window in the end wall by 0.3 mm;
-  - the boards, their headers and the Uno's tall parts clear the frame, the cover and one
-    another, the shield clearing the Uno's parts by 2.5 mm;
-  - the pins' tails under the shield clear the Uno's parts, and the Uno's under it clear the
-    posts;
-  - the Uno, the shield and the driver clear the motor and its cradle, and the motor clears the
-    cover.
+  - the boards, their headers, the terminals and the RedBoard's tall parts clear the frame, the
+    cover and one another, the shield clearing the RedBoard's parts by 2.5 mm and the RedBoard
+    clearing the bay's walls by 1.8 mm;
+  - the pins' tails under the shield clear the RedBoard's parts, and the RedBoard's under it
+    clear the posts;
+  - the RedBoard, the shield and the driver clear the motor and its cradle, and the motor clears
+    the cover.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
   shaped part, so it takes about two minutes.
   - The socket turns with the handle and its hole is the same at every height, so only the
@@ -325,28 +376,30 @@ gear and the socket as blanks while changing the layout.
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (base to lid, cover);
-  - M3 × 8 self-tapping, four (the Uno);
+  - M3 × 8 self-tapping, four (the RedBoard);
   - M3 set screws, two (the collar and the stand).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. Its pinion is a press fit on the 2 mm shaft, which runs on
   5.5 mm past the pinion, beside stage 2, and ends 1 mm over stage 3's gear on B.
 - **Electronics** (no fabbed PCB); see *The electronics*:
-  - an Arduino Uno R4 Minima (ABX00080, $20): the controller, and the adapter's way in;
+  - a SparkFun IoT RedBoard ESP32 (WRL-19177, ~$30): the controller, its Wi-Fi, and the
+    adapter's way in;
   - a 5 × 7 cm perfboard (18 × 24 holes, cut down to 18 × 20), and 0.1 in male headers for it:
     8, 6 and 8 pins;
-  - an Adafruit DRV8871 breakout (#3190, $7.50), its header and terminal blocks included: the
-    H-bridge. It takes its supply on its VM and GND pins, so its supply terminal can be left
-    off; the model keeps its room;
+  - an Adafruit TB6612 breakout (#2448, $5), its headers included: the H-bridge, its two bridges
+    tied together on the shield. It takes its supply on its VM and GND pins: leave its terminal
+    block off;
   - an Adafruit INA219 breakout (#904, ~$10), its header included: the motor's current over I2C,
     for the end-of-travel sensing. Leave its terminal block off;
-  - a 2-way 5.08 mm screw terminal, a 1 kΩ and a 4.7 kΩ resistor and a 100 nF capacitor: the
-    thermostat's input;
+  - two 2-way 5.08 mm screw terminals: the thermostat's and the motor's;
+  - a 1 kΩ, three 4.7 kΩ and a 10 kΩ resistor and a 100 nF capacitor: the thermostat's input,
+    the I2C's pull-ups and the PWM's pull-down;
   - a 9 V, 2 A wall adapter with a 5.5 × 2.1 mm centre-positive plug: a Mean Well GST18U09-P1J
     (~$14), or any regulated 9–12 V adapter of 1.5 A or more with that plug.
 - **The thermostat:** an old two-wire, low-voltage heating thermostat (mercury or bimetal), and
   two-conductor thermostat wire (18/2) to it.
 - **Cable entries** are in the bay's end wall: a grommet hole for the thermostat's cable, and a
-  window each on the Uno's barrel jack and its USB-C.
+  window each on the RedBoard's barrel jack and its USB-C.
 
 ## Assembly
 
@@ -356,16 +409,17 @@ gear and the socket as blanks while changing the layout.
 2. Stack the compounds on the rods (D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
-4. Make the shield. Plug the male headers into the Uno's power, analog and D0–D7 sockets, lay the
-   perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
-   column two holes out from that header's first pin, its 7 cm across the Uno) and solder them, so
-   they line up. Solder the driver and the INA219 on their headers, the long ends down, at the
-   grid places above, and cut the tails to 1.5 mm.
-   Add the thermostat's terminal, the two resistors and the capacitor, and wire them as in the
-   table.
-5. Screw the Uno to its posts with its jack and USB-C toward the end wall's windows, plug the
-   shield on, and connect the motor's leads to the driver's terminal. Pass the thermostat's cable
-   through the grommet to its terminal.
+4. Make the shield. Plug the male headers into the RedBoard's power, analog and D0–D7 sockets, lay
+   the perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
+   column two holes out from that header's first pin, its 7 cm across the board) and solder them,
+   so they line up. Solder the TB6612 and the INA219 on their headers, the long ends down, at the
+   grid places above, and cut the tails to 1.5 mm. Tie the TB6612's twin pins together under the
+   shield (AIN1–BIN1, AIN2–BIN2, PWMA–PWMB, AO1–BO1, AO2–BO2).
+   Add the two terminals, the resistors and the capacitor, and wire them as in the table. Before
+   plugging the shield in, check with a meter that no pin of it reaches the RedBoard's 5V.
+5. Screw the RedBoard to its posts with its jack and USB-C toward the end wall's windows, plug
+   the shield on, and connect the motor's leads to the motor terminal. Pass the thermostat's
+   cable through the grommet to its terminal.
 6. Slide the bot onto the valve from −y, so the inlet hex enters the clamp's pocket. Drop the
    four M4 nuts into their pockets in the fixed half's back, and bolt on the cap from +y.
 7. **Push A's compound up its axle from below**, its ring into mesh with D2's last pinion, up
@@ -387,12 +441,13 @@ gear and the socket as blanks while changing the layout.
 - **Round the handle.** The socket reaches 44.6 mm from the stem all round, 7.5 mm past the arms'
   tips, at the handle's height. Check that the radiator and the floor leave it room.
 - **The motors' figures.** See *The drive* above. The stall current also sets the trip, and
-  must stay under the DRV8871's ~2.1 A limit.
-- **The Uno's connectors.** Its outline, sockets and holes are the Uno standard, but the R4
-  Minima's USB-C is placed where the R3's USB-B was, and its jack is taken as 11 mm tall with its
-  pin 6.5 mm up. Check both against the end wall's windows on the board in hand before printing
-  the frame, and the plugs of the cables you'll use (taken as 12.5 × 7 mm and 11 mm square).
-- **The boards' heights.** The DRV8871's terminal blocks (taken as 8.5 mm tall) are estimated,
-  and stand 5.6 mm under the cover: check them.
+  must stay under the paralleled TB6612's ~2 A: a 130 that stalls well over it wants a bigger
+  driver.
+- **The RedBoard's connectors.** Its outline, its parts' places and its jack's and USB-C's
+  footprints are from SparkFun's layout, but its jack is taken as 11 mm tall with its pin 6.5 mm
+  up. Check both against the end wall's windows on the board in hand before printing the frame,
+  and the plugs of the cables you'll use (taken as 12.5 × 7 mm and 11 mm square).
+- **The boards' heights.** The screw terminals (taken as 10 mm tall) stand 8.2 mm under the
+  cover: check them.
 - **The ring and last pinion run open** under the base, beside the packing nut. A guard would be
   a small printed part.

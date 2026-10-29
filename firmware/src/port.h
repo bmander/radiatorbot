@@ -1,5 +1,6 @@
-// The console's side of the USB serial port.  What it writes waits in a buffer and goes out as the
-// host takes it, so a long reply never holds up the motor; with no host connected, it's dropped.
+// The console's side of a serial link, the USB port's or a network client's.  What it writes waits
+// in a buffer and goes out as the other end takes it, so a long reply never holds up the loop;
+// with nobody there, it's dropped.
 #pragma once
 
 #include <Arduino.h>
@@ -10,6 +11,11 @@ class Port : public Stream {
 
   // Sends what the host has room for.  Call it every loop.
   void pump();
+  // Takes up to `n` bytes of what's buffered instead of sending them, as the web page's console
+  // does; returns how many.
+  size_t take(uint8_t* out, size_t n);
+  // Drops what's buffered, for a new client.
+  void clear() { start_ = len_ = 0; }
 
   int printf(const char* fmt, ...) __attribute__((format(printf, 2, 3)));
 

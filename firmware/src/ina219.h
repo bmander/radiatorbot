@@ -10,9 +10,9 @@ class Ina219 {
 
   explicit Ina219(uint8_t address) : address_(address) {}
 
-  // Starts I2C and sets the chip converting: +-320 mV across the shunt (+-3.2 A), 32 V on the
-  // bus, each 12 bits in 532 us, continuously.  False if it doesn't answer.
-  bool begin();
+  // Starts I2C on `sda` and `scl` and sets the chip converting: +-320 mV across the shunt
+  // (+-3.2 A), 32 V on the bus, each 12 bits in 532 us, continuously.  False if it doesn't answer.
+  bool begin(int sda, int scl);
 
   // The latest conversions.  False, leaving `out` alone, if the chip doesn't answer.
   bool amps(float& out);

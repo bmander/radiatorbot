@@ -1,4 +1,4 @@
-// The settings in flash: the R4's data flash, through its EEPROM library.
+// The settings in flash: the ESP32's NVS partition, through its Preferences library.
 #pragma once
 
 #include "settings.h"
