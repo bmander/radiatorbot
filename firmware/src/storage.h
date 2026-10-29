@@ -9,5 +9,8 @@ namespace storage {
 void load(valve::Settings& s);
 // Writes every field.
 bool save(const valve::Settings& s);
+// Erases everything the bot keeps in flash, the settings and the Wi-Fi network both: the factory
+// reset.
+bool erase();
 
 }  // namespace storage

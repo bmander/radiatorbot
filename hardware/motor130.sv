@@ -5,9 +5,8 @@
 // rising up std.z behind it to the plastic end bell, the shaft and its bushing's boss pointing
 // down, the end bell's bearing boss up.  The can is round with two flats; the end bell follows
 // its section, and its two terminal tabs are left out.  The sizes are calipered off the motor in
-// the pile.  The electrical figures, marked "~", are estimates and differ from winding to
-// winding: measure the stall current at the supply voltage and the free speed, and the rest
-// follows.
+// the pile, and so are the electrical figures, measured on the bench (see below): another
+// winding's differ, so measure a new motor's the same way and the rest follows.
 
 unit mm
 use std
@@ -30,12 +29,17 @@ motor130_dims := {
   back_h: 1.92mm,
 }
 
-// ~ electrical: a servo's 130 at 6 V.  The gearbox reads the stall torque and the free speed;
-// the stall current is what the current sensing trips below.
-motor130_volts := 6V
-motor130_free := 12000rpm       // ~ no-load speed
-motor130_stall_torque := 0.006Nm   // ~ 6 mN·m
-motor130_stall_amps := 1.8A     // ~
+// Electrical, at the 9 V the firmware gives it (`motor_volts`).  The gearbox reads the stall
+// torque and the free speed; the stall current is what the current sensing trips below.
+// Measured with firmware/tools/bench.html: free-running from 30% to 100% of 9 V, the current
+// from the INA219 and the speed from the microphone (its fundamental, matched once by ear against
+// a tone: this motor sounds mostly its even multiples), the winding's resistance from a stall.
+// It fits V = I R + ke w with ke = kt = 6.06 mN·m/A, I0 = 61 mA and R = 7.5 Ω (the driver's
+// included), 173 rpm rms over nine points; the stall current and torque follow from R.
+motor130_volts := 9V
+motor130_free := 13476rpm       // no-load speed
+motor130_stall_torque := 0.0069Nm  // 6.9 mN·m: kt (V / R - I0)
+motor130_stall_amps := 1.2A     // V / R
 
 // The can's section grown by `grow` all round (negative shrinks it), from z0 to z1: the can itself
 // at no growth, and the pocket and outside of a cradle that holds one.

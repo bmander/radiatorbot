@@ -12,7 +12,7 @@ Tailscale, from anywhere.
 - `src/` — the ESP32 side: `main.cpp` (the control task and the loop), `tb6612.cpp` (the
   H-bridge and the motor's current), `ina219.cpp` (the current monitor, over I2C), `console.cpp`
   (the console and the log), `port.cpp` (the console's buffered side of a serial link),
-  `storage.cpp` (settings in flash), `wifi.cpp` (the network, kept in flash), `remote.cpp` (the
+  `storage.cpp` (settings in flash), `wlan.cpp` (the network, kept in flash), `remote.cpp` (the
   telnet console and the web page), `pins.h`.
 - `lib/valve/` — everything that doesn't touch hardware, tested on the host:
   - `controller` — the state machine that drives the valve to an end and knows where it is;
@@ -47,14 +47,31 @@ starts.
 
 ## Getting it on the network
 
-Plug in USB-C, open the console (`pio device monitor -d firmware`), and give it your network:
+With no network kept, the bot opens one of its own, **radiatorbot-setup**, an open network. Join
+it from a phone and the setup page opens by itself (as a hotel's Wi-Fi sign-in does; if it
+doesn't, open `http://192.168.4.1/`). It lists the networks in range, strongest first: choose
+yours, give its password, and **Join**. It needs a 2.4 GHz network: the ESP32 has no 5 GHz.
+
+- The bot tries the network before it keeps it, so a mistyped password leaves it as it was: the
+  page says so, and you try again.
+- Once it has joined, the page gives its address and `radiatorbot.local`, and the setup network
+  closes a minute later. Joining moves the bot to your network's channel, and the phone may drop
+  off the setup network as it does: rejoin your own network and open
+  `http://radiatorbot.local/`.
+- On the setup network the page is the setup page alone: the valve's page, its commands and
+  telnet answer only on your own network.
+- `wifi setup` at the console opens it again (to move the bot to another network), and
+  `wifi setup off` closes it; `wifi forget` forgets the network and opens it.
+
+Or give it your network at the console, over USB-C (`pio device monitor -d firmware`):
 
 ```
 wifi ssid My Home Network
 wifi pass correct horse battery staple
 ```
 
-Both are kept in flash, and the bot rejoins on every boot. It logs the link as it comes up:
+Either way it's kept in flash, and the bot rejoins on every boot. It logs the link as it comes
+up:
 
 ```
 wifi: on My Home Network as 192.168.1.50 (radiatorbot.local), -58 dBm
@@ -111,19 +128,20 @@ wins; a home network on an unusual range, such as 192.168.47.x, avoids it. With
 
 ## What it does
 
-- **Thermostat.** Its contact goes between D2 (GPIO4) and ground, D2 pulled up to 3.3 V: closed
-  reads low. A state must hold for `stat_settle` (3 s) before the bot acts on it, so a bounce as
-  the mercury rolls, or a thermostat's chatter, doesn't run the motor. Closed (calling for heat)
-  → open; open (not calling) → closed. If your thermostat's contact opens on a call,
+- **Thermostat.** Its contact goes between pin 4 (GPIO4) and ground, pin 4 pulled up to 3.3 V:
+  closed reads low. A state must hold for `stat_settle` (3 s) before the bot acts on it, so a
+  bounce as the mercury rolls, or a thermostat's chatter, doesn't run the motor. Closed (calling
+  for heat) → open; open (not calling) → closed. If your thermostat's contact opens on a call,
   `set stat_invert 1`.
 - **The drive.** The TB6612's two bridges are tied together as one. The direction is held on
   AIN1/AIN2 and the PWM input is driven at 20 kHz, low for the off-time, so the bridge brakes
   through it. The PWM is scaled to the supply the INA219 reads, so the motor sees `motor_volts`
-  (6 V) on average at full `duty`, off a 9 V adapter or a 12 V one. Between moves STBY puts the
+  (9 V) on average at full `duty`, off a 9 V adapter or a 12 V one. Between moves STBY puts the
   driver to sleep.
 - **The current.** The INA219 reads the supply's current, which under the PWM is about the PWM's
   fraction times the motor's. The firmware divides it back out, so every current the console
-  shows, and the trips, are the motor's own: a 130 stalls near 1.8 A at 6 V whatever the adapter.
+  shows, and the trips, are the motor's own: the bot's 130 stalls at about 1.2 A at 9 V whatever
+  the adapter.
 - **A move.** The driver wakes braked and the supply is read; the duty ramps up over `ramp`. Past
   `blank` (the inrush is near stall), the current, low-passed over `filter`, must stay over the
   trip (`trip_open` or `trip_close`) for `hold` to mark the end. Then the motor brakes, the driver
@@ -171,7 +189,8 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 | `wifi` | how the link is doing: the network, the bot's address and the signal |
 | `wifi ssid NAME` | join the network NAME, kept in flash (it may have spaces) |
 | `wifi pass PASSWORD` | its password, kept in flash, and join it |
-| `wifi forget` | leave the network and forget it |
+| `wifi forget` | leave the network and forget it; the setup network opens |
+| `wifi setup` / `wifi setup off` | open the setup network, radiatorbot-setup, or close it |
 | `reboot` | |
 
 ## Settings
@@ -185,7 +204,7 @@ open: reached in 23.4 s; running 0.42 A, peak 1.05 A, trip 1.00 A
 | `filter` | 10 ms | the current's low-pass time constant |
 | `timeout` | 60 s | the longest a move may take |
 | `duty` | 1.0 | the motor's speed, 0.1–1 of `motor_volts` |
-| `motor_volts` | 6 V | the motor's rating: the PWM gives it this on average at full `duty` |
+| `motor_volts` | 9 V | the motor's voltage: the PWM gives it this on average at full `duty` |
 | `ramp` | 80 ms | the soft start |
 | `backoff_open`, `backoff_close` | 0 ms | run back after reaching that end |
 | `rest` | 500 ms | the motor's rest between moves |
@@ -211,7 +230,7 @@ them with the valve in hand, well under the stall.
    closing torque seats the valve without straining the train, e.g. `set trip_close 0.9`. Then
    close and open a few times and check each move ends `reached`, in about the same time.
    - If moves end early, mid-travel, the trip is too low for a stiff stretch of the stem.
-   - A stall reads about 1.8 A. Nothing but the trip stops it, so keep the trips well under.
+   - A stall reads about 1.2 A. Nothing but the trip stops it, so keep the trips well under.
 4. **The thermostat.** `auto`, and turn the thermostat up and down. `status` shows its contact
    and the settled state; if they're backwards, `set stat_invert 1`.
 5. `save`.
@@ -220,7 +239,7 @@ them with the valve in hand, well under the stall.
 
 - The thermostat is a dry contact wired to the bot alone: an old two-wire heating thermostat,
   mercury switch or bimetal, taken off the wall or out of salvage. One still wired to a boiler's
-  24 VAC mustn't reach D2 (`hardware/DESIGN.md`, *The thermostat*).
+  24 VAC mustn't reach pin 4 (`hardware/DESIGN.md`, *The thermostat*).
 - Calling for heat means fully open and not calling means fully closed: no part-open positions.
 - Which way the motor turns the handle depends on its leads, hence `motor_invert`.
 - The motor current is worked out from the supply's, which holds while the motor's current runs on

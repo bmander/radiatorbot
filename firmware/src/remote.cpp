@@ -7,7 +7,7 @@
 #include <string.h>
 
 #include "pins.h"
-#include "wifi.h"
+#include "wlan.h"
 
 using valve::End;
 using valve::Mode;
@@ -138,6 +138,141 @@ setInterval(refresh, 2000);
 </html>
 )html";
 
+// The setup page, on the setup network: the networks in range, strongest first, a password, and
+// how the try goes.  Joining moves the bot to its network's channel, and the phone may drop off
+// the setup network as it does, so the page says where to look either way.
+const char kSetupPage[] = R"html(<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Radiator setup</title>
+<style>
+:root { --bg: #f6f5f2; --card: #fff; --ink: #1d1d1b; --dim: #6b6a66; --line: #dddbd5;
+        --warm: #c2410c; --ok: #2f6d3a; --bad: #b91c1c; }
+@media (prefers-color-scheme: dark) {
+  :root { --bg: #161615; --card: #22221f; --ink: #ecebe6; --dim: #9c9a93; --line: #3a3935;
+          --warm: #fb923c; --ok: #6fbf7b; --bad: #f87171; }
+}
+* { box-sizing: border-box; }
+body { margin: 0; padding: 16px; background: var(--bg); color: var(--ink);
+       font: 16px/1.4 system-ui, -apple-system, sans-serif; }
+main { max-width: 28rem; margin: 0 auto; }
+h1 { font-size: 1.1rem; margin: 0 0 4px; }
+p { margin: 0 0 12px; color: var(--dim); }
+.card { background: var(--card); border: 1px solid var(--line); border-radius: 12px;
+        padding: 16px; margin-bottom: 12px; }
+#nets button { display: flex; justify-content: space-between; width: 100%; text-align: left;
+               margin-bottom: 6px; font-weight: 400; }
+#nets button.chosen { border-color: var(--warm); }
+.dim { color: var(--dim); }
+label { display: block; color: var(--dim); font-size: 0.9rem; margin: 10px 0 4px; }
+input { width: 100%; font: inherit; padding: 10px; border-radius: 8px;
+        border: 1px solid var(--line); background: var(--bg); color: var(--ink); }
+button { font: inherit; font-weight: 600; padding: 12px; border-radius: 10px;
+         border: 1px solid var(--line); background: var(--card); color: var(--ink); }
+button.go { width: 100%; margin-top: 14px; background: var(--warm); border-color: var(--warm);
+            color: #fff; }
+.row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+.row button { padding: 6px 12px; font-weight: 400; }
+#said { margin-top: 12px; }
+#said.ok { color: var(--ok); } #said.bad { color: var(--bad); }
+a { color: var(--warm); }
+</style>
+</head>
+<body>
+<main>
+<h1>Radiator setup</h1>
+<p>Choose the Wi-Fi network the radiator should join. It needs a 2.4 GHz network.</p>
+<div class="card">
+  <div class="row"><span class="dim">Networks in range</span><button id="rescan">Look again</button></div>
+  <div id="nets" class="dim">Looking&hellip;</div>
+</div>
+<form class="card" id="join">
+  <label for="ssid">Network</label>
+  <input id="ssid" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" maxlength="32">
+  <label for="pass">Password</label>
+  <input id="pass" type="password" autocomplete="off" autocapitalize="off" maxlength="63">
+  <button class="go">Join</button>
+  <div id="said"></div>
+</form>
+</main>
+<script>
+const $ = (id) => document.getElementById(id);
+const say = (html, cls) => { $("said").innerHTML = html; $("said").className = cls || ""; };
+const esc = (s) => s.replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]);
+const post = (path, body) => fetch(path, { method: "POST", body,
+  headers: { "X-Radiatorbot": "1", "Content-Type": "application/x-www-form-urlencoded" } });
+
+async function networks() {
+  let list;
+  try { list = await (await fetch("/setup/networks")).json(); } catch (e) { setTimeout(networks, 2000); return; }
+  if (list.scanning) { $("nets").textContent = "Looking…"; setTimeout(networks, 1000); return; }
+  if (!list.networks.length) { $("nets").textContent = "None heard. Look again, or type its name below."; return; }
+  $("nets").textContent = "";
+  for (const n of list.networks) {
+    const b = document.createElement("button");
+    b.type = "button";
+    const bars = n.rssi > -60 ? "▂▄▆█" : n.rssi > -70 ? "▂▄▆" : n.rssi > -80 ? "▂▄" : "▂";
+    b.innerHTML = "<span>" + esc(n.ssid) + (n.open ? " <span class=dim>(open)</span>" : "") + "</span><span class=dim>" + bars + "</span>";
+    b.onclick = () => {
+      document.querySelectorAll("#nets button").forEach((x) => x.classList.remove("chosen"));
+      b.classList.add("chosen");
+      $("ssid").value = n.ssid;
+      $("pass").value = "";
+      if (n.open) $("join").requestSubmit(); else $("pass").focus();
+    };
+    $("nets").appendChild(b);
+  }
+}
+
+async function follow() {
+  let t;
+  try { t = await (await fetch("/setup/try")).json(); }
+  catch (e) {
+    say("Lost touch with the radiator: your phone may have left this network as the radiator moved " +
+        "to join yours. Rejoin <b>radiatorbot-setup</b> to see how it went, or rejoin your own " +
+        "network and open <a href=\"http://radiatorbot.local/\">radiatorbot.local</a>.");
+    setTimeout(follow, 2000);
+    return;
+  }
+  const name = "<b>" + esc(t.ssid) + "</b>";
+  if (t.state === "joining") {
+    say("Joining " + name + "&hellip;");
+    setTimeout(follow, 1000);
+  } else if (t.state === "joined") {
+    say("Joined " + name + " as " + t.ip + ". This setup network closes in a minute: rejoin " + name +
+        ", then open <a href=\"http://radiatorbot.local/\">http://radiatorbot.local/</a> (or " +
+        "<a href=\"http://" + t.ip + "/\">http://" + t.ip + "/</a>).", "ok");
+  } else if (t.state === "failed") {
+    say("Couldn't join " + name + ". Check the password, and that it's a 2.4 GHz network.", "bad");
+  }
+}
+
+$("join").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const ssid = $("ssid").value, pass = $("pass").value;
+  if (!ssid) { say("Choose a network, or type its name.", "bad"); return; }
+  if (pass && (pass.length < 8 || pass.length > 63)) { say("A Wi-Fi password is 8 to 63 characters.", "bad"); return; }
+  say("Joining <b>" + esc(ssid) + "</b>&hellip;");
+  try {
+    const r = await post("/setup/join", new URLSearchParams({ ssid, pass }).toString());
+    if (!r.ok) { say(esc(await r.text()), "bad"); return; }
+  } catch (e) { /* the bot may already be changing channel: follow it */ }
+  setTimeout(follow, 1000);
+});
+$("rescan").onclick = async () => {
+  $("nets").textContent = "Looking…";
+  try { await post("/setup/rescan", ""); } catch (e) {}
+  setTimeout(networks, 1500);
+};
+networks();
+follow();
+</script>
+</body>
+</html>
+)html";
+
 // The value of header `name` in `head`, which ends at its blank line, or null; matched without
 // case, as HTTP's names are.
 const char* header(const char* head, const char* name) {
@@ -162,6 +297,53 @@ __attribute__((format(printf, 4, 5))) void append(char* buf, size_t size, int& n
   int more = vsnprintf(buf + n, size - n, fmt, args);
   va_end(args);
   n = more >= 0 && static_cast<size_t>(n + more) < size ? n + more : -1;
+}
+
+// Appends `s` as a JSON string, quoted: quotes, backslashes and control characters escaped, the
+// rest (UTF-8 and all) as it is.
+void appendString(char* buf, size_t size, int& n, const char* s) {
+  append(buf, size, n, "\"");
+  for (; *s != '\0'; s++) {
+    unsigned char c = static_cast<unsigned char>(*s);
+    if (c == '"' || c == '\\') {
+      append(buf, size, n, "\\%c", c);
+    } else if (c < 0x20) {
+      append(buf, size, n, "\\u%04x", c);
+    } else {
+      append(buf, size, n, "%c", c);
+    }
+  }
+  append(buf, size, n, "\"");
+}
+
+// Field `key` of a form's urlencoded body, decoded into `out`: false if it isn't there, or won't
+// fit.
+bool formField(const char* body, const char* key, char* out, size_t size) {
+  size_t k = strlen(key);
+  for (const char* at = body; at != nullptr && *at != '\0';) {
+    const char* end = strchr(at, '&');
+    if (end == nullptr) end = at + strlen(at);
+    if (strncmp(at, key, k) == 0 && at[k] == '=') {
+      size_t n = 0;
+      for (const char* p = at + k + 1; p < end; p++) {
+        char c = *p;
+        if (c == '+') {
+          c = ' ';
+        } else if (c == '%' && p + 2 < end && isxdigit(static_cast<unsigned char>(p[1])) &&
+                   isxdigit(static_cast<unsigned char>(p[2]))) {
+          char hex[3] = {p[1], p[2], '\0'};
+          c = static_cast<char>(strtol(hex, nullptr, 16));
+          p += 2;
+        }
+        if (n + 1 >= size) return false;
+        out[n++] = c;
+      }
+      out[n] = '\0';
+      return true;
+    }
+    at = *end == '&' ? end + 1 : nullptr;
+  }
+  return false;
 }
 
 }  // namespace
@@ -237,7 +419,7 @@ size_t Link::write(const uint8_t* buf, size_t n) {
 
 void Remote::poll(uint32_t now) {
   if (!started_) {
-    if (!wifi::connected()) return;
+    if (!wifi::connected() && !wifi::inSetup()) return;
     telnet_server_.begin();
     telnet_server_.setNoDelay(true);
     web_server_.begin();
@@ -251,7 +433,9 @@ void Remote::pollTelnet(uint32_t now) {
   if (telnet_server_.hasClient()) {
     // a new client takes the console from the last
     NetworkClient client = telnet_server_.accept();
-    if (client) {
+    if (client && wifi::viaSetup(client.localIP())) {
+      client.stop();  // the setup network is open: no console on it
+    } else if (client) {
       telnet_.stop();
       telnet_.attach(client);
       telnet_port_.clear();
@@ -317,7 +501,10 @@ void Remote::respond() {
   char* query = strchr(path, '?');
   if (query != nullptr) *query = '\0';
 
-  if (strcmp(method, "GET") == 0 && (strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0)) {
+  if (wifi::viaSetup(web_.localIP())) {
+    respondSetup(method, path, body);
+  } else if (strcmp(method, "GET") == 0 &&
+             (strcmp(path, "/") == 0 || strcmp(path, "/index.html") == 0)) {
     send("200 OK", "text/html; charset=utf-8", kPage, sizeof kPage - 1);
   } else if (strcmp(method, "GET") == 0 && strcmp(path, "/status") == 0) {
     sendStatus();
@@ -330,6 +517,90 @@ void Remote::respond() {
   } else {
     sendText("404 Not Found", "not here\n");
   }
+}
+
+void Remote::respondSetup(const char* method, const char* path, const char* body) {
+  bool get = strcmp(method, "GET") == 0, post = strcmp(method, "POST") == 0;
+  if (post && header(request_, "X-Radiatorbot") == nullptr) {
+    sendText("403 Forbidden", "commands come from the bot's own page\n");
+  } else if (get && strcmp(path, "/") == 0) {
+    send("200 OK", "text/html; charset=utf-8", kSetupPage, sizeof kSetupPage - 1);
+  } else if (get && strcmp(path, "/setup/networks") == 0) {
+    sendNetworks();
+  } else if (get && strcmp(path, "/setup/try") == 0) {
+    sendTrial();
+  } else if (post && strcmp(path, "/setup/rescan") == 0) {
+    wifi::rescan();
+    sendText("200 OK", "looking\n");
+  } else if (post && strcmp(path, "/setup/join") == 0) {
+    char ssid[33], pass[64];
+    if (!formField(body, "ssid", ssid, sizeof ssid) || !formField(body, "pass", pass, sizeof pass) ||
+        !wifi::tryJoin(ssid, pass)) {
+      sendText("400 Bad Request",
+               "a network's name is 1 to 32 characters, its password 8 to 63, or none\n");
+    } else {
+      sendText("200 OK", "trying\n");
+    }
+  } else if (get) {
+    // A phone checking for the internet asks for its own page (Apple's hotspot-detect.html,
+    // Android's generate_204, ...) by a name the setup network's DNS gave the bot's address: sent
+    // here instead, it takes the network for a captive portal and opens the setup page.
+    char to[40];
+    snprintf(to, sizeof to, "http://%s/", wifi::setupAddress().toString().c_str());
+    sendRedirect(to);
+  } else {
+    sendText("404 Not Found", "not here\n");
+  }
+}
+
+void Remote::sendNetworks() {
+  static wifi::Network nets[20];
+  static char json[1536];
+  int count = wifi::networks(nets, 20);
+  int n = 0;
+  if (count < 0) {
+    append(json, sizeof json, n, "{\"scanning\":true}\n");
+  } else {
+    append(json, sizeof json, n, "{\"scanning\":false,\"networks\":[");
+    for (int i = 0; i < count; i++) {
+      int before = n;
+      append(json, sizeof json, n, "%s{\"ssid\":", i ? "," : "");
+      appendString(json, sizeof json, n, nets[i].ssid);
+      append(json, sizeof json, n, ",\"rssi\":%d,\"open\":%s}", nets[i].rssi,
+             nets[i].open ? "true" : "false");
+      // the weakest past the room are left off, and the list kept whole
+      if (n < 0 || static_cast<size_t>(n) + 4 > sizeof json) {
+        n = before;
+        break;
+      }
+    }
+    append(json, sizeof json, n, "]}\n");
+  }
+  send("200 OK", "application/json", json, n);
+}
+
+void Remote::sendTrial() {
+  static const char* const kStates[] = {"none", "joining", "joined", "failed"};
+  char json[160];
+  int n = 0;
+  append(json, sizeof json, n, "{\"state\":\"%s\",\"ssid\":",
+         kStates[static_cast<int>(wifi::trial())]);
+  appendString(json, sizeof json, n, wifi::trialSsid());
+  append(json, sizeof json, n, ",\"ip\":\"%s\"}\n", WiFi.localIP().toString().c_str());
+  if (n < 0) {
+    sendText("500 Internal Server Error", "too long\n");
+    return;
+  }
+  send("200 OK", "application/json", json, n);
+}
+
+void Remote::sendRedirect(const char* location) {
+  char head[192];
+  int n = snprintf(head, sizeof head,
+                   "HTTP/1.1 302 Found\r\nLocation: %s\r\nContent-Length: 0\r\n"
+                   "Cache-Control: no-store\r\nConnection: close\r\n\r\n",
+                   location);
+  web_.write(reinterpret_cast<const uint8_t*>(head), n);
 }
 
 void Remote::sendStatus() {

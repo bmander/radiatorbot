@@ -1,8 +1,8 @@
 // The Adafruit TB6612 breakout, its two H-bridges in parallel on one motor, its PWM input at
 // 20 kHz, and the INA219 in its supply, which says the motor's current.
 //
-// The TB6612 is two bridges of 1.2 A each.  The 130 stalls near 1.8 A, and every move ends in a
-// stall, so the shield ties the bridges together, AIN1 to BIN1, AIN2 to BIN2, PWMA to PWMB and
+// The TB6612 is two bridges of 1.2 A each.  The 130 stalls at 1.2 A at 9 V, and every move ends
+// in a stall, so the shield ties the bridges together, AIN1 to BIN1, AIN2 to BIN2, PWMA to PWMB and
 // each output to its twin: one bridge of twice the current, driven by three pins.
 //
 // IN1 high and IN2 low drives one way with PWM high, the other way with them swapped; PWM low, or
@@ -25,7 +25,7 @@ class Tb6612 : public valve::Motor {
  public:
   static constexpr uint32_t kPwmHz = 20000;  // above hearing
   static constexpr uint8_t kPwmBits = 10;    // 80 MHz / 20 kHz leaves 12; 10 is plenty
-  static constexpr float kMinVolts = 6.5f;   // under this the motor can't have its 6 V
+  static constexpr float kMinVolts = 6.5f;   // under this the adapter's unplugged or failing
   static constexpr float kMaxVolts = 13.5f;  // the TB6612's motor supply, at most
   static constexpr float kMinPwm = 0.02f;    // under this the motor's current isn't worked out
   static constexpr uint32_t kVoltsMs = 20;   // how often a move reads the supply's voltage

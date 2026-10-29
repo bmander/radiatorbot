@@ -92,12 +92,15 @@ The socket reduces 8⁄3 where the conjugate wheel it replaced stepped up 1.5. S
 16 → 64 stage fewer, a compound fewer, and stands 5.5 mm lower.
 
 That is 384:1 from the motor to A and **1024:1 from the motor to the handle**. The motor's
-figures are estimates for a servo's 130 at 6 V (`motor130.sv`): 12 000 rpm free and 6 mN·m
-stall. With six printed meshes at about 0.9 each, and the handle in the socket a direct drive,
-that gives:
+figures are measured on the bench at the 9 V the firmware gives it (`motor130.sv`): 13 500 rpm
+free and 6.9 mN·m stall, at 1.2 A. With six printed meshes at about 0.9 each, and the handle in
+the socket a direct drive, that gives:
 
-- **11.7 rpm free at the handle**, so three and a half turns of travel take 20–30 s under load;
-- **3.27 N·m at the handle at stall**, 1.36 N·m at A.
+- **13.2 rpm free at the handle**, so three and a half turns of travel take 20–30 s under load;
+- **3.76 N·m at the handle at stall**, 1.57 N·m at A.
+
+At 6 V the same motor would give 8 700 rpm and 4.7 mN·m: 2.6 N·m at the handle, too little
+margin. Its winding is 7.5 Ω, so at 9 V it stalls at 1.2 A, well inside the driver.
 
 With one mesh fewer, the motor now turns the other way for the same handle turn. The firmware
 sets which way is open when it's commissioned (`motor_invert`, in [firmware/README.md](../firmware/README.md)).
@@ -107,8 +110,9 @@ sets which way is open when it's commissioned (`motor_invert`, in [firmware/READ
 for example `solventc hardware/radiatorbot.sv --where handle_stall_torque`.
 
 The current trip sets the torque that actually seats the valve. Set it with the valve in hand,
-well under stall. Measure the motors in the pile (free speed and stall current at the supply
-voltage), put them in `motor130.sv`, and the figures and claims follow.
+well under stall. Another motor's figures differ: measure it on the bench with
+[firmware/tools/bench.html](../firmware/tools/bench.html) (its speed against its voltage, heard,
+and its stall), put them in `motor130.sv`, and the figures and claims follow.
 
 ## The electronics
 
@@ -133,11 +137,13 @@ modelled in `boards.sv`, from their makers' layouts, and placed in the bay in `r
   - Its USB-C, through a CH340C serial bridge, gives programming and the console, and powers the
     board alone (not the motor).
   - **It's 3.3 V logic, and no pin takes 5 V.** Everything on the shield runs off its 3V3.
-  - Its I2C pins, GPIO21 and GPIO22, aren't on the analog socket as an Uno's are. They're on its
-    Qwiic socket, whose mouth faces the bay's end wall 3 mm away, and on the D8–SCL socket, off
-    the shield's grid. The ESP32 puts I2C on any two pins that drive, so the INA219 is on the
-    analog socket's first two, GPIO33 and GPIO32. Its A4 and A5 places, GPIO39 and GPIO36, only
-    read.
+  - Its silkscreen labels its digital pins by their GPIO (4, 13, 25…) and its analog ones by
+    their ADC channel, not by the Uno's places: its analog socket reads A5, A4, A7, A6, A3, A0
+    (GPIO33, 32, 35, 34, 39, 36), and the last four are input only.
+  - Its I2C pins, GPIO21 and GPIO22 (labelled SDA and SCL), aren't on the analog socket as an
+    Uno's are. They're on its Qwiic socket, whose mouth faces the bay's end wall 3 mm away, and on
+    the SCL–26 socket, off the shield's grid. The ESP32 puts I2C on any two pins that drive, so
+    the INA219 is on the analog socket's first two, A5 and A4 (GPIO33 and GPIO32).
   - The linear 5 V regulator turns the adapter's extra volts to heat: about 0.4 W at 9 V with
     the Wi-Fi up, twice that at 12 V. 9 V is the adapter to use.
   - The Uno R4 Minima the bot had before had no Wi-Fi.
@@ -145,13 +151,13 @@ modelled in `boards.sv`, from their makers' layouts, and placed in the bay in `r
   a 19.05 × 26.67 mm board on two rows of pins 0.6 in apart, 10 of supply and logic and 6 of the
   outputs.
   - **Its two bridges are tied together**, input to input and output to output, as one bridge of
-    twice the current. Each is rated 1.2 A, and every move ends in a stall: the 130 stalls near
-    1.8 A at 6 V. Paralleled, the chip's rated about 2 A continuous, which is what Pololu
+    twice the current. Each is rated 1.2 A, and every move ends in a stall: the 130 stalls at
+    1.2 A at 9 V. Paralleled, the chip's rated about 2 A continuous, which is what Pololu
     recommends for a motor that stalls. The three logic pins drive both bridges at once.
-  - Its motor supply takes 4.5–13.5 V (15 V at most), so the adapter stays at 12 V or under. Off
-    the 9 V adapter, the 130 (rated for 6 V) would be overdriven, so the firmware scales the PWM
-    to the supply the INA219 reads: two thirds at 9 V, half at 12 V. The motor sees 6 V on average
-    whatever the adapter, and its stall current is 6 V's.
+  - Its motor supply takes 4.5–13.5 V (15 V at most), so the adapter stays at 12 V or under. The
+    firmware scales the PWM to the supply the INA219 reads, so the motor sees 9 V on average
+    (`motor_volts`): all of a 9 V adapter, three quarters of a 12 V one. Its speed and stall
+    current are 9 V's whatever the adapter, but for a 9 V adapter's sag under load.
   - **It has no current limit**, only a thermal shutdown. The firmware's trip is all that stops
     a stall, so it takes trips of 2 A at most: a trip over the stall would never trip, and the
     motor would stall on to the move's timeout.
@@ -170,7 +176,8 @@ modelled in `boards.sv`, from their makers' layouts, and placed in the bay in `r
   - A 12-bit conversion takes 532 µs, which averages over ten periods of the 20 kHz PWM.
   - It carries the driver's whole draw: the motor's current while the bridge drives, plus the
     chip's few mA. Under the PWM that reads about the PWM's fraction times the motor's current
-    (a stall at 9 V reads about 1.2 A), and the firmware divides the fraction back out. The
+    (a stall reads about 1.2 A off a 9 V adapter, 0.9 A off a 12 V one), and the firmware divides
+    the fraction back out. The
     currents the console shows, and the trips, are the motor's own.
   - It runs off the RedBoard's 3V3, so its 10 kΩ pull-ups hold I2C at 3.3 V. Two 4.7 kΩ on the
     shield stiffen them for 400 kHz.
@@ -182,9 +189,9 @@ a bimetal snap switch, the kind on the wall of a house built in the 1960s or 70s
 architectural salvage. It's a dry contact that closes on a call for heat. It makes no voltage of
 its own: in the house it came from, the boiler's 24 V transformer or a standing pilot's thermopile
 drove its loop. Here the RedBoard drives it.
-- Its two wires go to a screw terminal on the shield: one to ground, one to D2 (GPIO4) through
-  1 kΩ. A 4.7 kΩ resistor pulls D2 up to 3.3 V and a 100 nF capacitor holds it to ground. The
-  contact closed reads low.
+- Its two wires go to a screw terminal on the shield: one to ground, one to pin 4 (GPIO4)
+  through 1 kΩ. A 4.7 kΩ resistor pulls it up to 3.3 V and a 100 nF capacitor holds it to
+  ground. The contact closed reads low.
   - The resistors and the capacitor are for the wire's length: they keep noise and a static spark
     off the pin. The 0.7 mA through the contact is plenty for mercury, which doesn't tarnish.
   - The firmware acts on a state only once it has held for 3 s, so a bounce as the mercury rolls,
@@ -197,8 +204,8 @@ drove its loop. Here the RedBoard drives it.
 - Use a low-voltage (24 V or millivolt) thermostat. A line-voltage one, for electric baseboard
   heat, is a heavier snap switch labelled 120 or 240 V. It would work as a contact, but it's the
   wrong part.
-- **Don't wire a thermostat that also runs a boiler** to D2: its loop carries the boiler's 24 VAC.
-  Sharing one would need an optocoupler between the two.
+- **Don't wire a thermostat that also runs a boiler** to pin 4: its loop carries the boiler's
+  24 VAC. Sharing one would need an optocoupler between the two.
 - From the phone page or the console, the bot can be told to open or close regardless, and
   handed back to the thermostat after. It can't change the thermostat's setting.
 
@@ -206,16 +213,18 @@ drove its loop. Here the RedBoard drives it.
 RedBoard's barrel jack: the Mean Well GST18U09-P1J (9 V, 2 A, US wall plug, its P1J plug that size;
 [$14.10 at Jameco](https://www.jameco.com/z/GST18U09-P1J-MEAN-WELL-18-Watt-9V-2A-AC-DC-High-Reliability-Industrial-Wall-Adapter-2-1mm-Plug-Level-VI_2225609.html),
 and through Mean Well's other distributors). Any regulated 9–12 V adapter with that plug and
-1.5 A or more serves; 9 V keeps the RedBoard's regulator cool.
-- At a stall the motor draws about 1.8 A at 6 V, so the adapter carries about 1.2 A at 9 V, and
-  the RedBoard (its Wi-Fi up) and the INA219 a hundred mA or so more. The RedBoard's Schottky is
-  rated 3 A.
+1.5 A or more serves; 9 V keeps the RedBoard's regulator cool. A 12 V one holds the motor's 9 V
+steady under load, but warms the regulator.
+- At a stall the motor draws about 1.2 A at 9 V, so the adapter carries about 1.2 A at 9 V (0.9 A
+  at 12 V), and the RedBoard (its Wi-Fi up) and the INA219 a hundred mA or so more. The
+  RedBoard's Schottky is rated 3 A.
 - A 1 A adapter, like Adafruit's 9 V (#63), runs the motor but sits at its limit at each stall.
 - A USB cable in the RedBoard powers it alone, for programming and the console. The motor waits
   for the adapter; until it's in, every move is a motor fault.
 
-**Wiring**, all on the shield (each board's pins are listed in `boards.sv`; the RedBoard's places
-are named for the Uno's, the ESP32 GPIO each carries in brackets). The same as a schematic:
+**Wiring**, all on the shield (each board's pins are listed in `boards.sv`; the RedBoard's pins
+are named as its silkscreen labels them, the ESP32 GPIO in brackets where the label isn't it).
+The same as a schematic:
 
 ![The shield's wiring: the RedBoard's pins, the INA219, the TB6612 and the two terminals](wiring.svg)
 
@@ -223,15 +232,15 @@ are named for the Uno's, the ESP32 GPIO each carries in brackets). The same as a
 |---|---|---|
 | RedBoard VIN | INA219 VIN+ | the adapter's 9 V, through the RedBoard's Schottky |
 | INA219 VIN− | TB6612 VM | the driver's supply, through the shunt |
-| RedBoard 3V3 | INA219 VCC, TB6612 VCC; a 4.7 kΩ each to D2, A0 and A1 | the 3.3 V logic; nothing on the shield sees 5 V |
-| RedBoard GND | TB6612 GND (all three), INA219 GND, the thermostat terminal; a 100 nF to D2; a 10 kΩ to D7 | one ground |
-| RedBoard A0 (GPIO33) | INA219 SDA | I2C at 400 kHz; address 0x40 |
-| RedBoard A1 (GPIO32) | INA219 SCL | |
-| RedBoard D3 (GPIO13) | TB6612 STBY | low sleeps the driver |
-| RedBoard D5 (GPIO16) | TB6612 AIN1 and BIN1 | the direction |
-| RedBoard D6 (GPIO17) | TB6612 AIN2 and BIN2 | |
-| RedBoard D7 (GPIO25) | TB6612 PWMA and PWMB | the 20 kHz PWM, pulled down |
-| RedBoard D2 (GPIO4) | the thermostat terminal, through 1 kΩ | the contact to ground |
+| RedBoard 3.3V | INA219 VCC, TB6612 VCC; a 4.7 kΩ each to 4, A5 and A4 | the 3.3 V logic; nothing on the shield sees 5 V |
+| RedBoard GND | TB6612 GND (all three), INA219 GND, the thermostat terminal; a 100 nF to 4; a 10 kΩ to 25 | one ground |
+| RedBoard A5 (GPIO33) | INA219 SDA | I2C at 400 kHz; address 0x40 |
+| RedBoard A4 (GPIO32) | INA219 SCL | |
+| RedBoard 13 | TB6612 STBY | low sleeps the driver |
+| RedBoard 16 | TB6612 AIN1 and BIN1 | the direction |
+| RedBoard 17 | TB6612 AIN2 and BIN2 | |
+| RedBoard 25 | TB6612 PWMA and PWMB | the 20 kHz PWM, pulled down |
+| RedBoard 4 | the thermostat terminal, through 1 kΩ | the contact to ground |
 | TB6612 AO1 and BO1 | the motor terminal's first way | the bridges' outputs, tied |
 | TB6612 AO2 and BO2 | its second way | |
 
@@ -240,9 +249,9 @@ are named for the Uno's, the ESP32 GPIO each carries in brackets). The same as a
 
 | where | pins, in order |
 |---|---|
-| row 0, columns 2–9 | the RedBoard's power socket: LED, EN, 3V3, 3V3, 5V, GND, GND, VIN |
-| row 0, columns 11–16 | its analog socket: A0 (GPIO33), A1 (GPIO32), A2, A3, A4, A5 |
-| row 19, columns 9–16 | its D7–D0 socket: D7 (GPIO25), D6 (17), D5 (16), D4 (14), D3 (13), D2 (4), D1, D0 |
+| row 0, columns 2–9 | the RedBoard's power socket: LED, REF, RST, 3.3V, 5V, GND, GND, VIN |
+| row 0, columns 11–16 | its analog socket: A5 (GPIO33), A4 (GPIO32), A7, A6, A3, A0 |
+| row 19, columns 9–16 | its 25–RX socket: 25, 17, 16, 14, 13, 4, 1/TX-0, 3/RX-0 |
 | row 1, columns 7–12 | the TB6612's outputs: BO1, BO2, GND, GND, AO2, AO1 |
 | row 7, columns 5–14 | its logic: VM, VCC, GND, PWMB, BIN2, BIN1, STBY, AIN1, AIN2, PWMA |
 | column 9, rows 11–16 | the INA219: VIN+, VIN−, SDA, SCL, GND, VCC |
@@ -273,18 +282,18 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
   it in the +y half, so the bay is only as tall as the motor.
 - The RedBoard stands on four 6 mm posts on the lid, at its holes. Its edge stands 2 mm off the
   motor's cradle, its board 4.7 mm off the motor, and its far edge 1.8 mm off the bay's +y wall.
-  The post by its D8–SCL socket stands about 0.6 mm off its SCL pin's tail.
+  The post by its SCL–26 socket stands about 0.6 mm off its SCL pin's tail.
 - Its jack's mouth stands 1 mm in from the end wall, its USB-C's 2.6 mm. The end wall has a
   window on each, a plug's moulded body plus the print clearance: 11 mm square on the jack,
   12.5 × 7 mm on the USB-C.
 - Its microSD socket, by its end, stays empty: a card in it would stand into the end wall.
 - The shield is the perfboard, its 7 cm across the RedBoard, on male headers plugged into its
-  power, analog and D0–D7 sockets (8, 6 and 8 pins).
+  power, analog and 25–RX sockets (8, 6 and 8 pins).
   - It's cut down to 18 × 20 holes, two rows off each end, which no part used. Its rows then run
-    from the power header's (row 0) to the D0–D7 socket's (row 19), and it clears the motor's
+    from the power header's (row 0) to the 25–RX socket's (row 19), and it clears the motor's
     cradle by 5.8 mm.
   - Its first column is two holes out from the power header's first pin, and its first row is
-    that header's, so all three sockets fall on its grid. It misses the D8–SCL socket, which
+    that header's, so all three sockets fall on its grid. It misses the SCL–26 socket, which
     stands 0.06 in off the grid, and stands clear of the jack.
   - Its underside stands 12.6 mm over the RedBoard's, 2.5 mm over the tops of the sockets.
 - The TB6612 stands on both its rows: its outputs' row in the shield's row 1, columns 7–12, toward
@@ -409,7 +418,7 @@ gear and the socket as blanks while changing the layout.
 2. Stack the compounds on the rods (D2, B2, D1, B1) and fit the motor's pinion.
 3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
    from inside the bay.
-4. Make the shield. Plug the male headers into the RedBoard's power, analog and D0–D7 sockets, lay
+4. Make the shield. Plug the male headers into the RedBoard's power, analog and 25–RX sockets, lay
    the perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
    column two holes out from that header's first pin, its 7 cm across the board) and solder them,
    so they line up. Solder the TB6612 and the INA219 on their headers, the long ends down, at the

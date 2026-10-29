@@ -13,12 +13,13 @@
 #include <freertos/task.h>
 
 #include "app.h"
+#include "button.h"
 #include "console.h"
 #include "pins.h"
 #include "port.h"
 #include "remote.h"
 #include "storage.h"
-#include "wifi.h"
+#include "wlan.h"
 
 static constexpr uint32_t kWatchdogMs = 2000;
 static constexpr UBaseType_t kControlPriority = 5;  // the Arduino loop's is 1
@@ -53,6 +54,7 @@ void setup() {
   app_lock = xSemaphoreCreateMutex();
   app.motor.begin();
   pinMode(pins::kThermostat, INPUT_PULLUP);
+  button::begin();
   Serial.begin(115200);
 
   storage::load(app.settings);
@@ -78,6 +80,7 @@ void loop() {
     console.poll();
   }
   port.pump();
+  button::poll(now, port);
   wifi::poll(now);
   remote.poll(now);
   delay(1);

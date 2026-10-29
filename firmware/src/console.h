@@ -40,7 +40,7 @@ class Console {
 
   // What `report` last saw.
   bool stat_known_ = false, stat_calling_ = false;
-  bool linked_ = false;
+  bool linked_ = false, setup_ = false;
   valve::State state_ = valve::State::kIdle;
   uint32_t moves_ = 0, traced_ = 0;
 };

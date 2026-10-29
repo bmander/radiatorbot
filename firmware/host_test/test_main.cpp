@@ -310,10 +310,10 @@ static void test_settings_table() {
     formatField(t, fs[i], again, sizeof again);
     CHECK(strcmp(buf, again) == 0);
   }
-  CHECK(fabs(s.motor_volts - 6.0f) < 1e-6f);
+  CHECK(fabs(s.motor_volts - 9.0f) < 1e-6f);
   char volts[32];
   formatField(s, *findField("motor_volts"), volts, sizeof volts);
-  CHECK(strcmp(volts, "6") == 0);
+  CHECK(strcmp(volts, "9") == 0);
   CHECK(findField("nope") == nullptr);
 }
 

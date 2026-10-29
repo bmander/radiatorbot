@@ -24,7 +24,7 @@ struct Image {
   Slot slots[kSlots];
 };
 
-constexpr const char* kSpace = "radiatorbot";  // the NVS namespace, shared with wifi.cpp's keys
+constexpr const char* kSpace = "radiatorbot";  // the NVS namespace, shared with wlan.cpp's keys
 constexpr const char* kKey = "settings";
 
 Image image;  // off the stack: 776 bytes
@@ -64,6 +64,14 @@ bool save(const valve::Settings& s) {
   Preferences prefs;
   if (!prefs.begin(kSpace, false)) return false;
   bool ok = prefs.putBytes(kKey, &image, sizeof image) == sizeof image;
+  prefs.end();
+  return ok;
+}
+
+bool erase() {
+  Preferences prefs;
+  if (!prefs.begin(kSpace, false)) return false;
+  bool ok = prefs.clear();
   prefs.end();
   return ok;
 }

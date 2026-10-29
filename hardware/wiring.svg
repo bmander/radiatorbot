@@ -4,27 +4,27 @@
 <text x="24" y="54" font-size="12.5" text-anchor="start" fill="#6b6a66" font-weight="400">SparkFun IoT RedBoard ESP32, Adafruit TB6612 (both bridges tied together), Adafruit INA219. Nothing on the shield touches 5 V.</text>
 <rect x="30" y="100" width="220" height="680" rx="8" fill="#fbfaf7" stroke="#1d1d1b" stroke-width="1.6"/>
 <text x="140" y="74" font-size="15" text-anchor="middle" fill="#1d1d1b" font-weight="700">IoT RedBoard ESP32</text>
-<text x="140" y="90" font-size="11.5" text-anchor="middle" fill="#6b6a66" font-weight="400">its Uno place, then its GPIO</text>
+<text x="140" y="90" font-size="11.5" text-anchor="middle" fill="#6b6a66" font-weight="400">as its silkscreen labels them</text>
 <rect x="246" y="136" width="8" height="8" fill="#1d1d1b"/>
 <text x="240" y="144.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">VIN</text>
 <rect x="246" y="206" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="214.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">3V3</text>
+<text x="240" y="214.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">3.3V</text>
 <rect x="246" y="256" width="8" height="8" fill="#1d1d1b"/>
 <text x="240" y="264.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">GND</text>
 <rect x="246" y="316" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="324.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">A0 · GPIO33</text>
+<text x="240" y="324.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">A5 · GPIO33</text>
 <rect x="246" y="376" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="384.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">A1 · GPIO32</text>
+<text x="240" y="384.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">A4 · GPIO32</text>
 <rect x="246" y="496" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="504.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">D3 · GPIO13</text>
+<text x="240" y="504.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">13</text>
 <rect x="246" y="556" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="564.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">D5 · GPIO16</text>
+<text x="240" y="564.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">16</text>
 <rect x="246" y="606" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="614.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">D6 · GPIO17</text>
+<text x="240" y="614.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">17</text>
 <rect x="246" y="656" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="664.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">D7 · GPIO25</text>
+<text x="240" y="664.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">25</text>
 <rect x="246" y="746" width="8" height="8" fill="#1d1d1b"/>
-<text x="240" y="754.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">D2 · GPIO4</text>
+<text x="240" y="754.5" font-size="12.5" text-anchor="end" fill="#1d1d1b" font-weight="400">4</text>
 <text x="140" y="122" font-size="11.5" text-anchor="middle" fill="#6b6a66" font-weight="400">9 V adapter in the barrel jack</text>
 <text x="140" y="166" font-size="11" text-anchor="middle" fill="#6b6a66" font-weight="400" font-style="italic">the jack, through a 3 A Schottky</text>
 <rect x="520" y="120" width="150" height="190" rx="8" fill="#fbfaf7" stroke="#1d1d1b" stroke-width="1.6"/>
