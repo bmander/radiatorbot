@@ -35,12 +35,15 @@ static const char* g_test = "";
 // == A simulated valve ===========================================================================
 // The stem travels `travel_ms` of motor running between its ends.  The motor draws an inrush near
 // stall for the first 60 ms of a start, `run_a` on the way, and `stall_a` against either end.
+// Leaving an end, the seat holds it at the stall for `stick_ms`, or for good if it's `stuck`.
 // Forward (OUT1 high) opens it.
 struct SimValve : Motor {
   float travel_ms = 20000;
   float pos = 0.5f;           // 0 closed, 1 open
   float run_a = 0.4f, stall_a = 1.8f, inrush_a = 1.7f;
   uint32_t inrush_ms = 60;
+  uint32_t stick_ms = 0;
+  bool stuck = false;
 
   bool awake = false, driving = false, fwd = false, fault_now = false;
   float duty = 0;
@@ -75,15 +78,18 @@ struct SimValve : Motor {
   float amps() override {
     if (!driving || duty == 0) return 0;
     if (now - drive_since < inrush_ms) return inrush_a * duty;
-    if (at_end()) return stall_a * duty;
+    if (at_end() || held()) return stall_a * duty;
     return run_a;
   }
-  bool at_end() const { return (fwd && pos >= 1.0f) || (!fwd && pos <= 0.0f); }
+  bool at(bool open_end) const { return open_end ? pos >= 1.0f : pos <= 0.0f; }
+  bool at_end() const { return at(fwd); }
+  // held at the end it's leaving by the seat's friction: it can only be there if it set off there
+  bool held() const { return at(!fwd) && (stuck || now - drive_since < stick_ms); }
 
   // Advances a millisecond.
   void step() {
     now++;
-    if (driving && duty > 0) {
+    if (driving && duty > 0 && !held()) {
       pos += (fwd ? 1 : -1) * duty / travel_ms;
       if (pos > 1) pos = 1;
       if (pos < 0) pos = 0;
@@ -112,6 +118,17 @@ struct Rig {
     return done();
   }
 };
+
+// The valve closed, the controller knowing it, and the seat holding it for `stick_ms` (or for good,
+// `stuck`) when it next sets off.
+static void seat_closed(Rig& r, uint32_t stick_ms, bool stuck = false) {
+  r.v.pos = 0;
+  r.c.setDesired(End::kClosed);
+  CHECK(r.run_until([&] { return r.c.moves() == 1; }));
+  CHECK(r.c.position() == End::kClosed);
+  r.v.stick_ms = stick_ms;
+  r.v.stuck = stuck;
+}
 
 // == The trip ====================================================================================
 static void test_trip_ignores_inrush() {
@@ -176,6 +193,37 @@ static void test_trip_wraps() {
 }
 
 // == The thermostat ==============================================================================
+static void test_trip_breakaway() {
+  g_test = "trip waits out a breakaway";
+  TripDetector t;
+  t.start(0, 1.0f, 150, 50, 0, 1000);
+  uint32_t ms = 1;
+  for (; ms <= 600; ms++) CHECK(!t.update(ms, 1.5f));  // seated: over the trip, waited out
+  CHECK(!t.moved());
+  for (; ms <= 3000; ms++) CHECK(!t.update(ms, 0.4f));  // free, and on its way
+  CHECK(t.moved());
+  CHECK_NEAR(t.running(), 0.4f, 1e-3f);
+  CHECK_NEAR(t.peak(), 1.5f, 1e-6f);
+  // the far end: the trip is the trip again, with its hold
+  uint32_t rise = ms;
+  bool tripped = false;
+  for (; !tripped && ms < rise + 200; ms++) tripped = t.update(ms, 1.5f);
+  CHECK(tripped);
+  CHECK(ms - 1 - rise == 50);
+}
+
+static void test_trip_breakaway_gives_up() {
+  g_test = "trip ends a breakaway that never gets going";
+  TripDetector t;
+  t.start(0, 1.0f, 150, 50, 0, 1000);
+  uint32_t ms = 1;
+  bool tripped = false;
+  for (; !tripped && ms < 5000; ms++) tripped = t.update(ms, 1.5f);
+  CHECK(tripped);
+  CHECK(ms - 1 == 1000 + 50);  // the breakaway, then the hold
+  CHECK(!t.moved());
+}
+
 static void test_stat_contact() {
   g_test = "thermostat reads a closed contact as a call";
   Settings s;
@@ -399,9 +447,66 @@ static void test_already_there() {
   r.c.setDesired(End::kClosed);
   CHECK(r.run_until([&] { return r.c.moves() == 1; }));
   CHECK(r.c.last().outcome == Outcome::kReached);
-  // the blanking, then the hold
-  CHECK(r.c.last().duration_ms >= r.s.blank + r.s.hold);
-  CHECK(r.c.last().duration_ms < r.s.blank + r.s.hold + 50);
+  // from an unknown place: the breakaway, then the hold, and it's taken as there
+  CHECK(r.c.last().duration_ms >= r.s.breakaway + r.s.hold);
+  CHECK(r.c.last().duration_ms < r.s.breakaway + r.s.hold + 50);
+}
+
+static void test_breaks_free() {
+  g_test = "controller breaks a seated valve free";
+  Rig r;
+  r.v.travel_ms = 2000;
+  seat_closed(r, 600);  // it takes 600 ms at the stall to unstick
+  r.c.setDesired(End::kOpen);
+  CHECK(r.run_until([&] { return r.c.moves() == 2; }));
+  CHECK(r.c.last().outcome == Outcome::kReached);
+  CHECK(r.c.position() == End::kOpen);
+  CHECK(r.v.pos == 1.0f);
+  CHECK(r.c.last().duration_ms > 600 + 2000);
+  CHECK_NEAR(r.c.last().running_a, 0.4f, 0.05f);
+}
+
+static void test_breaks_free_after_a_long_ramp() {
+  g_test = "controller breaks a seated valve free after a soft start longer than the blanking";
+  Rig r;
+  r.v.travel_ms = 2000;
+  r.s.ramp = 400;  // under it even a stall reads under the trip
+  seat_closed(r, 600);
+  r.c.setDesired(End::kOpen);
+  CHECK(r.run_until([&] { return r.c.moves() == 2; }));
+  CHECK(r.c.last().outcome == Outcome::kReached);
+  CHECK(r.v.pos == 1.0f);
+}
+
+static void test_no_breakaway() {
+  g_test = "controller without a breakaway";
+  // The seat's grip trips the move at once.  It never got going from the closed end, so it's
+  // called stuck, not open: a failure to retry, where the trip alone would have taken it for the
+  // open end with the valve still shut.
+  Rig r;
+  r.s.breakaway = 0;
+  seat_closed(r, 600);
+  r.c.setDesired(End::kOpen);
+  CHECK(r.run_until([&] { return r.c.moves() == 2; }));
+  CHECK(r.c.last().outcome == Outcome::kStuck);
+  CHECK(r.c.last().duration_ms < 300);
+  CHECK(r.v.pos < 0.01f);
+}
+
+static void test_stuck() {
+  g_test = "controller finds a valve stuck";
+  Rig r;
+  seat_closed(r, 0, true);  // more than the stall will turn
+  r.c.setDesired(End::kOpen);
+  CHECK(r.run_until([&] { return r.c.moves() == 2; }));
+  CHECK(r.c.last().outcome == Outcome::kStuck);
+  CHECK(strcmp(name(Outcome::kStuck), "stuck") == 0);
+  CHECK(r.c.last().duration_ms >= r.s.breakaway + r.s.hold);
+  CHECK(r.c.last().duration_ms < r.s.breakaway + r.s.hold + 50);
+  CHECK(r.c.state() == State::kFault);
+  CHECK(r.c.position() == End::kUnknown);
+  CHECK(r.c.failures() == 1);
+  CHECK(r.v.pos == 0.0f);
 }
 
 static void test_motor_invert() {
@@ -582,6 +687,8 @@ int main() {
   test_trip_rejects_spikes();
   test_trip_through_ripple();
   test_trip_wraps();
+  test_trip_breakaway();
+  test_trip_breakaway_gives_up();
   test_stat_contact();
   test_stat_bounce();
   test_stat_idle();
@@ -594,6 +701,10 @@ int main() {
   test_holds_without_desire();
   test_closes_and_opens();
   test_already_there();
+  test_breaks_free();
+  test_breaks_free_after_a_long_ramp();
+  test_no_breakaway();
+  test_stuck();
   test_motor_invert();
   test_ramp();
   test_timeout();

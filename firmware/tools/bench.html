@@ -231,7 +231,7 @@
 const WINDOW_S = 20;  // the current chart's span
 const BOOT_BANNER = /`help` lists the commands/;
 const TRACE = /^\s*([\d.]+) s\s+(-?[\d.]+) A\s+\((-?[\d.]+) A filtered\)/;
-const MOVE_END = /^(open|close): (reached|timed out|motor fault|stopped)/;
+const MOVE_END = /^(open|close): (reached|timed out|motor fault|stuck|stopped)/;
 const SUPPLY = /^\s*supply\s+(-?[\d.]+) V/;
 const SETTING = /^\s*(duty|motor_volts)\s+(-?[\d.]+)\s/;
 
