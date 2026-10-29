@@ -48,10 +48,30 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   ring.
   - B stands 45 mm beyond A, where the gearbox was laid out. D stands 32 mm from B at 69.2°, so
     it is 45 mm from A as well.
-- **The frame** is one print: the gearbox lid, the electronics bay standing on it (the motor on a
-  pad, the boards beside it), and a spine up beside the valve to the **clamp**.
+- **The frame** is one print: the gearbox lid and the electronics bay standing on it (the motor
+  on a pad, the boards beside it), with a dovetail rail up the outside of its end wall toward the
+  valve.
+- **The mount** is a print of its own, snapped and glued onto the frame's rail: a spine up beside
+  the valve to the **clamp**'s fixed half. Split off, each part prints without support: the frame
+  on its lid, the mount on its top.
+  - The rail is 12 mm across at the wall, its flanks 15° off square, standing 5 mm out. The
+    spine's slot is the rail grown 0.15 mm all round, room for the glue, open at the spine's top
+    and closed at its foot by a shelf, the mount's foot flush with the lid's underside. The mount
+    slides up onto the rail from below until the rail's foot sits on the shelf, so the frame
+    hangs on it.
+  - The rail's foot leaves the wall 2 mm up from the lid's underside and slopes up and out at
+    45°, so the frame prints it off the wall without support; the shelf under it slopes the same
+    way, and so prints as a 45° ceiling in the mount rather than a bridge. The slope presses the
+    rail's flanks into the slot's.
+  - The snap holds the two together while the glue sets. A finger 1.6 mm thick, 6 mm wide and
+    20 mm long hangs in the slot's floor with a slit round it and a 1 mm relief behind it. The
+    barb at its foot stands 0.6 mm into the slot, square underneath and ramped over. In the last
+    few millimetres the rail's lip pushes it out, and then it drops into a notch in the rail's face.
+    The finger runs along z, so it prints standing up rather than as an overhang.
+  - The dovetail's flanks take the handle's reaction sideways and outward, and the glue takes the
+    rest.
   - The clamp is a block split at the stem, round the valve's inlet hex and the supply pipe above
-    it. The fixed half is the frame's; the cap closes it from the side away from the bot (the
+    it. The fixed half is the mount's; the cap closes it from the side away from the bot (the
     valve's +y), out of the radiator's way, with four M4 bolts whose nuts sit in pockets in the
     fixed half's back.
   - The hex pocket takes the handle's reaction torque positively; nothing relies on friction on
@@ -325,6 +345,7 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | a gear's bore turning on drill rod | +0.35 mm |
 | a rod pressed into the housing | +0.05 mm (drill or ream to fit) |
 | printed faces that meet or pass | 0.3 mm |
+| a glued joint's faces (the mount's slot on the frame's rail) | 0.15 mm each side |
 | each gear's teeth, thinned on the pitch circle | 0.15 mm (0.3 mm backlash a mesh) |
 | each gear's tips, chamfered 45° at both faces | 0.4 mm |
 | the socket's hole round the chrome handle | 0.3 mm each side |
@@ -341,6 +362,12 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   round the pinion and a 2.4 mm rim under the tooth roots, the windows' corners rounded. The
   smaller gears, the ring and the socket, which carry the most torque, stay solid.
 - The socket prints floor down, its hole open at the top.
+- The frame and the mount print without support. The frame prints on its lid, the bay and the
+  rail standing up from it, the rail's foot a 45° slope off the wall. The mount prints upside
+  down on its top (the clamp's and the spine's, flush): the pipe's bore and the slot stand
+  upright, the hex pocket opens upward, and the shelf at the slot's foot is a 45° ceiling. What
+  is left overhanging is short bridges (the end wall's windows, the blind rod holes in the lid,
+  the finger's pocket) and the clamp's horizontal bolt holes and nut pockets.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
 once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are
@@ -380,10 +407,12 @@ gear and the socket as blanks while changing the layout.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     pad, the base against the frame, the clamp on the pipe). Both of the clamp's halves clear the
     outlet's union nut by 2 mm and its boss by 1.2 mm.
+- The mount's joint is claimed on every check: the mount clears the frame by the glue's 0.15 mm
+  all round, at the dovetail's flanks, the rail's foot on the shelf, and the barb in its notch.
 
 ## Bill of materials
 
-- **Printed:** frame, base, clamp cap, cover, socket, A's compound (its pinion and the ring),
+- **Printed:** frame, mount, base, clamp cap, cover, socket, A's compound (its pinion and the ring),
   the stand, the upper collar (`collar_part`), motor pinion, and compounds B1, B2, D1, D2.
 - **Drill rod:** ½ in × 78 mm (A's axle); 0.311 in × 45 mm, two of them (B and D).
 - **Screws:**
@@ -416,6 +445,10 @@ gear and the socket as blanks while changing the layout.
 
 ## Assembly
 
+0. Glue the mount onto the frame. Spread glue (epoxy, or a CA gel) on the rail's flanks and face,
+   and slide the mount's slot up over the rail from below, its clamp toward the valve's side of
+   the frame, until the barb clicks into its notch and the rail's foot sits on the shelf. Wipe off
+   what squeezes out at the slot's top, and let it set before going on.
 1. Press the B and D rods into the base's floor and the ½ in axle into the base's bridge.
    Slide the upper collar up the axle from below, against the bridge, and tighten its set
    screw.
@@ -434,7 +467,7 @@ gear and the socket as blanks while changing the layout.
    the shield on, and connect the motor's leads to the motor terminal. Pass the thermostat's
    cable through the grommet to its terminal.
 6. Slide the bot onto the valve from −y, so the inlet hex enters the clamp's pocket. Drop the
-   four M4 nuts into their pockets in the fixed half's back, and bolt on the cap from +y.
+   four M4 nuts into their pockets in the fixed half's back (the mount's), and bolt on the cap from +y.
 7. **Push A's compound up its axle from below**, its ring into mesh with D2's last pinion, up
    against the upper collar.
 8. Turn the handle so it's closed. **Push the socket up over the handle from below**, its teeth
