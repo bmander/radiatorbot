@@ -56,8 +56,13 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   on its lid, the mount on its top.
   - The rail is 12 mm across at the wall, its flanks 15° off square, standing 5 mm out. The
     spine's slot is the rail grown 0.15 mm all round, room for the glue, open at the spine's top
-    and closed at its foot by a 3 mm shelf flush with the lid's underside. The mount slides up
-    onto the rail from below until the rail's foot sits on the shelf, so the frame hangs on it.
+    and closed at its foot by a shelf, the mount's foot flush with the lid's underside. The mount
+    slides up onto the rail from below until the rail's foot sits on the shelf, so the frame
+    hangs on it.
+  - The rail's foot leaves the wall 2 mm up from the lid's underside and slopes up and out at
+    45°, so the frame prints it off the wall without support; the shelf under it slopes the same
+    way, and so prints as a 45° ceiling in the mount rather than a bridge. The slope presses the
+    rail's flanks into the slot's.
   - The snap holds the two together while the glue sets. A finger 1.6 mm thick, 6 mm wide and
     20 mm long hangs in the slot's floor with a slit round it and a 1 mm relief behind it. The
     barb at its foot stands 0.6 mm into the slot, square underneath and ramped over. In the last
@@ -357,9 +362,12 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   round the pinion and a 2.4 mm rim under the tooth roots, the windows' corners rounded. The
   smaller gears, the ring and the socket, which carry the most torque, stay solid.
 - The socket prints floor down, its hole open at the top.
-- The frame prints on its lid, the bay and the rail standing up from it. The mount prints upside
+- The frame and the mount print without support. The frame prints on its lid, the bay and the
+  rail standing up from it, the rail's foot a 45° slope off the wall. The mount prints upside
   down on its top (the clamp's and the spine's, flush): the pipe's bore and the slot stand
-  upright, the hex pocket opens upward, and the shelf at the slot's foot bridges it last.
+  upright, the hex pocket opens upward, and the shelf at the slot's foot is a 45° ceiling. What
+  is left overhanging is short bridges (the end wall's windows, the blind rod holes in the lid,
+  the finger's pocket) and the clamp's horizontal bolt holes and nut pockets.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
 once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are

@@ -201,11 +201,12 @@ bridge_z0 := collar_z0 + collar_h
 bridge_z1 := bridge_z0 + 6mm
 stand_z1 := socket_z0 - gap
 stand_z0 := stand_z1 - 4mm
-// The mount's joint: the frame's rail stands on the lid, its foot on the mount's shelf, which is
-// flush with the lid's underside; the snap's finger hangs in the slot's floor, its barb's
-// underside 3 mm up the rail, over a lip of it.
-rail_z0 := lid_z0 + 3mm
-finger_z0 := rail_z0 + 3mm
+// The mount's joint: the frame's rail leaves the end wall 2 mm up from the lid's underside, its
+// foot sloped up and out at 45deg so it prints from the wall, and stands on the mount's shelf,
+// sloped so under it, the mount's foot flush with the lid's underside; the snap's finger hangs
+// in the slot's floor, its barb's underside 2.5 mm over the foot at the rail's face, a lip of it.
+rail_z0 := lid_z0 + 2mm
+finger_z0 := rail_z0 + dove_h + 2.5mm
 motor_z := s3_z0 + 5mm + 1mm + motor130_dims.shaft_len  // the motor's front face, on its pad
 claim motor_z >= lid_z1
 board_z := lid_z1 + 6mm                                 // the RedBoard's underside, on its posts
@@ -321,6 +322,22 @@ component Dovetail(x0: Length, x1: Length, w0: Length, w1: Length, z0: Length, z
   c := At(x: x1, y: w1 / 2)
   d := At(x: x0, y: w0 / 2)
   body := solid(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1)
+}
+
+// What stands under a 45deg slope across y = 0, `w` wide: from x0 to x1, under z0 + (x - x0), down
+// to zb.
+component UnderSlope(x0: Length, x1: Length, z0: Length, zb: Length, w: Length) {
+  in std.front {
+    a := point hint((x0, zb))
+    a coords(du: x0, dv: zb) std.front
+    b := point hint((x1, zb))
+    b coords(du: x1, dv: zb) std.front
+    c := point hint((x1, z0 + x1 - x0))
+    c coords(du: x1, dv: z0 + x1 - x0) std.front
+    d := point hint((x0, z0))
+    d coords(du: x0, dv: z0) std.front
+  }
+  body := solid(face(a, b, c, d, -> close), from: -w / 2, to: w / 2)
 }
 
 // A snap's barb on a face square to x at `x`, `w` across about y = 0: it stands `h` out toward -x,
@@ -647,10 +664,13 @@ bay_room := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: b
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
 
-// the mount's rail, from the lid up the end wall to its top, and the notch the snap's barb falls
-// into, over the rail's lip
+// the mount's rail, from its sloped foot up the end wall to its top, and the notch the snap's
+// barb falls into, over the rail's lip
 rail := Dovetail(x0: box_x1 - 1mm, x1: box_x1 + dove_h, w0: dove_root - 2mm * tan(dove_angle),
                  w1: dove_tip, z0: rail_z0, z1: bay_z1) in bot
+rail_heel := UnderSlope(x0: box_x1, x1: box_x1 + dove_h + 1mm, z0: rail_z0, zb: rail_z0 - 1mm,
+                        w: dove_tip + 2mm) in bot
+rail_heel.body cut rail.body
 rail_notch := Block(x0: box_x1 + dove_h - barb_h - slip, x1: box_x1 + dove_h + 1mm,
                     y0: -finger_w / 2 - gap, y1: finger_w / 2 + gap, z0: finger_z0 - slip,
                     z1: finger_z0 + barb_flat + barb_ramp + gap) in bot
@@ -698,7 +718,7 @@ rail_notch.body cut frame_part
 //
 // It slides up onto the frame's rail from below, the rail in a dovetail slot up the spine's back,
 // open at its top, until the rail's foot sits on the shelf closing the slot's bottom: the frame
-// hangs on the shelf.  There the barb at the foot of a finger in the slot's floor, pushed out by
+// hangs on the shelf, the slope of both pressing the rail's flanks into the slot's.  There the barb at the foot of a finger in the slot's floor, pushed out by
 // the rail's lip in the last few millimetres, snaps into the rail's notch, and holds the two
 // together while the glue in the slot sets.  The dovetail's flanks take the handle's reaction
 // sideways and outward, the glue the rest.
@@ -710,7 +730,11 @@ slot := Dovetail(x0: box_x1 - 1mm,
                  x1: slot_floor,
                  w0: dove_root - 2mm * tan(dove_angle) + 2 * slip / cos(dove_angle),
                  w1: dove_tip + 2 * slip * tan(dove_angle) + 2 * slip / cos(dove_angle),
-                 z0: rail_z0 - slip, z1: clamp_z1 + 1mm) in bot
+                 z0: rail_z0 - 1mm, z1: clamp_z1 + 1mm) in bot
+slot_heel := UnderSlope(x0: box_x1 - 1mm, x1: slot_floor + 1mm,
+                        z0: rail_z0 - slip * sqrt(2) - 1mm, zb: rail_z0 - 2mm,
+                        w: dove_tip + 2mm) in bot
+slot_heel.body cut slot.body
 finger_room := Block(x0: slot_floor - 1mm, x1: slot_floor + finger_t + finger_relief,
                      y0: -finger_w / 2 - finger_slit, y1: finger_w / 2 + finger_slit,
                      z0: finger_z0 - finger_slit, z1: finger_z0 + finger_len) in bot
