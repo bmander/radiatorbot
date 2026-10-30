@@ -86,6 +86,19 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
 - **The base** is the gearbox's floor and walls, screwed up to the lid. Its floor stops short of
   the ring, and a bridge across it holds A's axle, standing on the upper collar just above the
   ring.
+- **The rods' seats.** Each rod is pressed into posts, not just through a plate, so it is held
+  square over a length rather than pivoting in a thin wall:
+  - A's axle stands in the bridge, which runs from the upper collar all the way up to the lid's
+    underside (17.7 mm of it), and up into a post on the lid's top: 22.2 mm of seat, where it had 9.
+  - B's rod stands in a 6 mm floor and a post up from it to 0.3 mm under B2's pinion: 16.8 mm.
+    B2 stands on the post's top, so the compounds on B can't drop down the rod out of mesh. The
+    post's wall is 4.8 mm, cut back to 2 mm where it passes A's ring and D2's 48-tooth gear, a
+    millimetre clear of D2's tips (claimed, so D2 sitting down on the floor clears it).
+  - D's rod stands in the 6 mm floor; D2's pinion runs on the floor just over it, so there's no
+    room for a post there.
+  - B's and D's tops, and A's, go up into posts on the lid's top, 2.5 mm tall, up to 0.3 mm under
+    the motor's face, each rod's hole blind under a 1 mm roof: 4.5 mm of seat in the lid, where
+    the lid alone gave 2.
 
 ## The drive
 
@@ -414,7 +427,7 @@ gear and the socket as blanks while changing the layout.
 
 - **Printed:** frame, mount, base, clamp cap, cover, socket, A's compound (its pinion and the ring),
   the stand, the upper collar (`collar_part`), motor pinion, and compounds B1, B2, D1, D2.
-- **Drill rod:** ½ in × 78 mm (A's axle); 0.311 in × 45 mm, two of them (B and D).
+- **Drill rod:** ½ in × 78.9 mm (A's axle); 0.311 in × 44.6 mm, two of them (B and D).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (base to lid, cover);
@@ -449,12 +462,14 @@ gear and the socket as blanks while changing the layout.
    and slide the mount's slot up over the rail from below, its clamp toward the valve's side of
    the frame, until the barb clicks into its notch and the rail's foot sits on the shelf. Wipe off
    what squeezes out at the slot's top, and let it set before going on.
-1. Press the B and D rods into the base's floor and the ½ in axle into the base's bridge.
+1. Press the B and D rods into the base's floor (B's through its post) and the ½ in axle into
+   the base's bridge.
    Slide the upper collar up the axle from below, against the bridge, and tighten its set
    screw.
 2. Stack the compounds on the rods (D2, B2, D1, B1) and fit the motor's pinion.
-3. Close the base with the frame, putting the motor into its cradle, and fit the four M3 screws
-   from inside the bay.
+3. Close the base with the frame, putting the motor into its cradle and the three rods' tops into
+   their holes in the lid's posts, and fit the four M3 screws from inside the bay; draw them up
+   evenly, so the rods press home square.
 4. Make the shield. Plug the male headers into the RedBoard's power, analog and 25–RX sockets, lay
    the perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
    column two holes out from that header's first pin, its 7 cm across the board) and solder them,

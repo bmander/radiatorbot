@@ -54,7 +54,7 @@ shaped := 1                    // 1: shape the gears and the socket; 0: blanks, 
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~2 minutes)
 
 // == Stock =======================================================================================
-// Drill rod.  The gears turn on fixed rods; the housing holds the rods.
+// Drill rod.  The gears turn on fixed rods; the housing holds the rods, each in posts of its own.
 axle_d := 0.5in                 // A, the socket pinion's axle
 rod_d := 0.311in                // B and D, the gear train's
 
@@ -66,6 +66,7 @@ thin := 0.15mm                  // each gear's teeth thinned: 0.3 mm backlash a 
 chamfer := 0.4mm                // each gear's tips chamfered at both faces, 45deg
 bond := 0.25mm                  // a compound's pinion run up into its gear, so the two print as one
 wall := 2.4mm                   // six 0.4 mm perimeters
+boss_wall := 2 * wall           // a post's wall round a rod pressed into it
 pilot := 2.5mm                  // an M3 screw's self-tapping hole in a print
 m3_clear := 3.4mm
 m4_clear := 4.6mm
@@ -162,8 +163,8 @@ claim motor_rate == -handle_ratio
 // millimetre between layers.  The motor stands face down on a pad on the lid, its shaft down
 // through both to its pinion in stage 1, high enough that the shaft's end stands a millimetre
 // over stage 3's gear on B; the boards stand beside it, so the bay is the motor's height.
-floor_z0 := -0.1mm              // the base's floor, round B and D only: A's ring turns beside it
-floor_z1 := floor_z0 + 3mm
+floor_z0 := -3.1mm              // the base's floor, round B and D only: A's ring turns beside it
+floor_z1 := floor_z0 + 6mm
 ring_z0 := 3mm                  // the ring's teeth; the web under it runs down to A's pinion
 ring_z1 := ring_z0 + 10mm
 fin_z0 := ring_z0 + 0.5mm       // the last pinion
@@ -191,14 +192,19 @@ pivot_play := 1mm
 socket_body_r := m_socket * (socket_n / 2 - 1.25 - pin_shift) - 1mm   // under its teeth's roots
 a_pin_z0 := socket_z1 - socket_face + 0.5mm
 web_z0 := socket_z1 + gap
-// A's axle: a collar over the ring, under the bridge across the base that holds the axle, and
-// the stand under A's pinion, its arm a print's clearance under the socket's floor and its pad
-// up to it.
+// A's axle: a collar over the ring, under the bridge across the base that holds the axle, which
+// stands from there up to the lid, and the stand under A's pinion, its arm a print's clearance
+// under the socket's floor and its pad up to it.
 collar_h := 6mm
 collar_r := axle_d / 2 + 5mm
 collar_z0 := ring_z1 + gap
 bridge_z0 := collar_z0 + collar_h
-bridge_z1 := bridge_z0 + 6mm
+bridge_z1 := lid_z0
+// The rods' posts: B's up from the floor to a print's clearance under stage 4's pinion, which
+// stands on it; and one round each rod on the lid's top, up to a print's clearance under the
+// motor's face, its rod's hole blind under a 1 mm roof.  Every rod's top is its hole's.
+post_z1 := motor_z - gap
+rod_z1 := post_z1 - 1mm
 stand_z1 := socket_z0 - gap
 stand_z0 := stand_z1 - 4mm
 // The mount's joint: the frame's rail leaves the end wall 2 mm up from the lid's underside, its
@@ -471,11 +477,11 @@ construction b_spindle := line(b_c, b_up)
 construction d_spindle := line(d_c, d_up)
 construction m_spindle := line(m_c, m_up)
 
-// The rods: A held in the base's bridge and through the lid, down to the stand; B and D in the
-// floor and up into the lid's blind holes.
-axle_a := Post(a_c, r: axle_d / 2, z0: stand_z0, z1: lid_z1)
-rod_at_b := Post(b_c, r: rod_d / 2, z0: floor_z0, z1: lid_z1 - 1mm)
-rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: lid_z1 - 1mm)
+// The rods: A held in the base's bridge and up into its post on the lid, down to the stand; B and
+// D in the floor (B through its post on it too) and up into their posts on the lid.
+axle_a := Post(a_c, r: axle_d / 2, z0: stand_z0, z1: rod_z1)
+rod_at_b := Post(b_c, r: rod_d / 2, z0: floor_z0, z1: rod_z1)
+rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: rod_z1)
 
 // == The socket ==================================================================================
 // A gear round the handle about the stem, a body under its teeth down to a floor under the
@@ -627,8 +633,10 @@ cradle_in.body cut cradle
 // == The base: the gearbox's floor and walls =====================================================
 // A box from the floor to the lid, hollowed; its floor and its walls are cut away where A's ring
 // turns under the train (the whole of its +x end, down there), and a bridge across it, standing
-// on the collar, holds A's axle.  Four M3 screws down through the lid
-// hold it up to the frame (below).
+// on the collar and up to the lid, holds A's axle.  B's rod stands in a post up from the floor,
+// its top under B2's pinion, which stands on it, and cut back round the ring's room and a
+// millimetre clear of D2's tips, which pass over it; D's has no room for one, D2's pinion
+// standing on the floor.  Four M3 screws down through the lid hold it up to the frame (below).
 base_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: floor_z0, z1: lid_z0) in bot
 base_cavity := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
                      z0: floor_z1, z1: lid_z0 + 1mm) in bot
@@ -638,16 +646,23 @@ base_cavity.body cut base_shell
 bridge := Block(x0: -a_dist, x1: box_x1 - wall, y0: -collar_r, y1: collar_r, z0: bridge_z0,
                 z1: bridge_z1) in bot
 bridge_boss := Post(a_c, r: collar_r, z0: bridge_z0, z1: bridge_z1)
-ring_room := Post(a_c, r: 39mm, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
+ring_r := 39mm                  // the room A's ring turns in, about A
+ring_room := Post(a_c, r: ring_r, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
 ring_side := Block(x0: -a_dist, x1: box_x1 + 1mm, y0: box_y0 - 1mm, y1: box_y1 + 1mm,
                    z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm) in bot  // and the box's end over it
 base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: bridge_z1 + 1mm)
-base_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
+base_post_b := Post(b_c, r: rod_d / 2 + boss_wall, z0: floor_z1 - 1mm, z1: s4_z0 - gap)
+base_post_ring := Post(a_c, r: ring_r, z0: floor_z1 - 1mm, z1: s4_z0)
+base_post_d2 := Post(d_c, r: m_s4 * (s4_n / 2 + 1) + 1mm, z0: floor_z1 - 1mm, z1: s4_z0)
+base_post_ring.body cut base_post_b.body
+base_post_d2.body cut base_post_b.body
+base_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: s4_z0)
 base_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
 
 base := solid(base_shell)
 bridge.body union base
 bridge_boss.body union base
+base_post_b.body union base
 ring_room.body cut base
 ring_side.body cut base
 base_hole_a.body cut base
@@ -675,10 +690,13 @@ rail_notch := Block(x0: box_x1 + dove_h - barb_h - slip, x1: box_x1 + dove_h + 1
                     y0: -finger_w / 2 - gap, y1: finger_w / 2 + gap, z0: finger_z0 - slip,
                     z1: finger_z0 + barb_flat + barb_ramp + gap) in bot
 
-// the rods' holes, the motor's boss and shaft
-lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
-lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 - 1mm)
-lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: lid_z1 - 1mm)
+// the rods' posts on the lid's top and their holes up into them, the motor's boss and shaft
+lid_post_a := Post(a_c, r: axle_d / 2 + boss_wall, z0: lid_z1 - 1mm, z1: post_z1)
+lid_post_b := Post(b_c, r: rod_d / 2 + boss_wall, z0: lid_z1 - 1mm, z1: post_z1)
+lid_post_d := Post(d_c, r: rod_d / 2 + boss_wall, z0: lid_z1 - 1mm, z1: post_z1)
+lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
+lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
+lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
 motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
                         z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
 motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
@@ -700,6 +718,9 @@ frame_part := solid(lid.body)
 bay_shell union frame_part
 rail.body union frame_part
 cradle union frame_part
+lid_post_a.body union frame_part
+lid_post_b.body union frame_part
+lid_post_d.body union frame_part
 lid_hole_a.body cut frame_part
 lid_hole_b.body cut frame_part
 lid_hole_d.body cut frame_part
@@ -958,6 +979,7 @@ when checks == 1 {
   claim compound_b1 clear(0.05mm) pinion
   claim compound_d2 clear(0.2mm) base
   claim compound_b2 clear(0.2mm) base
+  claim compound_d2 clear(0.5mm) base_post_b.body     // and dropped onto the floor, over B's post
   claim compound_b1 clear(0.2mm) frame_part
   claim compound_d1 clear(0.2mm) frame_part
   claim pinion clear(0.2mm) frame_part
