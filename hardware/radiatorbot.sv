@@ -383,6 +383,27 @@ component UnderSlope(x0: Length, x1: Length, z0: Length, zb: Length, w: Length) 
   body := solid(std.solids.Prism(face(a, b, c, d, -> close), from: -w / 2, to: w / 2))
 }
 
+// A dovetail rail for the keeper, drawn in its own frame (its origin on a wall's inside face, x in
+// from the wall, y along it), and the keeper's pad that slots down over it: the rail up from its
+// sloped foot to the base's top, the slot through the pad, the rail grown `snug` all round, and
+// the pad `anchor_w` along the wall and `anchor_d` deep, `snug` off the wall.
+component KeeperRail() {
+  rail_z0 := lid_z0 - rail_h
+  tail := Dovetail(x0: -1mm, x1: rail_h, w0: rail_root - 2mm * tan(dove_angle), w1: rail_tip,
+                   z0: rail_z0, z1: lid_z1)
+  heel := UnderSlope(x0: 0mm, x1: rail_h + 1mm, z0: rail_z0, zb: rail_z0 - 1mm, w: rail_tip + 2mm)
+  groove := Dovetail(x0: -1mm, x1: rail_h + snug,
+                     w0: rail_root - 2mm * tan(dove_angle) + 2 * snug / cos(dove_angle),
+                     w1: rail_tip + 2 * snug * tan(dove_angle) + 2 * snug / cos(dove_angle),
+                     z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
+  block := Block(x0: snug, x1: anchor_d, y0: -anchor_w / 2, y1: anchor_w / 2, z0: lid_z0,
+                 z1: lid_z1)
+  rail := solid(tail.body)
+  heel.body cut rail
+  pad := solid(block.body)
+  slot := solid(groove.body)
+}
+
 // A snap's barb on a face square to x at `x`, `w` across about y = 0: it stands `h` out toward -x,
 // square on its underside at `z`, flat for `flat` and then ramped back into the face over `ramp`,
 // and runs half a millimetre back into the face to join it.
@@ -802,19 +823,30 @@ base_hole_d.body cut base
 
 // == The keeper: the gearbox's lid, the rods' tops and the motor =================================
 // One print, a frame of beams 3 mm deep with open bays between them, held in the base by four
-// pads pressed lightly against its walls: it holds the tops of the rods, in posts on its top, and
-// the motor, on its pad in its cradle, so the gearbox and its motor are whole without the frame.
+// pads slotted down over dovetail rails on its walls: it holds the tops of the rods, in posts on
+// its top, and the motor, on its pad in its cradle, so the gearbox and its motor are whole
+// without the frame.
 //   - A spine runs from end wall to end wall through B and A, over the bridge, and a cross beam
 //     over the bulkhead from side wall to side wall: the keeper stands on the bridge and the
-//     bulkhead, and each of the four ends is a pad `anchor_w` along its wall, a light press;
+//     bulkhead, and each of the four ends is a pad `anchor_w` along its wall;
+//   - up the middle of each pad's end, a dovetail slot, the rail grown `snug` all round: it
+//     slides down over the rail, a light press on its flanks, and the rail holds the pad to its
+//     wall and square along it, so the keeper can neither spread nor pull in off the walls;
 //   - two more beams, B to D and A to D, close a triangle round the rods; the motor's cradle
 //     stands on the spine beside B.
 // Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, the
 // keeper's posts and the cradle up through holes in its floor, and its floor bears down on the
 // keeper's beams.  It prints on its beams' undersides.
 keeper_beam := 6mm
-anchor_w := 12mm
-anchor_d := 4mm                 // the pads' depth, in from the walls
+anchor_w := 14mm
+anchor_d := 6mm                 // the pads' depth, in from the walls
+// The rails, one up the middle of each wall's inside face where a pad meets it: a dovetail
+// `rail_h` out from the wall, `rail_root` across at the wall, its flanks the mount's joint's
+// `dove_angle` off square, up to the base's top; its foot slopes off the wall at 45deg, full depth
+// at the keeper's underside, so the base prints it without support.
+rail_h := 3mm
+rail_root := 5mm
+rail_tip := rail_root + 2 * rail_h * tan(dove_angle)
 keeper_x0 := box_x0 + wall + snug
 keeper_x1 := box_x1 - wall - snug
 keeper_y0 := box_y0 + wall + snug
@@ -828,14 +860,15 @@ cross_beam := Block(x0: -a_dist - keeper_beam / 2, x1: -a_dist + keeper_beam / 2
 bd_beam := Bar(x0: b_r, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0, z1: lid_z1) in bot
 ad_beam := Bar(x0: -a_dist, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0,
                z1: lid_z1) in bot
-anchor_west := Block(x0: keeper_x0, x1: keeper_x0 + anchor_d, y0: -anchor_w / 2, y1: anchor_w / 2,
-                     z0: lid_z0, z1: lid_z1) in bot
-anchor_east := Block(x0: keeper_x1 - anchor_d, x1: keeper_x1, y0: -anchor_w / 2, y1: anchor_w / 2,
-                     z0: lid_z0, z1: lid_z1) in bot
-anchor_south := Block(x0: -a_dist - anchor_w / 2, x1: -a_dist + anchor_w / 2, y0: keeper_y0,
-                      y1: keeper_y0 + anchor_d, z0: lid_z0, z1: lid_z1) in bot
-anchor_north := Block(x0: -a_dist - anchor_w / 2, x1: -a_dist + anchor_w / 2,
-                      y0: keeper_y1 - anchor_d, y1: keeper_y1, z0: lid_z0, z1: lid_z1) in bot
+// Each rail's frame: its origin on the wall's inside face at the rail's middle, at z = 0, its x
+// in from the wall, its y along it; `a` is that inward direction's bearing in the bot's plan.
+keeper_rails_at := [
+  {x: box_x0 + wall, y: 0mm, a: 0deg},             // west, the far end wall
+  {x: box_x1 - wall, y: 0mm, a: 180deg},           // east, over the bridge
+  {x: -a_dist, y: box_y0 + wall, a: 90deg},        // south, over the bulkhead
+  {x: -a_dist, y: box_y1 - wall, a: -90deg},       // north, over the bulkhead
+]
+keeper_rails := solid()
 // the rods' posts on the keeper's top and their holes up into them, the motor's boss and shaft
 lid_post_r := axle_d / 2 + boss_wall
 rod_post_r := rod_d / 2 + boss_wall
@@ -853,10 +886,19 @@ keeper_part := solid(spine_beam.body)
 cross_beam.body union keeper_part
 bd_beam.body union keeper_part
 ad_beam.body union keeper_part
-anchor_west.body union keeper_part
-anchor_east.body union keeper_part
-anchor_south.body union keeper_part
-anchor_north.body union keeper_part
+repeat r in keeper_rails_at {
+  rail_f := frame
+  fix(origin == (r.x * cos(bot_turn) - r.y * sin(bot_turn),
+                 r.x * sin(bot_turn) + r.y * cos(bot_turn), 0mm)) rail_f
+  fix(dir == (cos(bot_turn + r.a), sin(bot_turn + r.a), 0)) rail_f.u
+  fix(dir == (-sin(bot_turn + r.a), cos(bot_turn + r.a), 0)) rail_f.v
+  joint := KeeperRail() in rail_f
+  joint.rail union base
+  joint.rail union keeper_rails
+  joint.pad union keeper_part
+  joint.slot cut keeper_part
+}
+claim keeper_rails clear(0.04mm) keeper_part          // the press: `snug` all round each rail
 cradle union keeper_part
 lid_post_a.body union keeper_part
 lid_post_b.body union keeper_part
