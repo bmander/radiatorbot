@@ -10,6 +10,7 @@
 
 unit mm
 use std
+use std.solids
 
 interface MotorSizes {
   d: Length, flats: Length, len: Length
@@ -65,7 +66,7 @@ component MotorCan(s: MotorSizes, grow: Length, z0: Length, z1: Length) {
     radius(r) right
     radius(r) left
   }
-  body := solid(section, from: z0, to: z1)
+  body := solid(std.solids.Prism(section, from: z0, to: z1))
 }
 
 component Motor130(s: MotorSizes) {
@@ -75,9 +76,9 @@ component Motor130(s: MotorSizes) {
     shaft_rim := radius(s.shaft_d / 2) circle(center: std.top.origin)
     back_rim := radius(s.back_d / 2) circle(center: std.top.origin)
   }
-  boss := solid(face(boss_rim), from: -s.boss_h, to: 0mm)
-  shaft := solid(face(shaft_rim), from: -s.shaft_len, to: 0mm)
-  back := solid(face(back_rim), from: s.len, to: s.len + s.back_h)
+  boss := solid(std.solids.Prism(face(boss_rim), from: -s.boss_h, to: 0mm))
+  shaft := solid(std.solids.Prism(face(shaft_rim), from: -s.shaft_len, to: 0mm))
+  back := solid(std.solids.Prism(face(back_rim), from: s.len, to: s.len + s.back_h))
   motor := solid(shell.body)
   boss union motor
   shaft union motor

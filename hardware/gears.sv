@@ -2,8 +2,9 @@
 //
 // Every gear is printed, so every gear is **shaped**: its blank is cut by the basic rack's tooth
 // swept through the roll of the rack on the gear's pitch circle, as a gear shaper or a hob cuts
-// one, in one statement (`sweep(tooth, through: shaped_blank, under: rack, …)`): the rack rolls
-// for as long as its tooth meets the blank, a roll the kernel finds, so none is stated.
+// one, in one statement (`solid({ p | p inside(under: rack, …) tooth })`, cut from the blank):
+// the rack rolls for as long as its tooth meets the blank, a roll the kernel finds, so none is
+// stated.
 // Nothing states an involute; the flanks the sweep leaves are one, exactly, and a small pinion is
 // undercut where a real one would be.  The rack's tooth is drawn `thin` wider than the basic
 // rack's, so the printed tooth comes out that much thinner on its pitch circle: a pair's backlash
@@ -26,6 +27,7 @@
 
 unit mm
 use std
+use std.solids
 use std.place (vertical, coords, on_v, raised, seats)
 use std.motion (turns, slides)
 use std.sets
@@ -94,7 +96,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     bottom_at := point hint((0, Rt - chamfer + z1 - z0))
     bottom_at on_v(d: Rt - chamfer + z1 - z0) std.top
   }
-  private construction tooth := solid(rack_tooth, from: z0 - 1mm, to: z1 + 1mm)
+  private construction tooth := solid(std.solids.Prism(rack_tooth, from: z0 - 1mm, to: z1 + 1mm))
 
   // the generating roll: the blank turns, the rack slides its pitch circle's length a turn
   blank_turn := frame
@@ -106,7 +108,8 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
 
   // the blank, chamfered and shaped: a solid of revolution but for its tooth spaces, then the
   // gear, that less its windows
-  private construction shaped_blank := solid(face(tip, holes: hole), from: z0, to: z1)
+  private construction shaped_blank := solid(std.solids.Prism(face(tip, holes: hole),
+                                                              from: z0, to: z1))
   construction gear := solid(shaped_blank)
 
   // the chamfers: the gear kept inside two 45deg cones, each through the tips' edge at a face
@@ -186,8 +189,8 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
                      end: ro_s)
       radius(rc) ro_k
     }
-    private construction window := solid(face(rim, ro_k, right, ri, hub_arc, li, left, lo),
-                                         from: z0 - 1mm, to: z1 + 1mm)
+    private construction window := solid(std.solids.Prism(
+      face(rim, ro_k, right, ri, hub_arc, li, left, lo), from: z0 - 1mm, to: z1 + 1mm))
     window cut gear
     repeat spokes - 1 as i {
       turned_window := window at(under: index) ((i + 1) * 360deg / spokes)
@@ -195,8 +198,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     }
   }
   when shaped == 1 {
-    private construction space := sweep(tooth, through: shaped_blank, under: rack,
-                                        seen_from: blank_turn)
+    private construction space := solid({ p | p inside(under: rack, seen_from: blank_turn) tooth })
     space cut shaped_blank
     repeat N - 1 as j {
       turned := space at(under: index) ((j + 1) * 360deg / N)

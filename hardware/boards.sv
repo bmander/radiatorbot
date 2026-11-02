@@ -38,6 +38,7 @@
 
 unit mm
 use std
+use std.solids
 use std.place (coords, seats, raised)
 use std.shapes
 
@@ -210,7 +211,7 @@ component Box(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: Le
     c coords(du: cx, dv: cy) std.top
     sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
-  body := solid(face(sq.loop), from: z0, to: z1)
+  body := solid(std.solids.Prism(face(sq.loop), from: z0, to: z1))
 }
 
 // A row of `n` pins along x at y, centred on x = 0, under a board `pcb_t` thick: the plastic and
