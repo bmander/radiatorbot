@@ -38,6 +38,7 @@
 
 unit mm
 use std
+use std.solids
 use std.place (vertical, horizontal, coords, seats, raised)
 use std.motion (turns)
 use std.shapes
@@ -297,7 +298,7 @@ component Post(c: point, r: Length, z0: Length, z1: Length) {
   in std.top {
     rim := radius(r) circle(center: c)
   }
-  body := solid(face(rim), from: z0, to: z1)
+  body := solid(std.solids.Prism(face(rim), from: z0, to: z1))
 }
 
 // A screw's post about `c` from z0 to z1, and the hole `depth` down into it from its top: the
@@ -307,8 +308,8 @@ component ScrewPost(c: point, r: Length, z0: Length, z1: Length, hole_d: Length,
     rim := radius(r) circle(center: c)
     bore := radius(hole_d / 2) circle(center: c)
   }
-  post := solid(face(rim), from: z0, to: z1)
-  hole := solid(face(bore), from: z1 - depth, to: z1 + 1mm)
+  post := solid(std.solids.Prism(face(rim), from: z0, to: z1))
+  hole := solid(std.solids.Prism(face(bore), from: z1 - depth, to: z1 + 1mm))
 }
 
 // A block square to the world: x0..x1, y0..y1, z0..z1.
@@ -318,7 +319,7 @@ component Block(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: 
     c coords(du: (x0 + x1) / 2, dv: (y0 + y1) / 2) std.top
     sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
-  body := solid(face(sq.loop), from: z0, to: z1)
+  body := solid(std.solids.Prism(face(sq.loop), from: z0, to: z1))
 }
 
 // A dovetail up z from z0 to z1 about y = 0, standing out along x: `w0` across at x0, `w1` at x1.
@@ -327,7 +328,7 @@ component Dovetail(x0: Length, x1: Length, w0: Length, w1: Length, z0: Length, z
   b := At(x: x1, y: -w1 / 2)
   c := At(x: x1, y: w1 / 2)
   d := At(x: x0, y: w0 / 2)
-  body := solid(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1)
+  body := solid(std.solids.Prism(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1))
 }
 
 // What stands under a 45deg slope across y = 0, `w` wide: from x0 to x1, under z0 + (x - x0), down
@@ -343,7 +344,7 @@ component UnderSlope(x0: Length, x1: Length, z0: Length, zb: Length, w: Length) 
     d := point hint((x0, z0))
     d coords(du: x0, dv: z0) std.front
   }
-  body := solid(face(a, b, c, d, -> close), from: -w / 2, to: w / 2)
+  body := solid(std.solids.Prism(face(a, b, c, d, -> close), from: -w / 2, to: w / 2))
 }
 
 // A snap's barb on a face square to x at `x`, `w` across about y = 0: it stands `h` out toward -x,
@@ -362,7 +363,7 @@ component Barb(x: Length, z: Length, h: Length, w: Length, flat: Length, ramp: L
     e := point hint((x - h, z + flat))
     e coords(du: x - h, dv: z + flat) std.front
   }
-  body := solid(face(a, b, c, d, e, -> close), from: -w / 2, to: w / 2)
+  body := solid(std.solids.Prism(face(a, b, c, d, e, -> close), from: -w / 2, to: w / 2))
 }
 
 // A bore along x at (y, z), from x0 to x1; and a nut's hexagonal pocket so.
@@ -372,7 +373,7 @@ component BoreX(y: Length, z: Length, d: Length, x0: Length, x1: Length) {
     c coords(du: y, dv: z) std.side
     rim := radius(d / 2) circle(center: c)
   }
-  body := solid(face(rim), from: x0, to: x1)
+  body := solid(std.solids.Prism(face(rim), from: x0, to: x1))
 }
 component NutX(y: Length, z: Length, af: Length, x0: Length, x1: Length) {
   in std.side {
@@ -494,8 +495,9 @@ socket_gear := Gear(std.top.origin, z: socket_z1 - socket_face, bearing: 0deg, d
 socket_body := Post(std.top.origin, r: socket_body_r, z0: socket_z0,
                     z1: socket_z1 - socket_face + bond)
 socket_star := StarOutline(valve.handle_top, s: handle_dims)
-socket_prism := solid(socket_star.outline, from: socket_floor - top0 + socket_fit,
-                      to: socket_z1 - top0 + 1mm)
+socket_prism := solid(std.solids.Prism(socket_star.outline,
+                                       from: socket_floor - top0 + socket_fit,
+                                       to: socket_z1 - top0 + 1mm))
 socket_hole := std.rounds.Grown(socket_prism, d: socket_fit)
 construction socket_part := solid(socket_gear.gear)
 socket_body.body union socket_part

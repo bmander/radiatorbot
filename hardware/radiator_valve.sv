@@ -18,6 +18,7 @@
 
 unit mm
 use std
+use std.solids
 use std.place (horizontal, vertical)
 use std.motion (screws)
 use std.rounds (round)
@@ -111,7 +112,7 @@ component RoundBar(c: point, d: Length, z0: Length, z1: Length) {
   in c.plane {
     rim := radius(d / 2) circle(center: c)
   }
-  bar := solid(face(rim), from: z0, to: z1)
+  bar := solid(std.solids.Prism(face(rim), from: z0, to: z1))
 }
 
 // A hexagonal bar by its width across the flats, a corner `phase` from the line `ref`.
@@ -121,7 +122,7 @@ component HexBar(c: point, ref: line, af: Length, phase: Angle, z0: Length, z1: 
     section := face(corners.v[0], corners.v[1], corners.v[2], corners.v[3], corners.v[4],
                     corners.v[5], -> close)
   }
-  bar := solid(section, from: z0, to: z1)
+  bar := solid(std.solids.Prism(section, from: z0, to: z1))
 }
 
 // A square bar by its width across the flats, its sides square to the line `ref`.
@@ -130,7 +131,7 @@ component SquareBar(c: point, ref: line, w: Length, z0: Length, z1: Length) {
     corners := std.shapes.Polygon(c, ref, n: 4, r: w / sqrt(2), phase: 45deg)
     section := face(corners.v[0], corners.v[1], corners.v[2], corners.v[3], -> close)
   }
-  bar := solid(section, from: z0, to: z1)
+  bar := solid(std.solids.Prism(section, from: z0, to: z1))
 }
 
 // == Parts =======================================================================================
@@ -159,7 +160,7 @@ component ValveBody(outlet: point, ref: line, s: BodySizes) {
     std.origin distance(s.inlet_top - s.inlet_h, along: v) bulge.end
     std.origin level(right) crown.p2
   }
-  barrel := solid(section, about: std.z)
+  barrel := solid(std.solids.Revolution(section, about: std.z))
   inlet := HexBar(std.top.origin, ref, af: s.inlet_af, phase: s.inlet_phase,
                   z0: s.inlet_top - s.inlet_h, z1: s.inlet_top)
   boss := RoundBar(outlet, d: s.boss_d, z0: 0mm, z1: s.boss_x)
@@ -255,8 +256,8 @@ component StarHandle(top: plane, s: StarSizes, stem_up: Length) {
   in top {
     stem_rim := radius(s.stem_d / 2) circle(center: plan.hub)
   }
-  star := solid(plan.outline, from: -s.h, to: 0mm, draft: s.draft)
-  stem := solid(face(stem_rim), from: -s.h / 2, to: stem_up)
+  star := solid(std.solids.Drafted(plan.outline, from: -s.h, to: 0mm, draft: s.draft))
+  stem := solid(std.solids.Prism(face(stem_rim), from: -s.h / 2, to: stem_up))
 
   handle := solid(star)
   stem union handle
