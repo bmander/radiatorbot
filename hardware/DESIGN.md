@@ -51,11 +51,15 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
 - **The keeper** is the gearbox's lid, a print of its own pressed down into the top of the base:
   it holds the three rods' tops and the motor, so the base, the keeper and the motor are a whole
   gearbox without the frame.
-  - Its 3 mm plate is the base's inside less 0.05 mm all round (`snug`), a light press into the
-    base's walls, which now run up 3 mm past the gears to its top. It stands on the tops of A's
-    bridge, the bulkhead and the base's four corner posts.
-  - On its top: the rods' posts, and the motor's pad and cradle, face down, the can's flats
-    keying it against its torque.
+  - It's a frame of beams 6 mm wide and 3 mm deep, open between them, rather than a sheet: a
+    spine from end wall to end wall through B and A, over the bridge; a cross beam over the
+    bulkhead from side wall to side wall; and beams from B and from A to D, closing a triangle
+    round the rods. It stands on the bridge and the bulkhead.
+  - Only its four beams' ends touch the base's walls, each a pad 12 mm along its wall: the light
+    press, 0.05 mm off the wall each side (`snug`). The base's walls run up 3 mm past the gears to
+    the keeper's top, and its four corner posts with them, beside the keeper and clear of it.
+  - On its beams: the rods' posts, and the motor's pad and cradle (on the spine beside B), face
+    down, the can's flats keying it against its torque.
   - **The motor's strap** holds it down on its pad, the usual way to hold a 130 that has no
     screw holes in its face: a printed bar 2.4 mm thick across its end bell, the end bell's boss
     up through a ring in it, and a leg down each side past the flats onto an **ear** up from the
@@ -70,8 +74,8 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   of its own, standing on the base's walls and the keeper, with a dovetail rail up the outside of
   its end wall toward the valve. Its floor has a hole round each of the keeper's posts and round
   the cradle, its ears and the strap, 0.3 mm clear, so it goes down over the keeper with the motor
-  strapped in. The base's four screws pass down through its floor and the keeper, clamping the
-  keeper between the two.
+  strapped in. The base's four screws pass down through its floor into the base's corner posts,
+  and its floor bears down on the keeper's beams, holding it on the bridge and the bulkhead.
 - **The mount** is a print of its own, snapped and glued onto the frame's rail: a spine up beside
   the valve to the **clamp**'s fixed half. Split off, each part prints without support: the frame
   on its floor, the mount on its top.
@@ -104,14 +108,14 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   - The clamp is 48 mm across, so its radiator-side face reaches out over the outlet's union nut
     (18.5 mm from the stem, 18.8 mm thick), whose top stands above the hex's underside. Both
     halves are relieved round the nut, its hex grown 2 mm all round.
-- **The base** is the gearbox's floor and walls, screwed up to the frame through the keeper. Its
+- **The base** is the gearbox's floor and walls, screwed up to the frame. Its
   floor stops short of the ring, and a bridge holds A's axle, standing on the upper collar just
   above the ring.
   - The bridge runs from A out to the end wall. That wall stops over the ring, so on its own it
     is a thin plate that flexes under the bridge. A **bulkhead** 4.8 mm thick runs across the
     whole box through A, from just over the ring's room up to the keeper, 0.3 mm clear round the
-    collar, so the bridge is tied into both side walls as well as the end wall, and the keeper
-    pressed in on top closes the cell.
+    collar, so the bridge is tied into both side walls as well as the end wall. The keeper's
+    cross beam lies along its top, pressed against both side walls.
   - The gears clear the bulkhead: D1's tips by 5 mm, D2's by 6.5.
 - **The rods' seats.** Each rod is pressed into posts, not just through a plate, so it is held
   square over a length rather than pivoting in a thin wall:
@@ -386,7 +390,7 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | a rod pressed into the housing | +0.05 mm (drill or ream to fit) |
 | printed faces that meet or pass | 0.3 mm |
 | a glued joint's faces (the mount's slot on the frame's rail) | 0.15 mm each side |
-| a printed part pressed into another (the keeper in the base's walls) | 0.05 mm each side (sand to fit) |
+| a printed part pressed into another (the keeper's pads against the base's walls) | 0.05 mm each side (sand to fit) |
 | each gear's teeth, thinned on the pitch circle | 0.15 mm (0.3 mm backlash a mesh) |
 | each gear's tips, chamfered 45° at both faces | 0.4 mm |
 | the socket's hole round the chrome handle | 0.3 mm each side |
@@ -403,8 +407,8 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
   round the pinion and a 2.4 mm rim under the tooth roots, the windows' corners rounded. The
   smaller gears, the ring and the socket, which carry the most torque, stay solid.
 - The socket prints floor down, its hole open at the top.
-- The keeper prints on its plate, its posts and the cradle standing up from it, the ears' 45°
-  undersides off the cradle's walls. The strap prints on its top, its legs up.
+- The keeper prints on its beams' undersides, its posts and the cradle standing up from them,
+  the ears' 45° undersides off the cradle's walls. The strap prints on its top, its legs up.
 - The frame and the mount print without support. The frame prints on its floor, the bay and the
   rail standing up from it, the rail's foot a 45° slope off the wall. The mount prints upside
   down on its top (the clamp's and the spine's, flush): the pipe's bore and the slot stand
@@ -450,8 +454,9 @@ gear and the socket as blanks while changing the layout.
   - The motor's shaft, out past its pinion, clears B's first compound by 3.4 mm and D's by 14,
     and its end clears B's second by 1.8 mm.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
-    pad and under its strap, the keeper in the base, the frame on both, the clamp on the pipe). Both of the clamp's halves clear the
-    outlet's union nut by 2 mm and its boss by 1.2 mm.
+    pad and under its strap, the keeper's pads on the base's walls, the frame on both, the clamp
+    on the pipe). The keeper clears the base's corner posts by 10.6 mm. Both of the clamp's
+    halves clear the outlet's union nut by 2 mm and its boss by 1.2 mm.
 - The mount's joint is claimed on every check: the mount clears the frame by the glue's 0.15 mm
   all round, at the dovetail's flanks, the rail's foot on the shelf, and the barb in its notch.
 
@@ -463,8 +468,7 @@ gear and the socket as blanks while changing the layout.
 - **Drill rod:** ½ in × 78.9 mm (A's axle); 0.311 in × 44.6 mm, two of them (B and D).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
-  - M3 × 12 self-tapping, four (the base to the frame, through the keeper);
-  - M3 × 10 self-tapping, four (the cover);
+  - M3 × 10 self-tapping, eight (the base to the frame, the cover);
   - M3 × 12 countersunk (flat head) self-tapping, two (the motor's strap);
   - M3 × 8 self-tapping, four (the RedBoard);
   - M3 set screws, two (the collar and the stand).
@@ -507,11 +511,11 @@ gear and the socket as blanks while changing the layout.
    its ring, and drive the two countersunk M3s down into the ears until the strap bears on the
    end bell.
 4. Press the keeper down into the base's walls, the three rods' tops into their holes in its
-   posts and the motor's pinion into mesh with B1, until it sits on the bridge, the bulkhead and
-   the corner posts. If it's too tight, sand its edges. Set the frame down over it, its floor's
-   holes over the posts and the strapped motor, and fit the base's four M3 × 12 screws from
-   inside the bay, down through the frame's floor and the keeper; draw them up evenly, so the
-   rods press home square.
+   posts and the motor's pinion into mesh with B1, until it sits on the bridge and the bulkhead.
+   If it's too tight, sand its four pads' ends. Set the frame down over it, its floor's holes
+   over the posts and the strapped motor, and fit the base's four M3 screws from inside the bay,
+   down through the frame's floor into the corner posts; draw them up evenly, so the frame's
+   floor presses the keeper and the rods home square.
 5. Make the shield. Plug the male headers into the RedBoard's power, analog and 25–RX sockets, lay
    the perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
    column two holes out from that header's first pin, its 7 cm across the board) and solder them,
@@ -558,5 +562,6 @@ gear and the socket as blanks while changing the layout.
   section the can's, and takes its terminal tabs to be at the round sides, clear of the 8 mm bar.
   Check the motor in hand: if its tabs stand across the flats' middle, the bar wants turning or
   notching for them.
-- **The keeper's press.** 0.05 mm each side is a light press for a typical FDM print; how tight it
-  is depends on the printer. Print the keeper and try it in the base before printing the rest.
+- **The keeper's press.** 0.05 mm each side is a light press for a typical FDM print; how tight
+  its four pads are depends on the printer. Print the keeper and try it in the base before
+  printing the rest.

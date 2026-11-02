@@ -355,6 +355,18 @@ component Dovetail(x0: Length, x1: Length, w0: Length, w1: Length, z0: Length, z
   body := solid(std.solids.Prism(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1))
 }
 
+// A bar from (x0, y0) to (x1, y1), `w` wide, from z0 to z1.
+component Bar(x0: Length, y0: Length, x1: Length, y1: Length, w: Length, z0: Length, z1: Length) {
+  len := sqrt((x1 - x0) ^ 2 + (y1 - y0) ^ 2)
+  nx := -(y1 - y0) / len * w / 2
+  ny := (x1 - x0) / len * w / 2
+  a := At(x: x0 - nx, y: y0 - ny)
+  b := At(x: x1 - nx, y: y1 - ny)
+  c := At(x: x1 + nx, y: y1 + ny)
+  d := At(x: x0 + nx, y: y0 + ny)
+  body := solid(std.solids.Prism(face(a.p, b.p, c.p, d.p, -> close), from: z0, to: z1))
+}
+
 // What stands under a 45deg slope across y = 0, `w` wide: from x0 to x1, under z0 + (x - x0), down
 // to zb.
 component UnderSlope(x0: Length, x1: Length, z0: Length, zb: Length, w: Length) {
@@ -721,7 +733,7 @@ motor_at raised(d: motor_z, along: std.z) m_c
 motor := Motor130(motor130_dims)
 motor seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 
-cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z, z1: 18mm)
+cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0 - motor_z, z1: 18mm)
 cradle_out seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 cradle_in := MotorCan(motor130_dims, grow: gap, z0: 0mm, z1: 19mm)
 cradle_in seats(turn: bot_turn, up: std.z, east: std.x) motor_at
@@ -789,20 +801,47 @@ base_hole_b.body cut base
 base_hole_d.body cut base
 
 // == The keeper: the gearbox's lid, the rods' tops and the motor =================================
-// One print, pressed down into the base's walls, its plate a light press inside them, standing on
-// the bridge, the bulkhead and the corner posts: it holds the tops of the rods, in posts on its
-// top, and the motor, on its pad in its cradle, so the gearbox and its motor are whole without the
-// frame.  The frame stands on it and the base's walls, the posts and the cradle up through holes
-// in its floor; the base's screws down through both clamp it.  It prints on its plate.
-keeper_plate := Block(x0: box_x0 + wall + snug, x1: box_x1 - wall - snug, y0: box_y0 + wall + snug,
-                      y1: box_y1 - wall - snug, z0: lid_z0, z1: lid_z1) in bot
-
+// One print, a frame of beams 3 mm deep with open bays between them, held in the base by four
+// pads pressed lightly against its walls: it holds the tops of the rods, in posts on its top, and
+// the motor, on its pad in its cradle, so the gearbox and its motor are whole without the frame.
+//   - A spine runs from end wall to end wall through B and A, over the bridge, and a cross beam
+//     over the bulkhead from side wall to side wall: the keeper stands on the bridge and the
+//     bulkhead, and each of the four ends is a pad `anchor_w` along its wall, a light press;
+//   - two more beams, B to D and A to D, close a triangle round the rods; the motor's cradle
+//     stands on the spine beside B.
+// Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, the
+// keeper's posts and the cradle up through holes in its floor, and its floor bears down on the
+// keeper's beams.  It prints on its beams' undersides.
+keeper_beam := 6mm
+anchor_w := 12mm
+anchor_d := 4mm                 // the pads' depth, in from the walls
+keeper_x0 := box_x0 + wall + snug
+keeper_x1 := box_x1 - wall - snug
+keeper_y0 := box_y0 + wall + snug
+keeper_y1 := box_y1 - wall - snug
+d_bx := b_r + cd_bd * cos(bd_bearing)                    // D in the bot's plan
+d_by := cd_bd * sin(bd_bearing)
+spine_beam := Block(x0: keeper_x0, x1: keeper_x1, y0: -keeper_beam / 2, y1: keeper_beam / 2,
+                    z0: lid_z0, z1: lid_z1) in bot
+cross_beam := Block(x0: -a_dist - keeper_beam / 2, x1: -a_dist + keeper_beam / 2, y0: keeper_y0,
+                    y1: keeper_y1, z0: lid_z0, z1: lid_z1) in bot
+bd_beam := Bar(x0: b_r, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0, z1: lid_z1) in bot
+ad_beam := Bar(x0: -a_dist, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0,
+               z1: lid_z1) in bot
+anchor_west := Block(x0: keeper_x0, x1: keeper_x0 + anchor_d, y0: -anchor_w / 2, y1: anchor_w / 2,
+                     z0: lid_z0, z1: lid_z1) in bot
+anchor_east := Block(x0: keeper_x1 - anchor_d, x1: keeper_x1, y0: -anchor_w / 2, y1: anchor_w / 2,
+                     z0: lid_z0, z1: lid_z1) in bot
+anchor_south := Block(x0: -a_dist - anchor_w / 2, x1: -a_dist + anchor_w / 2, y0: keeper_y0,
+                      y1: keeper_y0 + anchor_d, z0: lid_z0, z1: lid_z1) in bot
+anchor_north := Block(x0: -a_dist - anchor_w / 2, x1: -a_dist + anchor_w / 2,
+                      y0: keeper_y1 - anchor_d, y1: keeper_y1, z0: lid_z0, z1: lid_z1) in bot
 // the rods' posts on the keeper's top and their holes up into them, the motor's boss and shaft
 lid_post_r := axle_d / 2 + boss_wall
 rod_post_r := rod_d / 2 + boss_wall
-lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z1 - 1mm, z1: post_z1)
-lid_post_b := Post(b_c, r: rod_post_r, z0: lid_z1 - 1mm, z1: post_z1)
-lid_post_d := Post(d_c, r: rod_post_r, z0: lid_z1 - 1mm, z1: post_z1)
+lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z0, z1: post_z1)
+lid_post_b := Post(b_c, r: rod_post_r, z0: lid_z0, z1: post_z1)
+lid_post_d := Post(d_c, r: rod_post_r, z0: lid_z0, z1: post_z1)
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
 lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
 lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
@@ -810,7 +849,14 @@ motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
                         z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
 motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 
-keeper_part := solid(keeper_plate.body)
+keeper_part := solid(spine_beam.body)
+cross_beam.body union keeper_part
+bd_beam.body union keeper_part
+ad_beam.body union keeper_part
+anchor_west.body union keeper_part
+anchor_east.body union keeper_part
+anchor_south.body union keeper_part
+anchor_north.body union keeper_part
 cradle union keeper_part
 lid_post_a.body union keeper_part
 lid_post_b.body union keeper_part
@@ -923,19 +969,19 @@ barb.body union mount_part
 claim frame_part clear(0.1mm) mount_part              // the joint: the glue's room, all round
 
 // == The screws: the base to the lid, the RedBoard, the cover ====================================
-// The base's four, up from posts in its corners through the keeper and the frame's floor, their
-// heads in the bay.
+// The base's four, up from posts in its corners, which stand up to the base's top beside the
+// keeper, through the frame's floor, their heads in the bay.
 repeat 2 as i {
   repeat 2 as j {
     base_at := At(x: box_x0 + screw_inset + i * (box_x1 - box_x0 - 2 * screw_inset),
                   y: box_y0 + screw_inset + j * (box_y1 - box_y0 - 2 * screw_inset)) in bot
-    base_screw := ScrewPost(base_at.p, r: 4mm, z0: floor_z1, z1: lid_z0, hole_d: pilot,
+    base_screw := ScrewPost(base_at.p, r: 4mm, z0: floor_z1, z1: lid_z1, hole_d: pilot,
                             depth: 12mm) in bot
-    lid_screw := Post(base_at.p, r: m3_clear / 2, z0: lid_z0 - 1mm, z1: case_z1 + 1mm) in bot
+    lid_screw := Post(base_at.p, r: m3_clear / 2, z0: lid_z1 - 1mm, z1: case_z1 + 1mm) in bot
     base_screw.post union base
     base_screw.hole cut base
-    lid_screw.body cut keeper_part
     lid_screw.body cut frame_part
+    claim base_screw.post clear(0.5mm) keeper_part
   }
 }
 
