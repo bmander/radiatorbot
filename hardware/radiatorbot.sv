@@ -46,6 +46,7 @@ use std.place (vertical, horizontal, coords, seats, raised)
 use std.motion (turns)
 use std.shapes
 use std.rounds
+use std.rounds (round)
 use radiator_valve (RadiatorValve, handle_dims, body_dims, pipe_dims, handle_gap, stem_travel)
 use radiator_valve (open_turns)
 use radiator_valve (StarOutline, StarHandle, HexBar, RoundBar)
@@ -320,7 +321,7 @@ component At(x: Length, y: Length) {
 // A round post about `c` (drawn in std.top) from z0 to z1.
 component Post(c: point, r: Length, z0: Length, z1: Length) {
   in std.top {
-    rim := radius(r) circle(center: c)
+    rim := radius(r) circle(center: c) hint(r: r)
   }
   body := solid(std.solids.Prism(face(rim), from: z0, to: z1))
 }
@@ -384,9 +385,8 @@ component UnderSlope(x0: Length, x1: Length, z0: Length, zb: Length, w: Length) 
 }
 
 // A dovetail rail for the keeper, drawn in its own frame (its origin on a wall's inside face, x in
-// from the wall, y along it), and the keeper's pad that slots down over it: the rail up from its
-// sloped foot to the base's top, the slot through the pad, the rail grown `snug` all round, and
-// the pad `anchor_w` along the wall and `anchor_d` deep, `snug` off the wall.
+// from the wall, y along it), and the slot in the keeper's pad that slides down over it: the rail
+// up from its sloped foot to the base's top, and the slot the rail grown `snug` all round.
 component KeeperRail() {
   rail_z0 := lid_z0 - rail_h
   tail := Dovetail(x0: -1mm, x1: rail_h, w0: rail_root - 2mm * tan(dove_angle), w1: rail_tip,
@@ -396,11 +396,8 @@ component KeeperRail() {
                      w0: rail_root - 2mm * tan(dove_angle) + 2 * snug / cos(dove_angle),
                      w1: rail_tip + 2 * snug * tan(dove_angle) + 2 * snug / cos(dove_angle),
                      z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
-  block := Block(x0: snug, x1: anchor_d, y0: -anchor_w / 2, y1: anchor_w / 2, z0: lid_z0,
-                 z1: lid_z1)
   rail := solid(tail.body)
   heel.body cut rail
-  pad := solid(block.body)
   slot := solid(groove.body)
 }
 
@@ -754,7 +751,7 @@ motor_at raised(d: motor_z, along: std.z) m_c
 motor := Motor130(motor130_dims)
 motor seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 
-cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0 - motor_z, z1: 18mm)
+cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z, z1: 18mm)
 cradle_out seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 cradle_in := MotorCan(motor130_dims, grow: gap, z0: 0mm, z1: 19mm)
 cradle_in seats(turn: bot_turn, up: std.z, east: std.x) motor_at
@@ -833,7 +830,8 @@ base_hole_d.body cut base
 //     slides down over the rail, a light press on its flanks, and the rail holds the pad to its
 //     wall and square along it, so the keeper can neither spread nor pull in off the walls;
 //   - two more beams, B to D and A to D, close a triangle round the rods; the motor's cradle
-//     stands on the spine beside B.
+//     stands on the spine beside B, its foot pocketed from below;
+//   - every beam runs into its hub, pad or the cradle's foot through a fillet in plan.
 // Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, the
 // keeper's posts and the cradle up through holes in its floor, and its floor bears down on the
 // keeper's beams.  It prints on its beams' undersides.
@@ -853,10 +851,10 @@ keeper_y0 := box_y0 + wall + snug
 keeper_y1 := box_y1 - wall - snug
 d_bx := b_r + cd_bd * cos(bd_bearing)                    // D in the bot's plan
 d_by := cd_bd * sin(bd_bearing)
-spine_beam := Block(x0: keeper_x0, x1: keeper_x1, y0: -keeper_beam / 2, y1: keeper_beam / 2,
-                    z0: lid_z0, z1: lid_z1) in bot
-cross_beam := Block(x0: -a_dist - keeper_beam / 2, x1: -a_dist + keeper_beam / 2, y0: keeper_y0,
-                    y1: keeper_y1, z0: lid_z0, z1: lid_z1) in bot
+spine_beam := Bar(x0: keeper_x0, y0: 0mm, x1: keeper_x1, y1: 0mm, w: keeper_beam, z0: lid_z0,
+                  z1: lid_z1) in bot
+cross_beam := Bar(x0: -a_dist, y0: keeper_y0, x1: -a_dist, y1: keeper_y1, w: keeper_beam,
+                  z0: lid_z0, z1: lid_z1) in bot
 bd_beam := Bar(x0: b_r, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0, z1: lid_z1) in bot
 ad_beam := Bar(x0: -a_dist, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0,
                z1: lid_z1) in bot
@@ -872,9 +870,12 @@ keeper_rails := solid()
 // the rods' posts on the keeper's top and their holes up into them, the motor's boss and shaft
 lid_post_r := axle_d / 2 + boss_wall
 rod_post_r := rod_d / 2 + boss_wall
-lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z0, z1: post_z1)
-lid_post_b := Post(b_c, r: rod_post_r, z0: lid_z0, z1: post_z1)
-lid_post_d := Post(d_c, r: rod_post_r, z0: lid_z0, z1: post_z1)
+hub_a := Post(a_c, r: lid_post_r, z0: lid_z0, z1: lid_z1)
+hub_b := Post(b_c, r: rod_post_r, z0: lid_z0, z1: lid_z1)
+hub_d := Post(d_c, r: rod_post_r, z0: lid_z0, z1: lid_z1)
+lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z1, z1: post_z1)
+lid_post_b := Post(b_c, r: rod_post_r, z0: lid_z1, z1: post_z1)
+lid_post_d := Post(d_c, r: rod_post_r, z0: lid_z1, z1: post_z1)
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
 lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
 lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
@@ -882,10 +883,46 @@ motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
                         z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
 motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 
-keeper_part := solid(spine_beam.body)
-cross_beam.body union keeper_part
-bd_beam.body union keeper_part
-ad_beam.body union keeper_part
+// The cradle's foot, its section from the beams' underside up to the keeper's top, under the pad;
+// pocketed from below inside a wall, round B's hub and a boss round the motor's shaft, the pocket's
+// roof the pad, 2.8 mm under the motor's face.
+// (Drawn in a frame held on the motor's axis at z = 0, which the solve starts where it stands, so
+// the fillets find the foot where they find the beams.)
+m_frame := frame
+fix(origin == (b_r * cos(bot_turn) + cd_s1 * cos(bot_turn + bm_bearing),
+               b_r * sin(bot_turn) + cd_s1 * sin(bot_turn + bm_bearing), 0mm)) m_frame
+fix(dir == (cos(bot_turn), sin(bot_turn), 0)) m_frame.u
+fix(dir == (-sin(bot_turn), cos(bot_turn), 0)) m_frame.v
+cradle_foot := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0, z1: lid_z1) in m_frame
+foot_pocket := MotorCan(motor130_dims, grow: gap, z0: lid_z0 - 1mm, z1: lid_z1) in m_frame
+foot_keep_b := Post(b_c, r: rod_post_r, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
+foot_keep_m := Post(m_c, r: 2.5mm + wall, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
+construction pocket := solid(foot_pocket.body)
+foot_keep_b.body cut pocket
+foot_keep_m.body cut pocket
+
+// Each piece of the keeper a solid of its own, so its fillets can name them: `keeper_fillet` in
+// plan wherever a beam meets a hub, a pad or the cradle's foot, all within the beams' depth, so
+// none reaches up past the keeper's top to the frame's floor or down to the gears.
+keeper_fillet := 3mm
+construction k_spine := solid(spine_beam.body)
+construction k_cross := solid(cross_beam.body)
+construction k_bd := solid(bd_beam.body)
+construction k_ad := solid(ad_beam.body)
+construction k_hub_a := solid(hub_a.body)
+construction k_hub_b := solid(hub_b.body)
+construction k_hub_d := solid(hub_d.body)
+construction k_foot := solid(cradle_foot.body)
+keeper_part := solid()
+k_spine union keeper_part
+k_cross union keeper_part
+k_bd union keeper_part
+k_ad union keeper_part
+k_hub_a union keeper_part
+k_hub_b union keeper_part
+k_hub_d union keeper_part
+k_foot union keeper_part
+pocket cut keeper_part
 repeat r in keeper_rails_at {
   rail_f := frame
   fix(origin == (r.x * cos(bot_turn) - r.y * sin(bot_turn),
@@ -895,11 +932,27 @@ repeat r in keeper_rails_at {
   joint := KeeperRail() in rail_f
   joint.rail union base
   joint.rail union keeper_rails
-  joint.pad union keeper_part
   joint.slot cut keeper_part
+  // the pad, `anchor_w` along the wall and `anchor_d` deep, `snug` off it
+  pad_bar := Bar(x0: r.x + snug * cos(r.a), y0: r.y + snug * sin(r.a),
+                 x1: r.x + anchor_d * cos(r.a), y1: r.y + anchor_d * sin(r.a), w: anchor_w,
+                 z0: lid_z0, z1: lid_z1) in bot
+  construction k_pad := solid(pad_bar.body)
+  k_pad union keeper_part
 }
 claim keeper_rails clear(0.04mm) keeper_part          // the press: `snug` all round each rail
 cradle union keeper_part
+keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_hub_a
+keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_hub_b
+keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_foot
+keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_pad
+keeper_part.k_cross round(r: keeper_fillet) keeper_part.k_hub_a
+keeper_part.k_cross round(r: keeper_fillet) keeper_part.k_pad
+keeper_part.k_bd round(r: keeper_fillet) keeper_part.k_hub_b
+keeper_part.k_bd round(r: keeper_fillet) keeper_part.k_hub_d
+keeper_part.k_ad round(r: keeper_fillet) keeper_part.k_hub_a
+keeper_part.k_ad round(r: keeper_fillet) keeper_part.k_hub_d
+keeper_part.k_hub_b round(r: keeper_fillet) keeper_part.k_foot
 lid_post_a.body union keeper_part
 lid_post_b.body union keeper_part
 lid_post_d.body union keeper_part

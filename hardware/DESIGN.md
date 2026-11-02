@@ -69,6 +69,11 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     with them, beside the keeper and clear of it.
   - On its beams: the rods' posts, and the motor's pad and cradle (on the spine beside B), face
     down, the can's flats keying it against its torque.
+  - Every beam runs into its hub, its pad or the cradle's foot through a 3 mm fillet in plan,
+    filleted the beams' depth only, so none reaches up to the frame's floor or down to the gears.
+    The cradle's foot, otherwise 5.8 mm of solid under the motor, is pocketed from below inside
+    a 2.4 mm wall, leaving B's hub and a boss round the motor's shaft. The pocket's roof is the
+    motor's pad, 2.8 mm thick, a bridge of about 19 mm as the keeper prints.
   - **The motor's strap** holds it down on its pad, the usual way to hold a 130 that has no
     screw holes in its face: a printed bar 2.4 mm thick across its end bell, the end bell's boss
     up through a ring in it, and a leg down each side past the flats onto an **ear** up from the
