@@ -258,6 +258,10 @@ box_x0 := -136mm
 box_x1 := -35mm
 box_y0 := -31mm
 box_y1 := 64mm
+// The box's four upright corners are rounded outside, and inside by as much less the wall, so the
+// walls keep their thickness round them: a square corner is where a print's floor lifts first.
+box_r := 5mm
+box_r_in := box_r - wall
 spine_x1 := -21.5mm             // 4 mm off the valve's bulge and collar
 spine_w := 28mm
 // The mount's joint, on the end wall's outside about the bot's x: a dovetail rail `dove_root`
@@ -351,6 +355,24 @@ component Block(x0: Length, x1: Length, y0: Length, y1: Length, z0: Length, z1: 
     sq := std.shapes.CenteredRectangle(c, w: x1 - x0, h: y1 - y0)
   }
   body := solid(std.solids.Prism(face(sq.loop), from: z0, to: z1))
+}
+
+// The same block with its four upright corners rounded, radius r.
+component RoundedBlock(x0: Length, x1: Length, y0: Length, y1: Length, r: Length, z0: Length,
+                       z1: Length) {
+  in std.top {
+    a := point hint((x0, y0))
+    a coords(du: x0, dv: y0) std.top
+    b := point hint((x1, y0))
+    b coords(du: x1, dv: y0) std.top
+    c := point hint((x1, y1))
+    c coords(du: x1, dv: y1) std.top
+    d := point hint((x0, y1))
+    d coords(du: x0, dv: y1) std.top
+    outline := (south := line(a, b)) -> round(r: r) (east := line(b, c)) -> round(r: r)
+               (north := line(c, d)) -> round(r: r) (west := line(d, a)) -> round(r: r) close
+  }
+  body := solid(std.solids.Prism(outline, from: z0, to: z1))
 }
 
 // A dovetail up z from z0 to z1 about y = 0, standing out along x: `w0` across at x0, `w1` at x1.
@@ -787,9 +809,10 @@ claim strap_part clear(0.4mm) cradle      // its legs short of the ears: it bear
 // the ring's room and a millimetre clear of D2's tips, which pass over it; D's has no room for
 // one, D2's pinion standing on the floor.  Four M3 screws down through the frame's floor and the
 // keeper hold it up to the frame (below), the keeper clamped between them.
-base_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: floor_z0, z1: lid_z1) in bot
-base_cavity := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
-                     z0: floor_z1, z1: lid_z1 + 1mm) in bot
+base_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: floor_z0,
+                         z1: lid_z1) in bot
+base_cavity := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
+                            y1: box_y1 - wall, r: box_r_in, z0: floor_z1, z1: lid_z1 + 1mm) in bot
 base_shell := solid(base_box.body)
 base_cavity.body cut base_shell
 
@@ -973,10 +996,12 @@ motor_shaft_room.body cut keeper_part
 // boards stand on its floor, and the mount is glued onto the rail up its end wall.  Its floor has
 // a hole round each of the keeper's posts and round the motor's cradle, its ears and its strap, a
 // print's clearance all round, so it goes down over the keeper with the motor strapped in.
-case_floor := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z1, z1: case_z1) in bot
-bay_box := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: lid_z1, z1: bay_z1) in bot
-bay_room := Block(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall, y1: box_y1 - wall,
-                  z0: lid_z1 - 1mm, z1: bay_z1 + 1mm) in bot
+case_floor := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: lid_z1,
+                           z1: case_z1) in bot
+bay_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: lid_z1,
+                        z1: bay_z1) in bot
+bay_room := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
+                         y1: box_y1 - wall, r: box_r_in, z0: lid_z1 - 1mm, z1: bay_z1 + 1mm) in bot
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
 floor_hole_a := Post(a_c, r: lid_post_r + gap, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
@@ -1168,7 +1193,8 @@ repeat 2 as i {
 }
 
 // == The cover ===================================================================================
-cover := Block(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, z0: bay_z1, z1: bay_z1 + wall) in bot
+cover := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: bay_z1,
+                      z1: bay_z1 + wall) in bot
 cover_part := solid(cover.body)
 repeat c in cover_screws {
   cover_hole_at := At(x: c.x, y: c.y) in bot

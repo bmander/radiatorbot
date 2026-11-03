@@ -415,6 +415,9 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | the socket's hole round the chrome handle | 0.3 mm each side |
 | walls | 2.4 mm (six 0.4 mm perimeters) |
 
+- The base, the frame and the cover share one outline, its four upright corners rounded 5 mm
+  outside and 2.6 mm inside, so the walls keep their 2.4 mm round them. A square corner is where
+  a print's floor first lifts off the bed; in PLA, a clean sheet and a 5–8 mm brim do the rest.
 - Gears print flat, face down. Module 0.8 is the finest stage; it wants a 0.4 mm nozzle and
   0.12–0.16 mm layers.
 - Print the socket, A's compound and D2 in PETG or ASA rather than PLA. A radiator is warm, and
