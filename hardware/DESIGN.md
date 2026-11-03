@@ -90,6 +90,10 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   the cradle, its ears and the strap, 0.3 mm clear, so it goes down over the keeper with the motor
   strapped in. The base's four screws pass down through its floor into the base's corner posts,
   and its floor bears down on the keeper's beams, holding it on the bridge and the bulkhead.
+  - The screws stand 6.2 mm in from the box's outside, so their pan heads (5.6 mm across) sit on
+    the frame's floor 1 mm clear of the bay's walls. The posts under them are 8.6 mm across,
+    reaching out into both walls. The RedBoard stands 1.2 mm over the head in its corner; fit
+    these four screws before the RedBoard.
 - **The mount** is a print of its own, snapped and glued onto the frame's rail: a spine up beside
   the valve to the **clamp**'s fixed half. Split off, each part prints without support: the frame
   on its floor, the mount on its top.
@@ -453,6 +457,7 @@ gear and the socket as blanks while changing the layout.
     clearing the bay's walls by 1.8 mm;
   - the pins' tails under the shield clear the RedBoard's parts, and the RedBoard's under it
     clear the posts;
+  - the base's four screw heads, on the frame's floor, clear the bay's walls and the RedBoard;
   - the RedBoard, the shield and the driver clear the motor, its cradle and ears and its strap,
     and the motor and the strap clear the cover;
   - the keeper's cradle and the strap clear the frame's floor, which goes down over them, and the
@@ -471,7 +476,7 @@ gear and the socket as blanks while changing the layout.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
     pad and under its strap, the keeper's slots on the base's rails, the frame on both, the clamp
     on the pipe). The keeper's slots clear the rails by the press's 0.05 mm all round, and the
-    keeper clears the base's corner posts by 9.6 mm. Both of the clamp's halves clear the
+    keeper clears the base's corner posts by 7.5 mm. Both of the clamp's halves clear the
     outlet's union nut by 2 mm and its boss by 1.2 mm.
 - The mount's joint is claimed on every check: the mount clears the frame by the glue's 0.15 mm
   all round, at the dovetail's flanks, the rail's foot on the shelf, and the barb in its notch.
