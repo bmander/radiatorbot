@@ -74,6 +74,8 @@ wall := 2.4mm                   // six 0.4 mm perimeters
 boss_wall := 2 * wall           // a post's wall round a rod pressed into it
 pilot := 2.5mm                  // an M3 screw's self-tapping hole in a print
 m3_clear := 3.4mm
+m3_head_d := 5.6mm              // an M3 pan head (ISO 7045, and a self-tapper's), across and tall
+m3_head_h := 2.4mm
 m4_clear := 4.6mm
 m4_nut_af := 7.3mm              // an M4 nut's pocket across the flats
 split := 1mm                    // the clamp's halves stand apart this much before the bolts close it
@@ -285,7 +287,11 @@ nut_clear := 2mm                // the clamp's relief round the outlet's union n
 // its top.
 clamp_bolt_z0 := body_dims.inlet_top + gap + m4_clear / 2 + 1.5mm
 clamp_bolt_z1 := clamp_z1 - 7mm
-screw_inset := wall + 2mm       // the base's and the cover's screws, in from the box's outside
+screw_inset := wall + 2mm       // the cover's screws, in from the box's outside
+// The base's screws, in from the box's outside: their heads stand on the frame's floor in the
+// bay's corners, a millimetre clear of its walls; their posts reach out into both walls.
+base_screw_inset := wall + m3_head_d / 2 + 1mm
+base_post_r := base_screw_inset - wall + 0.5mm
 // The RedBoard and its shield (boards.sv) stand beside the motor, by the RedBoard's frame, its
 // power header's first pin at (board_ox, board_oy): its jack's mouth a millimetre in from the end
 // wall's inside face, its edge 2 mm off the motor's cradle's flat.
@@ -1065,18 +1071,24 @@ claim frame_part clear(0.1mm) mount_part              // the joint: the glue's r
 
 // == The screws: the base to the lid, the RedBoard, the cover ====================================
 // The base's four, up from posts in its corners, which stand up to the base's top beside the
-// keeper, through the frame's floor, their heads in the bay.
+// keeper, through the frame's floor, their heads on it in the bay's corners.  Each head is claimed
+// clear of the bay's walls, and of the RedBoard, which stands over the -x, +y one.
 repeat 2 as i {
   repeat 2 as j {
-    base_at := At(x: box_x0 + screw_inset + i * (box_x1 - box_x0 - 2 * screw_inset),
-                  y: box_y0 + screw_inset + j * (box_y1 - box_y0 - 2 * screw_inset)) in bot
-    base_screw := ScrewPost(base_at.p, r: 4mm, z0: floor_z1, z1: lid_z1, hole_d: pilot,
+    bx := box_x0 + base_screw_inset + i * (box_x1 - box_x0 - 2 * base_screw_inset)
+    by := box_y0 + base_screw_inset + j * (box_y1 - box_y0 - 2 * base_screw_inset)
+    base_at := At(x: bx, y: by) in bot
+    base_screw := ScrewPost(base_at.p, r: base_post_r, z0: floor_z1, z1: lid_z1, hole_d: pilot,
                             depth: 12mm) in bot
     lid_screw := Post(base_at.p, r: m3_clear / 2, z0: lid_z1 - 1mm, z1: case_z1 + 1mm) in bot
+    base_head := Post(base_at.p, r: m3_head_d / 2, z0: case_z1, z1: case_z1 + m3_head_h) in bot
     base_screw.post union base
     base_screw.hole cut base
     lid_screw.body cut frame_part
     claim base_screw.post clear(0.5mm) keeper_part
+    claim base_head.body clear(0.5mm) bay_shell
+    claim base_head.body clear(0.5mm) redboard.board
+    claim base_head.body clear(0.5mm) redboard.tails
   }
 }
 
