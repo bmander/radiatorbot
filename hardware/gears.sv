@@ -328,7 +328,7 @@ preview {
   wheel seats(turn: 0deg, up: std.z, east: std.x) wheel_at
   shown := solid(pinion.gear)
   shown_wheel := solid(wheel.gear)
-  sun := ShapedHelical(N: 14, m: 0.8mm, phi: 20deg, beta: 25deg, hand: -1, shift: 0, add: 1,
+  sun := ShapedHelical(N: 17, m: 0.8mm, phi: 20deg, beta: 25deg, hand: -1, shift: 0, add: 1,
                        thin: 0.15mm, z0: 0mm, z1: 6mm, bore: 4.35mm, shaped: 1, chamfer: 0.4mm)
   sun_at := point
   sun_at raised(d: -40mm, along: std.x) std.origin

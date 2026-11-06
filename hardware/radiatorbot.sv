@@ -113,15 +113,16 @@ top0 := -handle_gap
 // stage is a sun, three planets on steel pins in a carrier, and the ring round them, fixed: one
 // internal gear, the barrel the stack turns in, runs the whole stack's height, so every planet
 // screws down it into place.  The first sun is pressed on the motor's shaft; each carrier carries
-// the next stage's sun under it, and the last the pinion.  The stages are alike: a 14-tooth sun,
-// 16-tooth planets and the 46-tooth ring, (14 + 46) / 3 a whole number, so three planets spaced
+// the next stage's sun under it, and the last the pinion.  The stages are alike: a 17-tooth sun,
+// 19-tooth planets and the 55-tooth ring, (17 + 55) / 3 a whole number, so three planets spaced
 // evenly mesh both.
 //
 // The teeth are helical, 25deg, for quiet: each tooth comes into mesh across the face rather than
 // all along it at once, and a planet's 6 mm face overlaps a whole pitch, so one tooth pair is
 // always in full contact.  The suns are left-handed, the planets and the ring right-handed.  At
-// 25deg a 14-tooth sun keeps its involute down to where the planets' tips reach, so no tooth is
-// shifted and the stack's centre distances are nominal.  Module 0.8 (normal) throughout: the
+// 25deg a 17-tooth sun is cut without undercut (the cutter's straight flank stops short of where
+// it would fold the flank back, which the helical cut refuses), so no tooth is shifted and the
+// stack's centre distances are nominal.  Module 0.8 (normal) throughout: the
 // finest an 0.4 mm nozzle prints well, with the gear's teeth loaded far under what PETG bears.
 //
 // The ring and the socket's spur stages stay: they turn slowly (A 45 rpm at most, the pinion 180),
@@ -134,17 +135,17 @@ ring_n := 48
 cd_fin := m_fin * (fin_n + ring_n) / 2                  // 45 mm, P to A
 m_stack := 0.8mm                // the stack's normal module
 helix := 25deg
-sun_n := 14
-planet_n := 16
-ring_teeth := 46                // the barrel's internal teeth
+sun_n := 17
+planet_n := 19
+ring_teeth := 55                // the barrel's internal teeth
 claim ring_teeth == sun_n + 2 * planet_n
 stack_planets := 3
-claim (sun_n + ring_teeth) / stack_planets == 20             // the planets spaced evenly
+claim (sun_n + ring_teeth) / stack_planets == 24             // the planets spaced evenly
 m_t := m_stack / cos(helix)                                  // the transverse module, 0.883 mm
-orbit := m_t * (sun_n + planet_n) / 2                        // P to each planet, 13.24 mm
-ring_pitch := m_t * ring_teeth / 2                           // 20.30 mm
-ring_tip_r := ring_pitch - m_stack                           // the barrel's bore, 19.50 mm
-ring_root_r := ring_pitch + 1.25 * m_stack                   // 21.30 mm
+orbit := m_t * (sun_n + planet_n) / 2                        // P to each planet, 15.89 mm
+ring_pitch := m_t * ring_teeth / 2                           // 24.27 mm
+ring_tip_r := ring_pitch - m_stack                           // the barrel's bore, 23.47 mm
+ring_root_r := ring_pitch + 1.25 * m_stack                   // 25.27 mm
 sun_hand := -1
 planet_hand := 1
 // the planets' steel pins, pressed into their carrier's plate, and the rod P's carriers turn on
@@ -160,14 +161,14 @@ p_y := -12.47mm
 p_x := -a_dist - sqrt(cd_fin ^ 2 - p_y ^ 2)                    // -103.24 mm
 pa_bearing := atan2(-p_y, -a_dist - p_x)                       // 16.1deg
 
-// Each stage turns its carrier one turn for `stage_ratio` of its sun's, the same way: 1 + 46 / 14.
+// Each stage turns its carrier one turn for `stage_ratio` of its sun's, the same way: 1 + 55 / 17.
 stage_ratio := 1 + ring_teeth / sun_n
-gear_ratio := stage_ratio ^ 3 * ring_n / fin_n               // motor turns an A turn: 315
-handle_ratio := gear_ratio * socket_n / a_n                  // a handle turn: 840
+gear_ratio := stage_ratio ^ 3 * ring_n / fin_n               // motor turns an A turn: 304
+handle_ratio := gear_ratio * socket_n / a_n                  // a handle turn: 810
 
 // What it does, from the motor's figures: printed meshes at ~0.9 each.  A planetary stage loses
 // only on the power its meshes roll through, the sun turning against its carrier: with the ring
-// fixed, (1 + 0.9 ^ 2 (i - 1)) / i of it reaches the carrier, 0.854 here.  Then the ring's and the
+// fixed, (1 + 0.9 ^ 2 (i - 1)) / i of it reaches the carrier, 0.855 here.  Then the ring's and the
 // socket's spur meshes, and the handle in the socket is a direct drive.  The current sensing trips
 // well under the stall: at the end of the screw the torque the trip allows is what seats the
 // valve.  What the design asks of it: a stall well over what an old packed valve takes to turn,
@@ -189,7 +190,7 @@ claim handle_free_speed >= 6rpm
 // How fast each part turns about its upward axis, in turns a turn open of the handle (a turn the
 // handle makes about the downward stem): A 64/24, the last carrier and its pinion back from A's
 // ring, reversed, and each carrier above it and the motor `stage_ratio` faster, the same way.
-// A planet turns on its pin against its carrier as the ring turns against it, 46/16 the other way.
+// A planet turns on its pin against its carrier as the ring turns against it, 55/19 the other way.
 a_rate := socket_n / a_n
 c3_rate := -a_rate * ring_n / fin_n
 c2_rate := c3_rate * stage_ratio
@@ -299,7 +300,7 @@ clamp_z1 := clamp_z0 + 31.7mm
 // runs into it; its +y side stands 4.4 mm off the RedBoard's 2.3 in across the bay.
 box_x0 := -136mm
 box_x1 := -35mm
-box_y0 := -38mm
+box_y0 := -42mm
 box_y1 := 64mm
 // The stack's barrel about P: its teeth's root, a counterbore a print's clearance over it for the
 // keeper's spigot, and a wall round that; the keeper's plate over it stands on the barrel's top.
@@ -645,7 +646,7 @@ component Helical(c: point, z: Length, turn: Angle, N: Int, hand: Int, add: Scal
 // points out at the barrel stands in a tooth space of it, turned by as much as the space is from
 // the planet's bearing, in their ratio; its sun stands so that the planet's space toward it holds
 // one of the sun's teeth, as rolling would bring them.  The three planets' meshes agree because
-// (14 + 46) / 3 is whole.
+// (17 + 55) / 3 is whole.
 component Phasing(zb: Length, k: Int) {
   ring_at := ring_turn + planet_hand * (zb - band_z0) * tan(helix) / ring_pitch * 180deg / pi
   bearing0 := bot_turn
@@ -932,7 +933,7 @@ claim strap_part clear(0.4mm) cradle      // its legs short of the ears: it bear
 // bulkhead stands from the ring's room up to the keeper, a print's clearance round the collar.
 //
 // The stack's barrel stands up from the floor round P, into the -y wall, to the keeper's
-// underside: through its bore the 46 internal teeth every stage's planets run in, one right-handed
+// underside: through its bore the 55 internal teeth every stage's planets run in, one right-handed
 // helical gear from the last carrier's plate up past the first stage's planets, cut by its tooth
 // count's own helical gear grown a clearance (`Helical` with `add` 1.25); under them its plain
 // bore, where the last pinion turns and A's ring comes in through the ring's room; over them a
