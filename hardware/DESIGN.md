@@ -94,9 +94,9 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     0.5 mm short of the legs, so the screws always draw the strap down onto the end bell, never
     onto the ears. The bar is 8 mm wide, across the flats' middle, clear of the terminal tabs at
     the round sides.
-  - The ears swell from the cradle's 2.4 mm wall to 6 mm over a 45° underside, which starts 7 mm
-    over the RedBoard's underside, clear of its edge beside the cradle and of its LiPo socket,
-    which the +y ear passes over.
+  - The ears swell from the cradle's 2.4 mm wall to 6 mm over a 45° underside, which starts level
+    with the top of the RedBoard's LiPo socket (7.1 mm over the board's underside), clear of the
+    board's edge beside the cradle and of the socket, which the +y ear passes over.
 - **The frame** is one print: the electronics bay (the boards beside the motor) on a 2.4 mm floor
   of its own, standing on the base's walls and the keeper, with a dovetail rail up the outside of
   its end wall toward the valve. Its floor has a hole round A's post on the keeper and round
@@ -540,7 +540,7 @@ gear and the socket as blanks while changing the layout.
   - M3 set screws, two (the collar and the stand).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. The first stage's sun is a press fit on the 2 mm shaft,
-  which runs on 5 mm past the sun, down into the first carrier's bore over the top of P's rod.
+  which runs on 3.2 mm past the sun, down into the first carrier's bore over the top of P's rod.
 - **Electronics** (no fabbed PCB); see *The electronics*:
   - a SparkFun IoT RedBoard ESP32 (WRL-19177, ~$30): the controller, its Wi-Fi, and the
     adapter's way in;

@@ -146,13 +146,16 @@ orbit := m_t * (sun_n + planet_n) / 2                        // P to each planet
 ring_pitch := m_t * ring_teeth / 2                           // 24.27 mm
 ring_tip_r := ring_pitch - m_stack                           // the barrel's bore, 23.47 mm
 ring_root_r := ring_pitch + 1.25 * m_stack                   // 25.27 mm
+ring_lead := 2 * pi * ring_pitch / tan(helix)                // a tooth's rise a turn: 327 mm
+ring_twist := planet_hand * 360deg / ring_lead               // its turn a millimetre up
 sun_hand := -1
 planet_hand := 1
 // the planets' steel pins, pressed into their carrier's plate, and the rod P's carriers turn on
 pin_seat := 4mm
-pin_wall := m_stack * (planet_n / (2 * cos(helix)) - 1.25) - (pin_d + run) / 2
+planet_bore := pin_d + run
+pin_wall := m_stack * (planet_n / (2 * cos(helix)) - 1.25) - planet_bore / 2
 claim pin_wall >= 1.5mm                                      // a planet's roots to its bore
-sun_wall := m_stack * (sun_n / (2 * cos(helix)) - 1.25) - (p_rod_d + run) / 2
+sun_wall := m_stack * (sun_n / (2 * cos(helix)) - 1.25) - p_bore / 2
 claim sun_wall >= 1.5mm                                      // a sun's roots to its bore
 
 // P stands where the motor stood, beside the electronics bay's boards, and `cd_fin` from A; its
@@ -288,8 +291,9 @@ strap_h := 6mm                  // the legs, from the strap's top down
 strap_w := 8mm                  // across the flats' middle, clear of the round sides' terminals
 strap_lift := 0.5mm
 ear_t := 6mm                    // the ears, out from the cradle's pocket
-ear_z0 := board_z + 7mm         // where the ears start to swell out of the cradle's flats,
-                                // over the RedBoard's LiPo socket beside the +y one
+// where the ears start to swell out of the cradle's flats: level with the top of the RedBoard's
+// LiPo socket, which the +y one passes over
+ear_z0 := board_z + redboard_dims.pcb_t + redboard_dims.lipo_h
 ear_z1 := strap_top - strap_h - strap_lift
 strap_screw_y := motor130_dims.flats / 2 + gap + ear_t / 2   // off the motor's axis
 clamp_z0 := body_dims.inlet_top - body_dims.inlet_h     // the inlet hex's underside
@@ -608,16 +612,14 @@ component MotorStrap(s: MotorSizes) {
 // pinion is shifted +pin_shift and stands a tooth on the line of centres; its gear is shifted
 // -pin_shift and stands a space on it (the figure's cut space is on +v: a pinion turned `bearing
 // - 90deg - 180deg / N`, its gear `bearing + 90deg`).  Gears of one size and face are one figure,
-// shaped once.  A large gear is spoked to save material: `spokes` of them, `web` wide, between a
-// hub of radius `hub` (clear of the pinion it carries) and a rim `web` thick under its roots;
-// 0 spokes, solid.
+// shaped once.
 component Gear(c: point, z: Length, bearing: Angle, drives: Int, N: Int, m: Length, face: Length,
-               bore: Length, spokes: Int, hub: Length, web: Length) {
+               bore: Length) {
   at := point
   at raised(d: z, along: std.z) c
   g := ShapedSpur(N: N, m: m, phi: pa, shift: (2 * drives - 1) * pin_shift, thin: thin,
                   z0: 0mm, z1: face, bore: bore, shaped: shaped, chamfer: chamfer,
-                  spokes: spokes, hub: hub, web: web)
+                  spokes: 0, hub: 0mm, web: 0mm)
   g seats(turn: bot_turn + bearing + 90deg + drives * (180deg - 180deg / N), up: std.z,
           east: std.x) at
   construction gear := solid(g.gear)
@@ -625,50 +627,60 @@ component Gear(c: point, z: Length, bearing: Angle, drives: Int, N: Int, m: Leng
 
 // A printed helical gear of the stack seated on an axle: its figure (gears.sv) with its origin
 // `z` up the axle from `c`, its axis up the world's z, turned `rot` from the world's x (its cut
-// space, centred on its own +v at its underside, then at `rot + 90deg`).  `add` and `thin_by`
-// are the figure's.  Gears of one size and face are one figure, shaped once.
-component Helical(c: point, z: Length, rot: Angle, N: Int, hand: Int, add: Scalar,
-                  thin_by: Length, face: Length, bore: Length, chamfer_by: Length) {
+// space, centred on its own +v at its underside, then at `rot + 90deg`).  Gears of one size,
+// face and bore are one figure, shaped once.
+component Helical(c: point, z: Length, rot: Angle, N: Int, hand: Int, face: Length,
+                  bore: Length) {
   at := point
   at raised(d: z, along: std.z) c
-  g := ShapedHelical(N: N, m: m_stack, phi: pa, beta: helix, hand: hand, shift: 0, add: add,
-                     thin: thin_by, z0: 0mm, z1: face, bore: bore, shaped: shaped,
-                     chamfer: chamfer_by)
+  g := ShapedHelical(N: N, m: m_stack, phi: pa, beta: helix, hand: hand, shift: 0, add: 1,
+                     thin: thin, z0: 0mm, z1: face, bore: bore, shaped: shaped, chamfer: chamfer)
   g seats(turn: rot, up: std.z, east: std.x) at
   construction gear := solid(g.gear)
 }
 
-// How a stage's gears stand at rest, its planets' and its sun's undersides at `zb`: its planets
-// at bearings `bot_turn + k 120deg` from P in the world, `planet(k)`'s turn, and its sun's, `sun`,
-// each the turn its Helical is seated at.  The barrel's teeth stand as they are drawn
-// (`ring_turn`, at `band_z0`), and climb a right hand's turn to `zb`.  The planet's tooth that
-// points out at the barrel stands in a tooth space of it, turned by as much as the space is from
-// the planet's bearing, in their ratio; its sun stands so that the planet's space toward it holds
-// one of the sun's teeth, as rolling would bring them.  The three planets' meshes agree because
-// (17 + 55) / 3 is whole.
-component Phasing(zb: Length, k: Int) {
-  ring_at := ring_turn + planet_hand * (zb - band_z0) * tan(helix) / ring_pitch * 180deg / pi
-  bearing0 := bot_turn
-  bearing := bot_turn + k * 120deg
-  off := 90deg + ring_at + 180deg / ring_teeth - bearing0    // the barrel's space off planet 0
-  sun := (180deg * planet_n - off * ring_teeth) / sun_n - 90deg + bearing0
-  planet := bearing + 90deg - (90deg + sun + 180deg / sun_n - bearing) * sun_n / planet_n
+// Where planet `k` of a stage stands round P: its bearing in the world, and its pin's centre.
+component PlanetPlace(k: Int) {
+  bearing := bot_turn + k * 360deg / stack_planets
+  centre := At(x: pw_x + orbit * cos(bearing), y: pw_y + orbit * sin(bearing))
 }
 
-// A carrier's plate on P, `c_z0` up, its bore and its three pins' holes, blind `pin_seat` down
-// from its top, at bearings `bot_turn + k 120deg`: the plate's solid and its holes', each cut from
-// the compound it is in.
+// How a stage's gears stand at rest, its planets' and its sun's undersides at `zb`: planet `k`'s
+// turn, `planet`, and its sun's, `sun`, each the turn its Helical is seated at.  The barrel's teeth
+// stand as they are drawn (`ring_turn`, at `band_z0`) and turn `ring_twist` a millimetre up to
+// `zb`.  The planet's tooth that points out at the barrel stands in a tooth space of it, turned by
+// as much as the space is from the planet's bearing, in their ratio; the sun stands so that the
+// first planet's space toward it holds one of its teeth, as rolling would bring them.  The other
+// planets' meshes agree because (17 + 55) / 3 is whole.
+component Phasing(zb: Length, k: Int) {
+  first := PlanetPlace(k: 0)
+  place := PlanetPlace(k: k)
+  ring_at := ring_turn + (zb - band_z0) * ring_twist
+  off := 90deg + ring_at + 180deg / ring_teeth - first.bearing  // the barrel's space off planet 0
+  sun := (180deg * planet_n - off * ring_teeth) / sun_n - 90deg + first.bearing
+  planet := place.bearing + 90deg - (90deg + sun + 180deg / sun_n - place.bearing) * sun_n / planet_n
+}
+
+// A barrel tooth space's flank at radius `r`: its angle off the space's middle, the involute of
+// the barrel's base circle through the pitch circle `space_half` off it.
+component Flank(r: Length) {
+  at_r := acos(ring_base / r)
+  th := space_half + (tan(ring_alpha) * 1rad - ring_alpha) - (tan(at_r) * 1rad - at_r)
+}
+
+// A carrier's plate on P, `c_z0` up, less its pins' holes, blind `pin_seat` down from its top
+// (`part`), and the carrier's bore down through the sun or the pinion under it (`bore`, cut from
+// the compound).
 component CarrierPlate(c: point, c_z0: Length) {
   plate := Post(c, r: carrier_r, z0: c_z0, z1: c_z0 + plate_t)
-  holes := solid()
-  repeat 3 as k {
-    hole_at := At(x: pw_x + orbit * cos(bot_turn + k * 120deg),
-                  y: pw_y + orbit * sin(bot_turn + k * 120deg))
-    hole := Post(hole_at.p, r: (pin_d + press) / 2, z0: c_z0 + plate_t - pin_seat,
-                 z1: c_z0 + plate_t + 1mm)
-    hole.body union holes
-  }
   bore := Post(c, r: p_bore / 2, z0: c_z0 - 20mm, z1: c_z0 + plate_t + 1mm)
+  part := solid(plate.body)
+  repeat stack_planets as k {
+    place := PlanetPlace(k: k)
+    hole := Post(place.centre.p, r: (pin_d + press) / 2, z0: c_z0 + plate_t - pin_seat,
+                 z1: c_z0 + plate_t + 1mm)
+    hole.body cut part
+  }
 }
 
 // == The valve ===================================================================================
@@ -725,8 +737,7 @@ rod_at_p := Post(p_c, r: p_rod_d / 2, z0: floor_z0, z1: p_rod_z1)
 // grown `socket_fit` all round, straight from the floor up out of its top.  It is drawn where the
 // handle stands closed (`valve.handle_top`), the hole square to the arms there.
 socket_gear := Gear(std.top.origin, z: socket_z1 - socket_face, bearing: 0deg, drives: 0,
-                    N: socket_n, m: m_socket, face: socket_face, bore: 4mm, spokes: 0, hub: 0mm,
-                    web: 0mm)
+                    N: socket_n, m: m_socket, face: socket_face, bore: 4mm)
 socket_body := Post(std.top.origin, r: socket_body_r, z0: socket_z0,
                     z1: socket_z1 - socket_face + bond)
 socket_star := StarOutline(valve.handle_top, s: handle_dims)
@@ -745,9 +756,9 @@ pivot_hole.body cut socket_part
 // The pinion that drives the socket, the web over it, and the ring the last pinion drives, one
 // print, turning on A.
 a_pin := Gear(a_c, z: a_pin_z0, bearing: 0deg, drives: 1, N: a_n, m: m_socket,
-              face: web_z0 - a_pin_z0 + bond, bore: axle_bore, spokes: 0, hub: 0mm, web: 0mm)
+              face: web_z0 - a_pin_z0 + bond, bore: axle_bore)
 ring_gear := Gear(a_c, z: ring_z0, bearing: pa_bearing, drives: 0, N: ring_n, m: m_fin,
-                  face: ring_z1 - ring_z0, bore: axle_bore, spokes: 0, hub: 0mm, web: 0mm)
+                  face: ring_z1 - ring_z0, bore: axle_bore)
 web := Post(a_c, r: 30mm, z0: web_z0, z1: ring_z0 + bond)
 a_bore := Post(a_c, r: axle_bore / 2, z0: a_pin_z0 - 1mm, z1: ring_z1 + 1mm)
 construction a_part := solid(a_pin.gear)
@@ -792,43 +803,41 @@ ph3 := Phasing(zb: zb3, k: 0)
 ph2 := Phasing(zb: zb2, k: 0)
 ph1 := Phasing(zb: zb1, k: 0)
 
-// the first stage's sun, pressed on the motor's shaft
-sun1 := Helical(p_c, z: zb1, rot: ph1.sun, N: sun_n, hand: sun_hand, add: 1, thin_by: thin,
-                face: planet_face, bore: motor130_dims.shaft_d - 0.1mm, chamfer_by: chamfer)
+// The three suns are one figure: each from its stage's planets' undersides up into the carrier's
+// plate over them (the first, on the motor's shaft, up toward the keeper), bored for the shaft.
+// The carriers' bore is cut through the second and third.
+sun_face := planet_face + gap + bond
+sun1 := Helical(p_c, z: zb1, rot: ph1.sun, N: sun_n, hand: sun_hand, face: sun_face,
+                bore: motor130_dims.shaft_d - 0.1mm)
 construction motor_sun := solid(sun1.gear)
 
 // the first carrier, and the second stage's sun under it
 plate1 := CarrierPlate(p_c, c_z0: c1_z0)
-sun2 := Helical(p_c, z: zb2, rot: ph2.sun, N: sun_n, hand: sun_hand, add: 1, thin_by: thin,
-                face: c1_z0 - zb2 + bond, bore: p_bore, chamfer_by: chamfer)
-construction carrier1 := solid(plate1.plate.body)
+sun2 := Helical(p_c, z: zb2, rot: ph2.sun, N: sun_n, hand: sun_hand, face: sun_face,
+                bore: motor130_dims.shaft_d - 0.1mm)
+construction carrier1 := solid(plate1.part)
 sun2.gear union carrier1
 plate1.bore.body cut carrier1
-plate1.holes cut carrier1
 
 // the second, and the third stage's sun under it
 plate2 := CarrierPlate(p_c, c_z0: c2_z0)
-sun3 := Helical(p_c, z: zb3, rot: ph3.sun, N: sun_n, hand: sun_hand, add: 1, thin_by: thin,
-                face: c2_z0 - zb3 + bond, bore: p_bore, chamfer_by: chamfer)
-construction carrier2 := solid(plate2.plate.body)
+sun3 := Helical(p_c, z: zb3, rot: ph3.sun, N: sun_n, hand: sun_hand, face: sun_face,
+                bore: motor130_dims.shaft_d - 0.1mm)
+construction carrier2 := solid(plate2.part)
 sun3.gear union carrier2
 plate2.bore.body cut carrier2
-plate2.holes cut carrier2
 
 // the last, and the spur pinion under it, a tooth toward A's ring
 plate3 := CarrierPlate(p_c, c_z0: c3_z0)
 fin_pin := Gear(p_c, z: fin_z0, bearing: pa_bearing, drives: 1, N: fin_n, m: m_fin,
-                face: c3_z0 - fin_z0 + bond, bore: p_bore, spokes: 0, hub: 0mm, web: 0mm)
-construction carrier3 := solid(plate3.plate.body)
+                face: c3_z0 - fin_z0 + bond, bore: p_bore)
+construction carrier3 := solid(plate3.part)
 fin_pin.gear union carrier3
-plate3.bore.body cut carrier3
-plate3.holes cut carrier3
 
 // One planet, the last stage's first, at rest: the part printed nine times.
-planet_at := At(x: pw_x + orbit * cos(ph3.bearing), y: pw_y + orbit * sin(ph3.bearing))
-planet_gear := Helical(planet_at.p, z: zb3, rot: ph3.planet, N: planet_n, hand: planet_hand,
-                       add: 1, thin_by: thin, face: planet_face, bore: pin_d + run,
-                       chamfer_by: chamfer)
+planet_at := PlanetPlace(k: 0)
+planet_gear := Helical(planet_at.centre.p, z: zb3, rot: ph3.planet, N: planet_n,
+                       hand: planet_hand, face: planet_face, bore: planet_bore)
 construction planet := solid(planet_gear.gear)
 
 // The socket and the train turning with the handle, at the rates worked out with the drive, each
@@ -861,7 +870,8 @@ carrier_1 := carrier1 at c1_turn
 sun_1 := motor_sun at motor_turn
 
 // Every planet and its pin: each turned on its pin against its carrier, then carried round P with
-// it, the stage's carrier's rate.
+// it, the stage's carrier's rate.  Drawn so, not riding the carrier's frame, since a frame with a
+// value carries nothing drawn in it (bmander/geomsolver#823).
 stages := [
   {zb: zb3, rate: c3_rate},
   {zb: zb2, rate: c2_rate},
@@ -871,15 +881,14 @@ repeat st in stages {
   orbit_turn := frame
   orbit_turn turns(st.rate) p_spindle
   fix(value == handle_open) orbit_turn
-  repeat 3 as k {
+  repeat stack_planets as k {
     ph := Phasing(zb: st.zb, k: k)
-    pc := At(x: pw_x + orbit * cos(ph.bearing), y: pw_y + orbit * sin(ph.bearing))
     pc_up := point
-    pc_up raised(d: 10mm, along: std.z) pc.p
-    construction pc_spindle := line(pc.p, pc_up)
-    pg := Helical(pc.p, z: st.zb, rot: ph.planet, N: planet_n, hand: planet_hand, add: 1,
-                  thin_by: thin, face: planet_face, bore: pin_d + run, chamfer_by: chamfer)
-    pin := Post(pc.p, r: pin_d / 2, z0: st.zb - gap - pin_seat,
+    pc_up raised(d: 10mm, along: std.z) ph.place.centre.p
+    construction pc_spindle := line(ph.place.centre.p, pc_up)
+    pg := Helical(ph.place.centre.p, z: st.zb, rot: ph.planet, N: planet_n, hand: planet_hand,
+                  face: planet_face, bore: planet_bore)
+    pin := Post(ph.place.centre.p, r: pin_d / 2, z0: st.zb - gap - pin_seat,
                 z1: st.zb - gap - pin_seat + pin_len)
     spin := frame
     spin turns(-st.rate * ring_teeth / planet_n) pc_spindle
@@ -973,31 +982,39 @@ base_hole_p.body cut base
 
 // The barrel's teeth.  An internal gear's tooth space is the tooth of an external gear of its
 // count, module and helix: its flanks are involutes of the same base circle, curving away from the
-// space's middle.  So each space is drawn in the transverse plane at `band_z0`, as that tooth
-// stands (`thin` thicker, so the barrel's teeth come out `thin` thinner), a millimetre under them,
-// and carried up a screw about P of the teeth's lead, right-handed, to over the barrel's top
-// (ends clear of the other cuts' faces, so none meets another flush): the screw's sweep of the
-// section, exactly.  Each flank is the arc through three points of its involute, from a print's
-// clearance inside the teeth's tips to their root, within 4 µm of it.  The space stands centred
-// half a pitch on from +y at `band_z0` (`ring_turn`, as `Phasing` reads it; turned back the
-// screw's turn to stand so at `space_z0`), and is turned a
-// pitch at a time round P for the rest.
-ring_lead := 2 * pi * ring_pitch / tan(helix)              // 327 mm a turn
-space_z0 := band_z0 - 1mm         // from under the teeth, past the ring room's ceiling
+// space's middle.  So each space is drawn in the transverse plane as that tooth stands (`thin`
+// thicker, so the barrel's teeth come out `thin` thinner) and carried up a screw about P of the
+// teeth's lead: the screw's sweep of the section, exactly.  Each flank is the arc through three
+// points of its involute, from a print's clearance inside the teeth's tips to their root, within
+// 4 µm of it.  The space stands centred half a pitch on from +y at `band_z0` (`ring_turn`, as
+// `Phasing` reads it), and is turned a pitch at a time round P for the rest.
+//
+// Three workarounds for solventc v0.1.13, each to undo when geomsolver fixes it:
+//   - the spaces are drawn rather than cut by a 55-tooth helical gear, since a body cut by sweeps
+//     cannot itself be cut from another (bmander/geomsolver#818);
+//   - the screw turns about `ring_axis`, held outright, not about P's drawn spindle, which leaves
+//     the section's station unheld beside the gears seated on P (bmander/geomsolver#817);
+//   - the spaces run from a millimetre under the teeth's band to half a millimetre over the
+//     barrel's top, so their ends are flush with no other cut's face, which leaves the STL a
+//     degenerate triangle (bmander/geomsolver#821).
+claim planet_hand == 1          // the screw below climbs right-handed
+space_z0 := band_z0 - 1mm
 ring_rise := lid_z0 + 0.5mm - space_z0
 ring_alpha := atan(tan(pa) / cos(helix))                    // the transverse pressure angle
 ring_base := ring_pitch * cos(ring_alpha)
-ring_inv := tan(ring_alpha) * 1rad - ring_alpha
 space_half := (pi * m_t / 2 + thin / cos(helix)) / (2 * ring_pitch) * 1rad
-space_mid := 90deg + ring_turn + 180deg / ring_teeth - (band_z0 - space_z0) * tan(helix) / ring_pitch * 1rad
+space_mid := 90deg + ring_turn + 180deg / ring_teeth + (space_z0 - band_z0) * ring_twist
 r_in := ring_tip_r - gap
 r_mid := (r_in + ring_root_r) / 2
-a_in := acos(ring_base / r_in)
-a_mid := acos(ring_base / r_mid)
-a_root := acos(ring_base / ring_root_r)
-th_in := space_half + ring_inv - (tan(a_in) * 1rad - a_in)
-th_mid := space_half + ring_inv - (tan(a_mid) * 1rad - a_mid)
-th_root := space_half + ring_inv - (tan(a_root) * 1rad - a_root)
+f_in := Flank(r: r_in)
+f_mid := Flank(r: r_mid)
+f_root := Flank(r: ring_root_r)
+left_in := space_mid + f_in.th                // each flank's points' bearings from P
+left_mid := space_mid + f_mid.th
+left_root := space_mid + f_root.th
+right_in := space_mid - f_in.th
+right_mid := space_mid - f_mid.th
+right_root := space_mid - f_root.th
 ring_x := axis
 ring_y := axis
 fix(dir == (1, 0, 0), origin == (pw_x, pw_y, space_z0)) ring_x
@@ -1011,24 +1028,25 @@ ring_screw screws(ring_lead) ring_axis
 fix(value == 360deg * ring_rise / ring_lead * ring_s) ring_screw
 in ring_screw {
   in ring_level {
-    li := point hint((r_in * cos(space_mid + th_in), r_in * sin(space_mid + th_in)))
-    li coords(du: r_in * cos(space_mid + th_in), dv: r_in * sin(space_mid + th_in)) ring_level
-    lm := point hint((r_mid * cos(space_mid + th_mid), r_mid * sin(space_mid + th_mid)))
-    lm coords(du: r_mid * cos(space_mid + th_mid), dv: r_mid * sin(space_mid + th_mid)) ring_level
-    lr := point hint((ring_root_r * cos(space_mid + th_root), ring_root_r * sin(space_mid + th_root)))
-    lr coords(du: ring_root_r * cos(space_mid + th_root), dv: ring_root_r * sin(space_mid + th_root)) ring_level
-    ri := point hint((r_in * cos(space_mid - th_in), r_in * sin(space_mid - th_in)))
-    ri coords(du: r_in * cos(space_mid - th_in), dv: r_in * sin(space_mid - th_in)) ring_level
-    rm := point hint((r_mid * cos(space_mid - th_mid), r_mid * sin(space_mid - th_mid)))
-    rm coords(du: r_mid * cos(space_mid - th_mid), dv: r_mid * sin(space_mid - th_mid)) ring_level
-    rr := point hint((ring_root_r * cos(space_mid - th_root), ring_root_r * sin(space_mid - th_root)))
-    rr coords(du: ring_root_r * cos(space_mid - th_root), dv: ring_root_r * sin(space_mid - th_root)) ring_level
-    // each flank bulges away from the space's middle: its centre across it, 8.7 mm off
-    flank_l := arc(center: hint((8.6 * cos(space_mid - 90deg), 21 + 8.6 * sin(space_mid - 90deg))),
-                start: lr, end: li)
+    li := point hint((r_in * cos(left_in), r_in * sin(left_in)))
+    li coords(du: r_in * cos(left_in), dv: r_in * sin(left_in)) ring_level
+    lm := point hint((r_mid * cos(left_mid), r_mid * sin(left_mid)))
+    lm coords(du: r_mid * cos(left_mid), dv: r_mid * sin(left_mid)) ring_level
+    lr := point hint((ring_root_r * cos(left_root), ring_root_r * sin(left_root)))
+    lr coords(du: ring_root_r * cos(left_root), dv: ring_root_r * sin(left_root)) ring_level
+    ri := point hint((r_in * cos(right_in), r_in * sin(right_in)))
+    ri coords(du: r_in * cos(right_in), dv: r_in * sin(right_in)) ring_level
+    rm := point hint((r_mid * cos(right_mid), r_mid * sin(right_mid)))
+    rm coords(du: r_mid * cos(right_mid), dv: r_mid * sin(right_mid)) ring_level
+    rr := point hint((ring_root_r * cos(right_root), ring_root_r * sin(right_root)))
+    rr coords(du: ring_root_r * cos(right_root), dv: ring_root_r * sin(right_root)) ring_level
+    // each flank bulges away from the space's middle, its centre across the middle from it,
+    // about 8.7 mm off: seeded 19deg round P on the far side, 22.6 mm out
+    flank_l := arc(center: hint((22.6 * cos(space_mid - 19deg), 22.6 * sin(space_mid - 19deg))),
+                   start: lr, end: li)
     lm coincident flank_l
-    flank_r := arc(center: hint((-8.6 * cos(space_mid - 90deg), 21 - 8.6 * sin(space_mid - 90deg))),
-                 start: ri, end: rr)
+    flank_r := arc(center: hint((22.6 * cos(space_mid + 19deg), 22.6 * sin(space_mid + 19deg))),
+                   start: ri, end: rr)
     rm coincident flank_r
     root_arc := arc(center: hint((0, 0)), start: rr, end: lr)
     radius(ring_root_r) root_arc

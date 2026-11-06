@@ -222,7 +222,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
 // `add` is the addendum in modules, 1 for a gear.  The space cut is centred on +v at the gear's
 // own z = 0, the face it stands on, and turns `hand` tan(beta) / R a unit of height on from there.
 // (An internal gear's tooth space is such a gear's tooth, but a body cut by sweeps cannot itself
-// be cut from another, so radiatorbot.sv draws its barrel's spaces as screwed sections instead.)
+// be cut from another, bmander/geomsolver#818.)
 component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, shift: Scalar,
                         add: Scalar, thin: Length, z0: Length, z1: Length, bore: Length,
                         shaped: Int, chamfer: Length) {
@@ -243,7 +243,9 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
     construction lean := line(std.origin, lean_at)
   }
   // the rack tooth's normal section: across its teeth (`lean`) and out along the radius through
-  // it (std.y); its extrusion, square to it, climbs aslant the blank
+  // it (std.y); its extrusion, square to it, climbs aslant the blank.  Its axes are minted and held
+  // parallel to drawn lines, as geomsolver's twist_drill/wheel.sv draws its section: the plane
+  // over `lean` and std.y directly is refused inside a part (bmander/geomsolver#819)
   in std.top {
     radial_at := point hint((0, 10))
     radial_at on_v(d: 10mm) std.top
@@ -295,8 +297,6 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
   blank_turn turns(1) spindle
   rack := frame
   rack slides(2 * pi * R) rack_line
-  index := frame
-  index turns(1) spindle
 
   private construction shaped_blank := solid(std.solids.Prism(face(tip, holes: hole),
                                                               from: z0, to: z1))
@@ -319,7 +319,7 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
                                                                     seen_from: blank_turn) t })
     space cut shaped_blank
     repeat N - 1 as j {
-      turned := space at(under: index) ((j + 1) * 360deg / N)
+      turned := space at(under: blank_turn) ((j + 1) * 360deg / N)
       turned cut shaped_blank
     }
   }
