@@ -245,6 +245,7 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
   // the rack tooth's normal section: across its teeth (`lean`) and out along the radius through
   // it (std.y); its extrusion, square to it, climbs aslant the blank
   normal := plane(u: lean, v: std.y)
+  normal.origin coincident std.origin
   in std.top {
     // the rack's pitch line in the transverse plane, tangent at +v and running -u, the way the
     // blank's pitch point goes as it turns counter-clockwise
