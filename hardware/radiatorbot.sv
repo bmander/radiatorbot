@@ -640,13 +640,10 @@ rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: rod_z1)
 // A gear round the handle about the stem, a body under its teeth down to a floor under the
 // handle, and through it all the hole the handle turns it by: the star's top face's outline,
 // grown `socket_fit` all round, straight from the floor up out of its top.  It is drawn where the
-// handle stands closed (`valve.handle_top`), the hole square to the arms there.  The gear's own
-// bore is the stem's, well inside the hole, which takes it: bored any less, its 64 teeth's sector
-// is too thin at the axis to be cut once and turned, and solventc v0.1.12 cuts the gear whole,
-// which fails on a cell of no volume.
+// handle stands closed (`valve.handle_top`), the hole square to the arms there.
 socket_gear := Gear(std.top.origin, z: socket_z1 - socket_face, bearing: 0deg, drives: 0,
-                    N: socket_n, m: m_socket, face: socket_face, bore: handle_dims.stem_d,
-                    spokes: 0, hub: 0mm, web: 0mm)
+                    N: socket_n, m: m_socket, face: socket_face, bore: 4mm, spokes: 0, hub: 0mm,
+                    web: 0mm)
 socket_body := Post(std.top.origin, r: socket_body_r, z0: socket_z0,
                     z1: socket_z1 - socket_face + bond)
 socket_star := StarOutline(valve.handle_top, s: handle_dims)
