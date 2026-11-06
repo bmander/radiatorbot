@@ -1,0 +1,23 @@
+# Temporary: runs .github/scratch.sh with solventc, to check work in progress on a branch.
+name: Scratch
+on:
+  push:
+    branches-ignore: [main]
+    paths:
+      - "hardware/**"
+      - ".github/scratch.sh"
+      - ".github/workflows/scratch.yml"
+env:
+  SOLVENTC_VERSION: v0.1.13
+jobs:
+  scratch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install solventc
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/bmander/geomsolver/main/scripts/install-solventc.sh | sh
+          echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+      - name: Scratch
+        run: sh .github/scratch.sh 2>&1
