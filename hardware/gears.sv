@@ -2,9 +2,9 @@
 //
 // Every gear is printed, so every gear is **shaped**: its blank is cut by the basic rack's tooth
 // swept through the roll of the rack on the gear's pitch circle, as a gear shaper or a hob cuts
-// one, in one statement (`solid({ p | p inside(under: rack, …) tooth })`, cut from the blank):
-// the rack rolls for as long as its tooth meets the blank, a roll the kernel finds, so none is
-// stated.
+// one, in one statement (`solid({ p | some t: p in tooth at(under: rack, …) t })`, cut from the
+// blank): `some t` is every roll of the rack, and it rolls for as long as its tooth meets the
+// blank, a roll the kernel finds, so none is stated.
 // Nothing states an involute; the flanks the sweep leaves are one, exactly, and a small pinion is
 // undercut where a real one would be.  The rack's tooth is drawn `thin` wider than the basic
 // rack's, so the printed tooth comes out that much thinner on its pitch circle: a pair's backlash
@@ -27,7 +27,7 @@
 
 unit mm
 use std
-use std.solids
+use std.solids (cut, common)
 use std.place (vertical, coords, on_v, raised, seats)
 use std.motion (turns, slides)
 use std.sets
@@ -120,7 +120,7 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
   when chamfer > 0mm {
     top_cone := std.sets.ConeThrough(spindle, top_q, lean: -45deg)
     bottom_cone := std.sets.ConeThrough(spindle, bottom_q, lean: 45deg)
-    bicone := { p | p inside top_cone; p inside bottom_cone }
+    bicone := { p | p in top_cone; p in bottom_cone }
     private construction chamfers := solid(bicone)
     chamfers common shaped_blank
   }
@@ -198,7 +198,8 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
     }
   }
   when shaped == 1 {
-    private construction space := solid({ p | p inside(under: rack, seen_from: blank_turn) tooth })
+    private construction space := solid({ p | some t: p in tooth at(under: rack,
+                                                                    seen_from: blank_turn) t })
     space cut shaped_blank
     repeat N - 1 as j {
       turned := space at(under: index) ((j + 1) * 360deg / N)

@@ -41,7 +41,7 @@
 
 unit mm
 use std
-use std.solids
+use std.solids (cut, union)
 use std.place (vertical, horizontal, coords, seats, raised)
 use std.motion (turns)
 use std.shapes
@@ -640,10 +640,13 @@ rod_at_d := Post(d_c, r: rod_d / 2, z0: floor_z0, z1: rod_z1)
 // A gear round the handle about the stem, a body under its teeth down to a floor under the
 // handle, and through it all the hole the handle turns it by: the star's top face's outline,
 // grown `socket_fit` all round, straight from the floor up out of its top.  It is drawn where the
-// handle stands closed (`valve.handle_top`), the hole square to the arms there.
+// handle stands closed (`valve.handle_top`), the hole square to the arms there.  The gear's own
+// bore is the stem's, well inside the hole, which takes it: bored any less, its 64 teeth's sector
+// is too thin at the axis to be cut once and turned, and solventc v0.1.12 cuts the gear whole,
+// which fails on a cell of no volume.
 socket_gear := Gear(std.top.origin, z: socket_z1 - socket_face, bearing: 0deg, drives: 0,
-                    N: socket_n, m: m_socket, face: socket_face, bore: 4mm, spokes: 0, hub: 0mm,
-                    web: 0mm)
+                    N: socket_n, m: m_socket, face: socket_face, bore: handle_dims.stem_d,
+                    spokes: 0, hub: 0mm, web: 0mm)
 socket_body := Post(std.top.origin, r: socket_body_r, z0: socket_z0,
                     z1: socket_z1 - socket_face + bond)
 socket_star := StarOutline(valve.handle_top, s: handle_dims)
@@ -760,13 +763,13 @@ motor_turn := frame
 motor_turn turns(motor_rate) m_spindle
 fix(value == handle_open) motor_turn
 
-socket := socket_part in socket_turn
-a_compound := a_part in a_turn
-compound_d2 := d2 in d2_turn
-compound_b2 := b2 in b2_turn
-compound_d1 := d1 in d1_turn
-compound_b1 := b1 in b1_turn
-pinion := motor_pinion in motor_turn
+socket := socket_part at socket_turn
+a_compound := a_part at a_turn
+compound_d2 := d2 at d2_turn
+compound_b2 := b2 at b2_turn
+compound_d1 := d1 at d1_turn
+compound_b1 := b1 at b1_turn
+pinion := motor_pinion at motor_turn
 
 // == The motor ===================================================================================
 // Face down on a pad on the keeper, its boss in a recess, its shaft through the pad and the
@@ -915,42 +918,29 @@ motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 // The cradle's foot, its section from the beams' underside up to the keeper's top, under the pad;
 // pocketed from below inside a wall, round B's hub and a boss round the motor's shaft, the pocket's
 // roof the pad, 2.8 mm under the motor's face.
-// (Drawn in a frame held on the motor's axis at z = 0, which the solve starts where it stands, so
-// the fillets find the foot where they find the beams.)
-m_frame := frame
-fix(origin == (b_r * cos(bot_turn) + cd_s1 * cos(bot_turn + bm_bearing),
-               b_r * sin(bot_turn) + cd_s1 * sin(bot_turn + bm_bearing), 0mm)) m_frame
-fix(dir == (cos(bot_turn), sin(bot_turn), 0)) m_frame.u
-fix(dir == (-sin(bot_turn), cos(bot_turn), 0)) m_frame.v
-cradle_foot := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0, z1: lid_z1) in m_frame
-foot_pocket := MotorCan(motor130_dims, grow: gap, z0: lid_z0 - 1mm, z1: lid_z1) in m_frame
+cradle_foot := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0 - motor_z, z1: lid_z1 - motor_z)
+cradle_foot seats(turn: bot_turn, up: std.z, east: std.x) motor_at
+foot_pocket := MotorCan(motor130_dims, grow: gap, z0: lid_z0 - 1mm - motor_z, z1: lid_z1 - motor_z)
+foot_pocket seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 foot_keep_b := Post(b_c, r: rod_post_r, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
 foot_keep_m := Post(m_c, r: 2.5mm + wall, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
 construction pocket := solid(foot_pocket.body)
 foot_keep_b.body cut pocket
 foot_keep_m.body cut pocket
 
-// Each piece of the keeper a solid of its own, so its fillets can name them: `keeper_fillet` in
-// plan wherever a beam meets a hub, a pad or the cradle's foot, all within the beams' depth, so
-// none reaches up past the keeper's top to the frame's floor or down to the gears.
+// The keeper's pieces unioned whole, each named by its path in the keeper for its fillets:
+// `keeper_fillet` in plan wherever a beam meets a hub, a pad or the cradle's foot, all within the
+// beams' depth, so none reaches up past the keeper's top to the frame's floor or down to the gears.
 keeper_fillet := 3mm
-construction k_spine := solid(spine_beam.body)
-construction k_cross := solid(cross_beam.body)
-construction k_bd := solid(bd_beam.body)
-construction k_ad := solid(ad_beam.body)
-construction k_hub_a := solid(hub_a.body)
-construction k_hub_b := solid(hub_b.body)
-construction k_hub_d := solid(hub_d.body)
-construction k_foot := solid(cradle_foot.body)
 keeper_part := solid()
-k_spine union keeper_part
-k_cross union keeper_part
-k_bd union keeper_part
-k_ad union keeper_part
-k_hub_a union keeper_part
-k_hub_b union keeper_part
-k_hub_d union keeper_part
-k_foot union keeper_part
+spine_beam.body union keeper_part
+cross_beam.body union keeper_part
+bd_beam.body union keeper_part
+ad_beam.body union keeper_part
+hub_a.body union keeper_part
+hub_b.body union keeper_part
+hub_d.body union keeper_part
+cradle_foot.body union keeper_part
 pocket cut keeper_part
 repeat r in keeper_rails_at {
   rail_f := frame
@@ -966,22 +956,21 @@ repeat r in keeper_rails_at {
   pad_bar := Bar(x0: r.x + snug * cos(r.a), y0: r.y + snug * sin(r.a),
                  x1: r.x + anchor_d * cos(r.a), y1: r.y + anchor_d * sin(r.a), w: anchor_w,
                  z0: lid_z0, z1: lid_z1) in bot
-  construction k_pad := solid(pad_bar.body)
-  k_pad union keeper_part
+  pad_bar.body union keeper_part
 }
 claim keeper_rails clear(0.04mm) keeper_part          // the press: `snug` all round each rail
 cradle union keeper_part
-keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_hub_a
-keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_hub_b
-keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_foot
-keeper_part.k_spine round(r: keeper_fillet) keeper_part.k_pad
-keeper_part.k_cross round(r: keeper_fillet) keeper_part.k_hub_a
-keeper_part.k_cross round(r: keeper_fillet) keeper_part.k_pad
-keeper_part.k_bd round(r: keeper_fillet) keeper_part.k_hub_b
-keeper_part.k_bd round(r: keeper_fillet) keeper_part.k_hub_d
-keeper_part.k_ad round(r: keeper_fillet) keeper_part.k_hub_a
-keeper_part.k_ad round(r: keeper_fillet) keeper_part.k_hub_d
-keeper_part.k_hub_b round(r: keeper_fillet) keeper_part.k_foot
+keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a
+keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_b
+keeper_part.spine_beam round(r: keeper_fillet) keeper_part.cradle_foot
+keeper_part.spine_beam round(r: keeper_fillet) keeper_part.pad_bar
+keeper_part.cross_beam round(r: keeper_fillet) keeper_part.hub_a
+keeper_part.cross_beam round(r: keeper_fillet) keeper_part.pad_bar
+keeper_part.bd_beam round(r: keeper_fillet) keeper_part.hub_b
+keeper_part.bd_beam round(r: keeper_fillet) keeper_part.hub_d
+keeper_part.ad_beam round(r: keeper_fillet) keeper_part.hub_a
+keeper_part.ad_beam round(r: keeper_fillet) keeper_part.hub_d
+keeper_part.hub_b round(r: keeper_fillet) keeper_part.cradle_foot
 lid_post_a.body union keeper_part
 lid_post_b.body union keeper_part
 lid_post_d.body union keeper_part

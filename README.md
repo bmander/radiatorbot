@@ -62,16 +62,17 @@ solventc --no-check hardware/radiatorbot.sv   # the layout alone, its solids' cl
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.10 (`SOLVENTC_VERSION=v0.1.10` pins the installer to
-it), which solves the bot and judges its claims in about fifteen seconds, and exports it in about
-two and a half minutes. The models use its lists (`repeat h in LIST`), read numbers off component
-instances (`shield.top`), cut clearances as a part's body grown (`std.rounds.Grown`) and import
-the standard library's words from its modules (`use std.place (coords)`, `use std.shapes`), so
-they need v0.1.10 or later. Every gear is its rack's exact sweep; the
-printed parts' STLs come to 4.0 MB and the assembly's STEP to 35 MB. v0.1.6 wrote the 16-tooth
-pinions' straight tip edges as dense B-splines, doubling the STEP (bmander/geomsolver#644).
+The models are checked with Solvent v0.1.12 (`SOLVENTC_VERSION=v0.1.12` pins the installer to
+it), which solves the bot and judges its claims in about half a minute, and exports it in a little
+over two. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
+a part placed at its joint's value as `socket_part at socket_turn`), import the body words they use
+(`use std.solids (cut, union)`), and name a piece unioned into a part by its path for a fillet
+(`keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a`), so they need v0.1.12 or
+later. Every gear is its rack's exact sweep; the printed parts' STLs come to 4.7 MB and the
+assembly's STEP to 36 MB. v0.1.6 wrote the 16-tooth pinions' straight tip edges as dense
+B-splines, doubling the STEP (bmander/geomsolver#644).
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
-(`.github/workflows/export.yml`, Solvent pinned to v0.1.10 there too) and keeps its output on the
+(`.github/workflows/export.yml`, Solvent pinned to v0.1.12 there too) and keeps its output on the
 run's page: `radiatorbot-stl-<sha>`, a zip of the printed parts' STLs, and `radiatorbot-step-<sha>`,
 the assembly. It can also be run by hand from the Actions tab.
