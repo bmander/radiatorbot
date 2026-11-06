@@ -38,7 +38,7 @@
 
 unit mm
 use std
-use std.solids
+use std.solids (union)
 use std.place (coords, seats, raised)
 use std.shapes
 

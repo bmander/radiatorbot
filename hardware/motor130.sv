@@ -10,7 +10,7 @@
 
 unit mm
 use std
-use std.solids
+use std.solids (union)
 
 interface MotorSizes {
   d: Length, flats: Length, len: Length

@@ -18,7 +18,7 @@
 
 unit mm
 use std
-use std.solids
+use std.solids (union)
 use std.place (horizontal, vertical)
 use std.motion (screws)
 use std.rounds (round)
@@ -325,7 +325,7 @@ component RadiatorValve(handle_open: Angle) {
   fix(origin == (0mm, 0mm, -handle_gap)) handle_top
   fix(dir == (1, 0, 0)) handle_top.u
   fix(dir == (0, 1, 0)) handle_top.v
-  turned_top := handle_top in handle
+  turned_top := handle_top at handle
 
   star_handle := StarHandle(turned_top, s: handle_dims, stem_up: handle_gap + packing_dims.top)
 }
