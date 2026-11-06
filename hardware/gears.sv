@@ -219,10 +219,10 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
 // exactly.  A pair in external mesh is of opposite hands, a pinion and the internal gear round it
 // of the same hand.
 //
-// `add` is the addendum in modules, 1 for a gear; an internal gear is cut by a gear of its own
-// tooth count with `add` 1.25 and `thin` negative, its teeth the internal gear's tooth spaces.
-// The space cut is centred on +v at the gear's own z = 0, the face it stands on, and turns
-// `hand` tan(beta) / R a unit of height on from there.
+// `add` is the addendum in modules, 1 for a gear.  The space cut is centred on +v at the gear's
+// own z = 0, the face it stands on, and turns `hand` tan(beta) / R a unit of height on from there.
+// (An internal gear's tooth space is such a gear's tooth, but a body cut by sweeps cannot itself
+// be cut from another, so radiatorbot.sv draws its barrel's spaces as screwed sections instead.)
 component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, shift: Scalar,
                         add: Scalar, thin: Length, z0: Length, z1: Length, bore: Length,
                         shaped: Int, chamfer: Length) {
@@ -244,8 +244,14 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
   }
   // the rack tooth's normal section: across its teeth (`lean`) and out along the radius through
   // it (std.y); its extrusion, square to it, climbs aslant the blank
-  normal := plane(u: hint(dir: lean), v: std.y)
+  in std.top {
+    radial_at := point hint((0, 10))
+    radial_at on_v(d: 10mm) std.top
+    construction radial := line(std.top.origin, radial_at)
+  }
+  normal := plane(u: hint(dir: lean), v: hint(dir: radial))
   lean parallel(sense: same) normal.u
+  radial parallel(sense: same) normal.v
   std.origin coincident normal.origin
   in std.top {
     // the rack's pitch line in the transverse plane, tangent at +v and running -u, the way the
