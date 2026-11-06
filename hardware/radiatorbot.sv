@@ -12,11 +12,13 @@
 //     and screws down through it as the valve opens.  It turns on a pad on the stem's axis under
 //     its floor, at the end of the **stand**, an arm clamped to A, the axle `a_dist` out along -x;
 //   - on A, a pinion drives the socket and a 48-tooth ring over it is driven by the **gearbox**
-//     above: four printed spur stages on two drill-rod axles, B and D, the 130 motor's pinion
-//     driving the first; its base's floor stops short of the ring, and a bridge and a bulkhead
-//     across it hold A;
-//   - the **keeper**, the gearbox's lid, presses down into the base's walls: it holds the rods'
-//     tops and the motor, in a cradle on it with a strap across its end bell;
+//     above: a stack of three planetary stages with helical teeth on P, under the 130 motor, its
+//     last carrier's pinion on the ring; the stack turns in a barrel up through the base, its
+//     teeth the stages' ring gear, and the base's floor stops short of A's ring, a bridge and a
+//     bulkhead across it holding A;
+//   - the **keeper**, the gearbox's lid, presses down into the base's walls: it holds A's top
+//     and the motor, on a plate spigoted into the barrel, in a cradle with a strap across its
+//     end bell;
 //   - the **frame** is the electronics bay standing on the base and the keeper (beside the
 //     motor, the RedBoard with a perfboard shield on it carrying the motor driver and its
 //     current monitor, the cable entries), a dovetail rail up its end wall;
@@ -892,17 +894,17 @@ repeat st in stages {
 }
 
 // == The motor ===================================================================================
-// Face down on a pad on the keeper, its boss in a recess, its shaft through the pad and the
-// keeper's plate to its pinion in stage 1; held in a cradle of its own section grown by a wall, a
-// print's clearance inside, the pad the cradle's section under it.  The flats key it against its
-// torque; a strap across its end bell holds it down on the pad, screwed into two ears up from the
+// Face down on the keeper's plate over P, its boss in a recess, its shaft down through the plate
+// and its spigot to the first sun, pressed on it; held in a cradle of its own section grown by a
+// wall, a print's clearance inside, standing on the plate.  The flats key it against its torque;
+// a strap across its end bell holds it down on the plate, screwed into two ears up from the
 // cradle's flat walls.
 motor_at := point
-motor_at raised(d: motor_z, along: std.z) m_c
+motor_at raised(d: motor_z, along: std.z) p_c
 motor := Motor130(motor130_dims)
 motor seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 
-cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z, z1: 18mm)
+cradle_out := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z1 - motor_z - 1mm, z1: 18mm)
 cradle_out seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 cradle_in := MotorCan(motor130_dims, grow: gap, z0: 0mm, z1: 19mm)
 cradle_in seats(turn: bot_turn, up: std.z, east: std.x) motor_at
@@ -914,7 +916,7 @@ ears.body union cradle
 ears.holes cut cradle
 
 strap_at := point
-strap_at raised(d: strap_top, along: std.z) m_c
+strap_at raised(d: strap_top, along: std.z) p_c
 strap := MotorStrap(motor130_dims)
 strap seats(turn: bot_turn, up: std.z, east: std.x) strap_at
 strap_part := solid(strap.part)
@@ -922,16 +924,21 @@ claim strap_part clear(0.4mm) cradle      // its legs short of the ears: it bear
 
 // == The base: the gearbox's floor and walls =====================================================
 // A box from the floor up to the keeper's top, hollowed: the keeper presses down into its walls'
-// top, onto the tops of the bridge, the bulkhead and the corner posts.  Its floor and its walls
-// are cut away where A's ring turns under the train (the whole of its +x end, down there), and a
-// bridge standing on the collar and up to the keeper holds A's axle.  The bridge runs out to the
-// end wall, and a bulkhead across the box through A ties it into both side walls as well: on its
-// own the end wall, a thin plate over the ring's room, would flex under it.  The bulkhead stands
-// from the ring's room up to the keeper, a print's clearance round the collar.  B's rod stands
-// in a post up from the floor, its top under B2's pinion, which stands on it, and cut back round
-// the ring's room and a millimetre clear of D2's tips, which pass over it; D's has no room for
-// one, D2's pinion standing on the floor.  Four M3 screws down through the frame's floor and the
-// keeper hold it up to the frame (below), the keeper clamped between them.
+// top, onto the tops of the bridge, the bulkhead, the barrel and the corner posts.  Its floor and
+// its walls are cut away where A's ring turns under the train (the whole of its +x end, down
+// there), and a bridge standing on the collar and up to the keeper holds A's axle.  The bridge
+// runs out to the end wall, and a bulkhead across the box through A ties it into both side walls
+// as well: on its own the end wall, a thin plate over the ring's room, would flex under it.  The
+// bulkhead stands from the ring's room up to the keeper, a print's clearance round the collar.
+//
+// The stack's barrel stands up from the floor round P, into the -y wall, to the keeper's
+// underside: through its bore the 46 internal teeth every stage's planets run in, one right-handed
+// helical gear from the last carrier's plate up past the first stage's planets, cut by its tooth
+// count's own helical gear grown a clearance (`Helical` with `add` 1.25); under them its plain
+// bore, where the last pinion turns and A's ring comes in through the ring's room; over them a
+// counterbore the keeper's spigot drops into, which stands the motor over P.  P's rod stands in
+// the floor, the last pinion running just over it.  Four M3 screws down through the frame's floor
+// and the keeper hold the base up to the frame (below), the keeper clamped between them.
 base_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: floor_z0,
                          z1: lid_z1) in bot
 base_cavity := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
@@ -950,43 +957,46 @@ ring_room := Post(a_c, r: ring_r, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
 ring_side := Block(x0: -a_dist, x1: box_x1 + 1mm, y0: box_y0 - 1mm, y1: box_y1 + 1mm,
                    z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm) in bot  // and the box's end over it
 base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: bridge_z1 + 1mm)
-base_post_b := Post(b_c, r: rod_d / 2 + boss_wall, z0: floor_z1 - 1mm, z1: s4_z0 - gap)
-base_post_ring := Post(a_c, r: ring_r, z0: floor_z1 - 1mm, z1: s4_z0)
-base_post_d2 := Post(d_c, r: m_s4 * (s4_n / 2 + 1) + 1mm, z0: floor_z1 - 1mm, z1: s4_z0)
-base_post_ring.body cut base_post_b.body
-base_post_d2.body cut base_post_b.body
-base_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: s4_z0)
-base_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
+barrel := Post(p_c, r: barrel_r, z0: floor_z1 - 1mm, z1: lid_z0)
+barrel_bore := Post(p_c, r: ring_tip_r, z0: floor_z1, z1: band_z1)
+counterbore := Post(p_c, r: cb_r, z0: band_z1, z1: lid_z0 + 1mm)
+ring_cutter := Helical(p_c, z: band_z0, turn: ring_turn, N: ring_teeth, hand: planet_hand,
+                       add: 1.25, thin_by: -thin, face: band_z1 - band_z0, bore: 10mm,
+                       chamfer_by: 0mm)
+base_hole_p := Post(p_c, r: (p_rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
 
 base := solid(base_shell)
 bridge.body union base
 bridge_boss.body union base
 bulkhead.body union base
-base_post_b.body union base
+barrel.body union base
 collar_room.body cut base
 ring_room.body cut base
 ring_side.body cut base
+barrel_bore.body cut base
+counterbore.body cut base
+ring_cutter.gear cut base
 base_hole_a.body cut base
-base_hole_b.body cut base
-base_hole_d.body cut base
+base_hole_p.body cut base
 
-// == The keeper: the gearbox's lid, the rods' tops and the motor =================================
-// One print, a frame of beams 3 mm deep with open bays between them, held in the base by four
-// pads slotted down over dovetail rails on its walls: it holds the tops of the rods, in posts on
-// its top, and the motor, on its pad in its cradle, so the gearbox and its motor are whole
-// without the frame.
-//   - A spine runs from end wall to end wall through B and A, over the bridge, and a cross beam
-//     over the bulkhead from side wall to side wall: the keeper stands on the bridge and the
-//     bulkhead, and each of the four ends is a pad `anchor_w` along its wall;
+// == The keeper: the gearbox's lid, A's top and the motor ========================================
+// One print, a frame of beams 3 mm deep with open bays between them and a plate over the stack,
+// held in the base by four pads slotted down over dovetail rails on its walls: it holds the top
+// of A's axle, in a post on its top, and the motor, on the plate in its cradle, so the gearbox and
+// its motor are whole without the frame.
+//   - A spine runs from end wall to end wall through the plate and A, over the bridge, and a cross
+//     beam over the bulkhead from side wall to side wall: the keeper stands on the bridge, the
+//     bulkhead and the barrel's top, and each of the four ends is a pad `anchor_w` along its wall;
 //   - up the middle of each pad's end, a dovetail slot, the rail grown `snug` all round: it
 //     slides down over the rail, a light press on its flanks, and the rail holds the pad to its
 //     wall and square along it, so the keeper can neither spread nor pull in off the walls;
-//   - two more beams, B to D and A to D, close a triangle round the rods; the motor's cradle
-//     stands on the spine beside B, its foot pocketed from below;
-//   - every beam runs into its hub, pad or the cradle's foot through a fillet in plan.
-// Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, the
-// keeper's posts and the cradle up through holes in its floor, and its floor bears down on the
-// keeper's beams.  It prints on its beams' undersides.
+//   - the plate over P stands on the barrel's top, and a spigot under it drops into the barrel's
+//     counterbore, `snug` all round, so the motor's shaft stands on P's axis: the first sun meshes
+//     its planets as truly as the barrel stands them;
+//   - every beam runs into its hub, the plate or a pad through a fillet in plan.
+// Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, A's
+// post and the cradle up through holes in its floor, and its floor bears down on the keeper's
+// beams and plate.  It prints on its beams' undersides, the spigot standing up from the plate.
 keeper_beam := 6mm
 anchor_w := 14mm
 anchor_d := 6mm                 // the pads' depth, in from the walls
@@ -1001,15 +1011,10 @@ keeper_x0 := box_x0 + wall + snug
 keeper_x1 := box_x1 - wall - snug
 keeper_y0 := box_y0 + wall + snug
 keeper_y1 := box_y1 - wall - snug
-d_bx := b_r + cd_bd * cos(bd_bearing)                    // D in the bot's plan
-d_by := cd_bd * sin(bd_bearing)
 spine_beam := Bar(x0: keeper_x0, y0: 0mm, x1: keeper_x1, y1: 0mm, w: keeper_beam, z0: lid_z0,
                   z1: lid_z1) in bot
 cross_beam := Bar(x0: -a_dist, y0: keeper_y0, x1: -a_dist, y1: keeper_y1, w: keeper_beam,
                   z0: lid_z0, z1: lid_z1) in bot
-bd_beam := Bar(x0: b_r, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0, z1: lid_z1) in bot
-ad_beam := Bar(x0: -a_dist, y0: 0mm, x1: d_bx, y1: d_by, w: keeper_beam, z0: lid_z0,
-               z1: lid_z1) in bot
 // Each rail's frame: its origin on the wall's inside face at the rail's middle, at z = 0, its x
 // in from the wall, its y along it; `a` is that inward direction's bearing in the bot's plan.
 keeper_rails_at := [
@@ -1019,49 +1024,28 @@ keeper_rails_at := [
   {x: -a_dist, y: box_y1 - wall, a: -90deg},       // north, over the bulkhead
 ]
 keeper_rails := solid()
-// the rods' posts on the keeper's top and their holes up into them, the motor's boss and shaft
+// A's post on the keeper's top and its hole up into it; the plate over P and its spigot, the
+// motor's boss's recess and its shaft's hole
 lid_post_r := axle_d / 2 + boss_wall
-rod_post_r := rod_d / 2 + boss_wall
 hub_a := Post(a_c, r: lid_post_r, z0: lid_z0, z1: lid_z1)
-hub_b := Post(b_c, r: rod_post_r, z0: lid_z0, z1: lid_z1)
-hub_d := Post(d_c, r: rod_post_r, z0: lid_z0, z1: lid_z1)
 lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z1, z1: post_z1)
-lid_post_b := Post(b_c, r: rod_post_r, z0: lid_z1, z1: post_z1)
-lid_post_d := Post(d_c, r: rod_post_r, z0: lid_z1, z1: post_z1)
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
-lid_hole_b := Post(b_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
-lid_hole_d := Post(d_c, r: (rod_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
-motor_boss_room := Post(m_c, r: motor130_dims.boss_d / 2 + gap,
+hub_p := Post(p_c, r: lid_disc_r, z0: lid_z0, z1: lid_z1)
+spigot := Post(p_c, r: cb_r - snug, z0: spigot_z0, z1: lid_z0 + 0.5mm)
+motor_boss_room := Post(p_c, r: motor130_dims.boss_d / 2 + gap,
                         z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
-motor_shaft_room := Post(m_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
-
-// The cradle's foot, its section from the beams' underside up to the keeper's top, under the pad;
-// pocketed from below inside a wall, round B's hub and a boss round the motor's shaft, the pocket's
-// roof the pad, 2.8 mm under the motor's face.
-cradle_foot := MotorCan(motor130_dims, grow: wall + gap, z0: lid_z0 - motor_z, z1: lid_z1 - motor_z)
-cradle_foot seats(turn: bot_turn, up: std.z, east: std.x) motor_at
-foot_pocket := MotorCan(motor130_dims, grow: gap, z0: lid_z0 - 1mm - motor_z, z1: lid_z1 - motor_z)
-foot_pocket seats(turn: bot_turn, up: std.z, east: std.x) motor_at
-foot_keep_b := Post(b_c, r: rod_post_r, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
-foot_keep_m := Post(m_c, r: 2.5mm + wall, z0: lid_z0 - 2mm, z1: lid_z1 + 1mm)
-construction pocket := solid(foot_pocket.body)
-foot_keep_b.body cut pocket
-foot_keep_m.body cut pocket
+motor_shaft_room := Post(p_c, r: 2.5mm, z0: spigot_z0 - 1mm, z1: motor_z)
 
 // The keeper's pieces unioned whole, each named by its path in the keeper for its fillets:
-// `keeper_fillet` in plan wherever a beam meets a hub, a pad or the cradle's foot, all within the
-// beams' depth, so none reaches up past the keeper's top to the frame's floor or down to the gears.
+// `keeper_fillet` in plan wherever a beam meets a hub, the plate or a pad, all within the beams'
+// depth, so none reaches up past the keeper's top to the frame's floor or down to the gears.
 keeper_fillet := 3mm
 keeper_part := solid()
 spine_beam.body union keeper_part
 cross_beam.body union keeper_part
-bd_beam.body union keeper_part
-ad_beam.body union keeper_part
 hub_a.body union keeper_part
-hub_b.body union keeper_part
-hub_d.body union keeper_part
-cradle_foot.body union keeper_part
-pocket cut keeper_part
+hub_p.body union keeper_part
+spigot.body union keeper_part
 repeat r in keeper_rails_at {
   rail_f := frame
   fix(origin == (r.x * cos(bot_turn) - r.y * sin(bot_turn),
@@ -1081,22 +1065,12 @@ repeat r in keeper_rails_at {
 claim keeper_rails clear(0.04mm) keeper_part          // the press: `snug` all round each rail
 cradle union keeper_part
 keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a
-keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_b
-keeper_part.spine_beam round(r: keeper_fillet) keeper_part.cradle_foot
+keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_p
 keeper_part.spine_beam round(r: keeper_fillet) keeper_part.pad_bar
 keeper_part.cross_beam round(r: keeper_fillet) keeper_part.hub_a
 keeper_part.cross_beam round(r: keeper_fillet) keeper_part.pad_bar
-keeper_part.bd_beam round(r: keeper_fillet) keeper_part.hub_b
-keeper_part.bd_beam round(r: keeper_fillet) keeper_part.hub_d
-keeper_part.ad_beam round(r: keeper_fillet) keeper_part.hub_a
-keeper_part.ad_beam round(r: keeper_fillet) keeper_part.hub_d
-keeper_part.hub_b round(r: keeper_fillet) keeper_part.cradle_foot
 lid_post_a.body union keeper_part
-lid_post_b.body union keeper_part
-lid_post_d.body union keeper_part
 lid_hole_a.body cut keeper_part
-lid_hole_b.body cut keeper_part
-lid_hole_d.body cut keeper_part
 motor_boss_room.body cut keeper_part
 motor_shaft_room.body cut keeper_part
 
@@ -1114,8 +1088,6 @@ bay_room := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
 floor_hole_a := Post(a_c, r: lid_post_r + gap, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
-floor_hole_b := Post(b_c, r: rod_post_r + gap, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
-floor_hole_d := Post(d_c, r: rod_post_r + gap, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
 floor_hole_m := MotorCan(motor130_dims, grow: wall + 2 * gap, z0: lid_z1 - 1mm - motor_z,
                          z1: case_z1 + 1mm - motor_z)
 floor_hole_m seats(turn: bot_turn, up: std.z, east: std.x) motor_at
@@ -1152,8 +1124,6 @@ frame_part := solid(case_floor.body)
 bay_shell union frame_part
 rail.body union frame_part
 floor_hole_a.body cut frame_part
-floor_hole_b.body cut frame_part
-floor_hole_d.body cut frame_part
 floor_hole_m.body cut frame_part
 floor_hole_ears.body cut frame_part
 grommet.body cut frame_part
@@ -1422,23 +1392,19 @@ when checks == 1 {
   claim a_compound clear(0.25mm) stand_part
   claim pivot_pin.body clear(0.4mm) socket_part         // loose in its hole, under its roof
   claim a_compound clear(0.25mm) collar.part
-  claim a_compound clear(0.05mm) compound_d2
-  claim compound_d2 clear(1mm) collar.part
-  claim compound_d2 clear(0.05mm) compound_b2
-  claim compound_b2 clear(0.05mm) compound_d1
-  claim compound_d1 clear(0.05mm) compound_b1
-  claim compound_b1 clear(0.05mm) pinion
-  claim compound_d2 clear(0.2mm) base
-  claim compound_b2 clear(0.2mm) base
-  claim compound_d1 clear(0.2mm) base
-  claim compound_b1 clear(0.2mm) base
-  claim compound_d2 clear(0.5mm) base_post_b.body     // and dropped onto the floor, over B's post
-  claim compound_b1 clear(0.2mm) keeper_part
-  claim compound_d1 clear(0.2mm) keeper_part
-  claim pinion clear(0.2mm) keeper_part
-  claim compound_b1 clear(0.2mm) motor.motor            // the shaft, through its pinion
-  claim compound_d1 clear(0.2mm) motor.motor
-  claim compound_b2 clear(0.5mm) motor.motor            // the shaft's end, 1 mm over its spokes
+  claim a_compound clear(0.05mm) carrier_3              // A's ring and the last pinion
+  claim carrier_3 clear(1mm) collar.part
+  claim carrier_3 clear(0.2mm) carrier_2
+  claim carrier_2 clear(0.2mm) carrier_1
+  claim carrier_1 clear(0.2mm) sun_1
+  claim carrier_3 clear(0.2mm) base
+  claim carrier_2 clear(0.2mm) base
+  claim carrier_1 clear(0.2mm) base
+  claim sun_1 clear(0.2mm) base
+  claim sun_1 clear(0.2mm) keeper_part
+  claim carrier_1 clear(0.5mm) motor.motor              // the shaft's end, in its bore
+  claim planet clear(0.2mm) carrier3                     // on its carrier's plate
+  claim planet clear(0.05mm) carrier2                    // in mesh with its sun
   claim mount_part clear(0.05mm) valve.supply_pipe.bar
   claim cap_part clear(0.05mm) valve.supply_pipe.bar
   claim mount_part clear(0.15mm) valve.body.casting

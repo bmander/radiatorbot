@@ -11,7 +11,8 @@ out=${1:-$here/stl}
 solventc=${SOLVENTC:-solventc}
 mkdir -p "$out"
 set --
-for part in socket_part a_part stand_part collar_part motor_pinion b1 b2 d1 d2 base keeper_part \
+for part in socket_part a_part stand_part collar_part motor_sun carrier1 carrier2 carrier3 planet \
+    base keeper_part \
     strap_part frame_part mount_part cap_part cover_part; do
   set -- "$@" --stl "$out/$part.stl" --solid "$part"
 done
