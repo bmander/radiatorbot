@@ -208,6 +208,123 @@ component ShapedSpur(N: Int, m: Length, phi: Angle, shift: Scalar, thin: Length,
   }
 }
 
+// A shaped helical gear: N teeth of normal module m and normal pressure angle phi, its teeth
+// leaning `beta` off its axis, `hand` 1 for right-handed (a tooth turns counter-clockwise, seen
+// from +z, as it climbs) and -1 for left.  It is cut as ShapedSpur's is, by the basic rack's tooth
+// rolled on the pitch circle, but the rack's tooth is a helical rack's: drawn in its normal
+// section, in a plane leaned `beta` about the radius through it, and extruded square to that
+// plane, so it crosses the blank aslant (the generating class with a leaned prism,
+// geomsolver's solid_sweeps/helical.sv).  The pitch circle is the transverse one, m N / (2 cos
+// beta), and the rack rolls its length a turn; the flanks the sweep leaves are involute helicoids,
+// exactly.  A pair in external mesh is of opposite hands, a pinion and the internal gear round it
+// of the same hand.
+//
+// `add` is the addendum in modules, 1 for a gear.  The space cut is centred on +v at the gear's
+// own z = 0, the face it stands on, and turns `hand` tan(beta) / R a unit of height on from there.
+// (An internal gear's tooth space is such a gear's tooth, but a body cut by sweeps cannot itself
+// be cut from another, bmander/geomsolver#818.)
+component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, shift: Scalar,
+                        add: Scalar, thin: Length, z0: Length, z1: Length, bore: Length,
+                        shaped: Int, chamfer: Length) {
+  R := m * N / (2 * cos(beta))           // the pitch circle, in the transverse plane
+  Rp := R + shift * m                    // where the rack's pitch line stands off the axis
+  Rt := Rp + add * m                     // the tip
+  hw := pi * m / 4 + thin / 2            // the rack tooth's half thickness, square to its teeth
+  lo := 1.25 * m                         // the rack's tooth in past its pitch line, to the root
+  hi := (add + 0.5) * m                  // and out past the blank's tip
+
+  in std.front {
+    construction spindle := vertical line(std.origin, hint((0, 10)))
+    length(10mm) spindle
+    // the rack's teeth's lean: a line across the blank's face at +v, tipped `beta` up (right
+    // hand) or down (left) from the way the rack rolls
+    lean_at := point hint((10 * cos(beta), hand * 10 * sin(beta)))
+    lean_at coords(du: 10mm * cos(beta), dv: hand * 10mm * sin(beta)) std.front
+    construction lean := line(std.origin, lean_at)
+  }
+  // the rack tooth's normal section: across its teeth (`lean`) and out along the radius through
+  // it (std.y); its extrusion, square to it, climbs aslant the blank.  Its axes are minted and held
+  // parallel to drawn lines, as geomsolver's twist_drill/wheel.sv draws its section: the plane
+  // over `lean` and std.y directly is refused inside a part (bmander/geomsolver#819)
+  in std.top {
+    radial_at := point hint((0, 10))
+    radial_at on_v(d: 10mm) std.top
+    construction radial := line(std.top.origin, radial_at)
+  }
+  normal := plane(u: hint(dir: lean), v: hint(dir: radial))
+  lean parallel(sense: same) normal.u
+  radial parallel(sense: same) normal.v
+  std.origin coincident normal.origin
+  in std.top {
+    // the rack's pitch line in the transverse plane, tangent at +v and running -u, the way the
+    // blank's pitch point goes as it turns counter-clockwise
+    construction rack_line := line(hint((10, Rp)), hint((0, Rp)))
+    rack_line.p1 coords(du: 10mm, dv: Rp) std.top
+    rack_line.p2 on_v(d: Rp) std.top
+
+    tip := circle(center: std.top.origin) hint(r: Rt)
+    radius(Rt) tip
+    hole := circle(center: std.top.origin) hint(r: bore / 2)
+    radius(bore / 2) hole
+    construction pitch := circle(center: std.top.origin) hint(r: R)
+    radius(R) pitch
+
+    // the chamfers' cones through the tips' edge at each face, as ShapedSpur's
+    top_at := point hint((0, Rt - chamfer))
+    top_at on_v(d: Rt - chamfer) std.top
+    bottom_at := point hint((0, Rt - chamfer + z1 - z0))
+    bottom_at on_v(d: Rt - chamfer + z1 - z0) std.top
+  }
+  in normal {
+    // the basic rack's tooth, pointing in, centred on the radius: its flanks lean `phi` off it
+    // and cross the pitch line `2 hw` apart
+    a := point hint((-hw - hi * tan(phi), Rp + hi))
+    a coords(du: -hw - hi * tan(phi), dv: Rp + hi) normal
+    b := point hint((-hw + lo * tan(phi), Rp - lo))
+    b coords(du: -hw + lo * tan(phi), dv: Rp - lo) normal
+    c := point hint((hw - lo * tan(phi), Rp - lo))
+    c coords(du: hw - lo * tan(phi), dv: Rp - lo) normal
+    d := point hint((hw + hi * tan(phi), Rp + hi))
+    d coords(du: hw + hi * tan(phi), dv: Rp + hi) normal
+    rack_tooth := face(a, b, c, d, -> close)
+  }
+  // extruded square to its section from 2 mm under the blank to 2 mm over it, so its caps
+  // stand clear of the blank
+  private construction tooth := solid(std.solids.Prism(rack_tooth, from: (z0 - 2mm) / cos(beta),
+                                                       to: (z1 + 2mm) / cos(beta)))
+
+  blank_turn := frame
+  blank_turn turns(1) spindle
+  rack := frame
+  rack slides(2 * pi * R) rack_line
+
+  private construction shaped_blank := solid(std.solids.Prism(face(tip, holes: hole),
+                                                              from: z0, to: z1))
+  construction gear := solid(shaped_blank)
+
+  top_q := point
+  top_q raised(d: z1, along: std.z) top_at
+  bottom_q := point
+  bottom_q raised(d: z1, along: std.z) bottom_at
+  when chamfer > 0mm {
+    top_cone := std.sets.ConeThrough(spindle, top_q, lean: -45deg)
+    bottom_cone := std.sets.ConeThrough(spindle, bottom_q, lean: 45deg)
+    bicone := { p | p in top_cone; p in bottom_cone }
+    private construction chamfers := solid(bicone)
+    chamfers common shaped_blank
+  }
+
+  when shaped == 1 {
+    private construction space := solid({ p | some t: p in tooth at(under: rack,
+                                                                    seen_from: blank_turn) t })
+    space cut shaped_blank
+    repeat N - 1 as j {
+      turned := space at(under: blank_turn) ((j + 1) * 360deg / N)
+      turned cut shaped_blank
+    }
+  }
+}
+
 preview {
   pinion := ShapedSpur(N: 12, m: 1.5mm, phi: 20deg, shift: 0.3, thin: 0.15mm, z0: 0mm, z1: 10mm,
                        bore: 6.35mm, shaped: 1, chamfer: 0.6mm, spokes: 0, hub: 0mm, web: 0mm)
@@ -218,4 +335,10 @@ preview {
   wheel seats(turn: 0deg, up: std.z, east: std.x) wheel_at
   shown := solid(pinion.gear)
   shown_wheel := solid(wheel.gear)
+  sun := ShapedHelical(N: 17, m: 0.8mm, phi: 20deg, beta: 25deg, hand: -1, shift: 0, add: 1,
+                       thin: 0.15mm, z0: 0mm, z1: 6mm, bore: 4.35mm, shaped: 1, chamfer: 0.4mm)
+  sun_at := point
+  sun_at raised(d: -40mm, along: std.x) std.origin
+  sun seats(turn: 0deg, up: std.z, east: std.x) sun_at
+  shown_sun := solid(sun.gear)
 }

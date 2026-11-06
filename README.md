@@ -9,8 +9,9 @@ valve under motor control.
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
-  - `radiatorbot.sv` — the bot: a 130 motor and a printed spur train turning the valve's star
-    handle through a socket round it, which the handle screws through as it opens. It also has the
+  - `radiatorbot.sv` — the bot: a 130 motor and a printed stack of three helical planetary stages
+    turning the valve's star handle through a socket round it, which the handle screws through as
+    it opens. It also has the
     gearbox, an electronics bay with a SparkFun IoT RedBoard ESP32 and a perfboard shield carrying
     the motor driver and its current monitor, and a split clamp round the valve's inlet hex and
     supply pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with
@@ -19,8 +20,9 @@ valve under motor control.
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_open` scrubs the handle open, screwing it down the stem 2.06 mm
     a turn over three and a half turns, as measured.
-  - `gears.sv` — printed spur gears, cut by a rack's exact generating sweep (true involutes,
-    undercut where it would be), with FDM backlash, chamfered tips and optional spokes.
+  - `gears.sv` — printed spur and helical gears, cut by a rack's exact generating sweep (true
+    involutes, a helical gear's by a leaned rack), with FDM backlash, chamfered tips and optional
+    spokes.
   - `motor130.sv` — the 130-size motor and its can's section, for the cradle that holds it.
   - `boards.sv` — the bought boards: a SparkFun IoT RedBoard ESP32, the perfboard shield plugged
     into it, and on the shield an Adafruit TB6612 motor driver (its two bridges tied together) and
@@ -69,9 +71,10 @@ a part placed at its joint's value as `socket_part at socket_turn`), import the 
 (`use std.solids (cut, union)`), and name a piece unioned into a part by its path for a fillet
 (`keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a`), which v0.1.12 brought; the
 socket's 64-tooth gear builds from v0.1.13 (bmander/geomsolver#812), so they need v0.1.13 or
-later. Every gear is its rack's exact sweep; the printed parts' STLs come to 4.7 MB and the
-assembly's STEP to 36 MB. v0.1.6 wrote the 16-tooth pinions' straight tip edges as dense
-B-splines, doubling the STEP (bmander/geomsolver#644).
+later. Every gear is its rack's exact sweep, the helical ones a leaned rack's, and the planetary
+stack's barrel teeth are a screw's exact sweep; the printed parts' STLs come to 9.1 MB and the
+assembly's STEP to 141 MB, most of it the helical gears' surfaces. With `checks := 1` the bot's
+every clearance is judged in about two and a quarter minutes.
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
 (`.github/workflows/export.yml`, Solvent pinned to v0.1.13 there too) and keeps its output on the
