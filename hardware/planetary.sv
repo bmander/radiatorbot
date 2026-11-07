@@ -25,8 +25,8 @@
 unit mm
 use std
 use std.solids (cut, union)
-use std.place (vertical, on_u, on_v, raised, seats)
-use std.motion (turns, screws)
+use std.place (vertical, on_u, raised, seats)
+use std.motion (turns)
 use gears (ShapedHelical)
 use fits (run, press, gap, bond, wall, pa, thin, chamfer)
 use parts (Post)
@@ -161,21 +161,11 @@ component CarrierPlate(z0: Length) {
   }
 }
 
-// A barrel tooth space's flank at radius `r`: its angle off the space's middle, the involute of
-// the ring's base circle through the pitch circle `space_half` off it.
-ring_alpha := atan(tan(pa) / cos(helix))                    // the transverse pressure angle
-ring_base := ring_pitch * cos(ring_alpha)
-space_half := (pi * m_t / 2 + thin / cos(helix)) / (2 * ring_pitch) * 1rad
-component Flank(r: Length) {
-  at_r := acos(ring_base / r)
-  th := space_half + (tan(ring_alpha) * 1rad - ring_alpha) - (tan(at_r) * 1rad - at_r)
-}
-
 // == The stage ===================================================================================
 
 // One planetary stage at rest, and its planets turning, drawn up the frame's z from its carrier's
-// underside at `z0` (a number, not a seat: drawn in the frame of what holds it, the stage's rows
-// stay out of that frame's, which keeps the bot's follow of its handle quick).  Its carrier turns
+// underside at `z0` (a number, not a seat: drawn in the frame of what holds it, it gives the solve
+// no frame of its own to place, which keeps the bot's check quick).  Its carrier turns
 // `rate` turns a turn of `roll` about the frame's z, and each planet on its pin against it,
 // ring_teeth / planet_n turns the other way, carried round with it.  The carrier's plate with its
 // pins' holes (`carrier`) and the sun (`sun`, bored `sun_bore`) are drawn at rest, for the unit to
@@ -239,106 +229,31 @@ component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
 
 // == The ring ====================================================================================
 // The ring's teeth: the internal gear of `ring_teeth` the stages' planets run in, about the axis.
-// Its teeth climb right-handed (`planet_hand`), a turn a lead; on the plane a machine names its
-// teeth's datum (`level`: square to the axis, its origin on it, its axes the frame's) a tooth
-// space's middle stands on +v, so `z` over it the teeth stand `z * ring_twist` round from there,
-// which `PlanetaryStage` is told as `ring_at`.
+// Its teeth climb right-handed (`planet_hand`), a turn a lead; at the frame's z = 0 a tooth
+// space's middle stands on +v, so at a height `z` the teeth stand `z * ring_twist` round from
+// there, which `PlanetaryStage` is told as `ring_at`.
 //
-// An internal gear's tooth space is the tooth of an external gear of its count, module and helix:
-// its flanks are involutes of the same base circle, curving away from the space's middle.  So one
-// space is drawn in the transverse plane as that tooth stands (`thin` thicker, so the ring's teeth
-// come out `thin` thinner), and swept up a screw about the axis of the teeth's lead: the screw's
-// sweep of the section, exactly.  Each flank is the arc through three points of its involute, from
-// a print's clearance inside the teeth's tips to their root, within 4 µm of it; the right flank is
-// the left mirrored in the space's middle.  The space is turned a pitch at a time round the axis
-// for the rest (`BarrelTeeth`).
-//
-// Two workarounds for solventc v0.1.14, each to undo when geomsolver fixes it:
-//   - the spaces are drawn rather than cut by a 55-tooth helical gear, since a body cut by sweeps
-//     cannot itself be cut from another (bmander/geomsolver#818);
-//   - v0.1.14 sweeps a section up a screw only as a face family over a parameter the document
-//     declares, at its top: `ToothSpace` is that face, and the document that draws the ring
-//     sweeps it, `solid({ p | some s: p in ToothSpace(level, …, s: s).section at s })`, and
-//     hands the space to what cuts it.  Run z0 and z1 past the body's other faces (a millimetre
-//     into a floor, half a millimetre over the top): flush, v0.1.14 leaves a sliver on the bore's
-//     rim, which the STL refuses (bmander/geomsolver#821, #836).
-
-// One tooth space's section, drawn on `level` about its normal, carried up the screw from `z0` to
-// `z1` over it as `s` runs from 0 to 1.
-component ToothSpace(level: plane, z0: Length, z1: Length, s: Scalar) {
-  claim planet_hand == 1          // the screw below climbs right-handed
-  r_in := ring_tip_r - gap
-  r_mid := (r_in + ring_root_r) / 2
-  f_in := Flank(r: r_in)
-  f_mid := Flank(r: r_mid)
-  f_root := Flank(r: ring_root_r)
-  screw := frame
-  screw screws(ring_lead) level.normal
-  fix(value == 360deg * (z0 + (z1 - z0) * s) / ring_lead) screw
-  in screw {
-    in level {
-      // the space's middle, up +v
-      construction middle := line(level.origin, hint((0, 10)))
-      middle.p2 on_v(d: 10mm) level
-      // the left flank's three points, each at its radius and `th` round from the middle (seeded
-      // a small angle's run off it)
-      li := point hint((-r_in * f_in.th / 1rad, r_in))
-      lm := point hint((-r_mid * f_mid.th / 1rad, r_mid))
-      lr := point hint((-ring_root_r * f_root.th / 1rad, ring_root_r))
-      construction to_li := line(level.origin, li)
-      construction to_lm := line(level.origin, lm)
-      construction to_lr := line(level.origin, lr)
-      length(r_in) to_li
-      length(r_mid) to_lm
-      length(ring_root_r) to_lr
-      middle angle(f_in.th) to_li
-      middle angle(f_mid.th) to_lm
-      middle angle(f_root.th) to_lr
-      // the right flank's, mirrored
-      ri := point hint((r_in * f_in.th / 1rad, r_in))
-      rm := point hint((r_mid * f_mid.th / 1rad, r_mid))
-      rr := point hint((ring_root_r * f_root.th / 1rad, ring_root_r))
-      ri symmetry(middle) li
-      rm symmetry(middle) lm
-      rr symmetry(middle) lr
-      // each flank bulges away from the space's middle, its centre across the middle from it,
-      // about 8.7 mm off: seeded 19deg round on the far side, 22.6 mm out
-      flank_l := arc(center: hint((7.4, 21.4)), start: lr, end: li)
-      lm coincident flank_l
-      flank_r := arc(center: hint((-7.4, 21.4)), start: ri, end: rr)
-      rm coincident flank_r
-      root_arc := arc(center: hint((0, 0)), start: rr, end: lr)
-      radius(ring_root_r) root_arc
-      inner_edge := line(ri, li)
-    }
-    section := face(flank_l, root_arc, flank_r, inner_edge)
-  }
-}
-
-// The ring's teeth cut from `body`, about the frame's z: `space`, one tooth space swept
-// (`ToothSpace`), and it turned a pitch at a time for the rest.
-component BarrelTeeth(body: solid, space: solid) {
-  in std.front {
-    construction spindle := vertical line(std.origin, hint((0, 10)))
-    length(10mm) spindle
-  }
-  index := frame
-  index turns(1) spindle
-  space cut body
-  repeat ring_teeth - 1 as j {
-    turned := space at(under: index) ((j + 1) * 360deg / ring_teeth)
-    turned cut body
-  }
+// An internal gear's tooth space is the tooth of an external gear of its count, module and helix,
+// the same hand: its flanks are involute helicoids of the same base circle.  So the ring is cut by
+// that gear, rack-cut as every other gear here (gears.sv): its addendum the ring's dedendum, so
+// its tips reach the ring's roots, and its teeth `thin` fatter, so the ring's come out `thin`
+// thinner.  A tooth of it stands on +v at z = 0, half a pitch back from where its own cut space
+// stands.  Its blank is a ring of its own inside the bore, so it cuts nothing but the spaces.
+// `shaped` 0 cuts its blank instead: the ring's bore out to its teeth's roots, for a quick look.
+component BarrelTeeth(body: solid, z0: Length, z1: Length, shaped: Int) {
+  cutter := ShapedHelical(N: ring_teeth, m: m_stack, phi: pa, beta: helix, hand: planet_hand,
+                          shift: 0, add: 1.25, thin: -thin, z0: z0, z1: z1,
+                          bore: 2 * (ring_tip_r - 2mm), shaped: shaped, chamfer: 0mm)
+  cutter seats(turn: -180deg / ring_teeth, up: std.z, east: std.x) std.origin
+  cutter.gear cut body
 }
 
 preview {
-  param teeth_s: Scalar over (0, 1)
   stage := PlanetaryStage(z0: 0mm, ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
                           sun_bore: 1.88mm, shaped: 1)
   rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h)
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
   barrel := solid(rim.body)
   bore.body cut barrel
-  space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: -1.5mm, z1: stage_h + 0.5mm, s: teeth_s).section at teeth_s })
-  teeth := BarrelTeeth(barrel, space: space)
+  teeth := BarrelTeeth(barrel, z0: -0.5mm, z1: stage_h + 0.5mm, shaped: 1)
 }

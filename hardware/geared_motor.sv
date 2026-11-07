@@ -35,7 +35,7 @@ use radiator_valve (HexBar)
 use motor130 (Motor130, MotorCan, MotorSizes, motor130_dims)
 use fits (run, press, gap, bond, wall, snug, pilot, m3_clear, m3_head_d, m3_head_h)
 use parts (Post, Block, Countersink)
-use planetary (PlanetaryStage, ToothSpace, BarrelTeeth, stage_ratio, stage_h, stage_zb, plate_t)
+use planetary (PlanetaryStage, BarrelTeeth, stage_ratio, stage_h, stage_zb, plate_t)
 use planetary (planet_face, sun_tip_r)
 use planetary (ring_twist, ring_tip_r, ring_root_r, p_rod_d, p_bore)
 
@@ -71,9 +71,9 @@ out_hex_af := 6mm               // across the flats; its corners inside the roun
 out_hex_len := 5mm
 out_pilot := 6mm                // the screw's self-tapping hole up into the shaft's end
 rod_z0 := out_z - out_hex_len + out_pilot + 1mm
-// The barrel's teeth, swept from a millimetre into the floor to half a millimetre over the barrel's
+// The barrel's teeth, from the last carrier's underside to half a millimetre over the barrel's
 // top (planetary.sv), their datum the foot: a tooth space's middle on the unit's +y there.
-teeth_z0 := case_floor - 1mm
+teeth_z0 := c3_z0
 teeth_z1 := unit_lid_z0 + 0.5mm
 
 // == The lid's registration =======================================================================
@@ -88,8 +88,8 @@ spigot_in := sun_tip_r + 1mm                                 // a millimetre rou
 // own x, and the screws through them.
 unit_barrel_r := ring_root_r + wall
 rib_r := 3.2mm
-rib_c := ring_root_r + gap + rib_r                           // the ribs' axes, off P: their insides a
-                                                            // print's clearance past the roots
+// the ribs' axes, off P: their insides a print's clearance past the teeth's roots
+rib_c := ring_root_r + gap + rib_r
 rib_bearings := [100deg, 220deg, 300deg]
 rib_pilot := 8mm                // each rib's hole up from its foot
 // The motor's strap: a bar `wall` thick across the end bell's back, its boss up through it, and a
@@ -241,22 +241,14 @@ component Footprint(depth: Length, floor_t: Length) {
 // turns a turn of `roll` about the frame's z, each carrier above it and the motor `stage_ratio`
 // faster, the same way.  The strap's ears start to swell out of the cradle's flats at `ear_z0`.  A
 // part on the output shaft is `hub_len` long, from the shoulder down; `out_socket` is what it is
-// cut by.  `tooth_space` is one of the barrel's tooth spaces, swept where the unit stands by the
-// document that draws it (planetary.sv says why):
+// cut by.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
 //
-//     param teeth_s: Scalar over (0, 1)
-//     tooth_space := solid({ p | some teeth_s: p in ToothSpace(foot, z0: teeth_z0, z1: teeth_z1,
-//                                                               s: teeth_s).section at teeth_s })
-//
-// `foot` a plane where the unit's foot is: its origin on P, its axes the unit's x and y.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every
-// clearance inside.
-//
-// The printed parts, at rest: `gearcase`, `lid`, `strap_part`, `motor_sun`, `carrier1` (the first
-// carrier and the second sun), `carrier2` (the second and the third sun), `carrier3` (the last
-// carrier and the output shaft) and `planet`, one of the nine.  `carrier_1` … `sun_1` are the
-// carriers and the motor's sun turning.
+// The printed parts, at rest: `gearcase` (`case_blank` and its teeth), `lid`, `strap_part`,
+// `motor_sun`, `carrier1` (the first carrier and the second sun), `carrier2` (the second and the
+// third sun), `carrier3` (the last carrier and the output shaft) and `planet`, one of the nine.
+// `carrier_1` … `sun_1` are the carriers and the motor's sun turning.
 component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Length,
-                      tooth_space: solid, shaped: Int, checks: Int) {
+                      shaped: Int, checks: Int) {
   claim p_rod_z1 >= zb2 + 4mm     // the first carrier turns on 4 mm of the rod, or more
   claim unit_motor_z - motor130_dims.shaft_len >= zb2 + 4mm      // the shaft's end in it
   claim unit_motor_z - motor130_dims.boss_h - gap >= unit_lid_z0 + 1mm   // a floor under its boss
@@ -351,10 +343,13 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   barrel := Post(std.top.origin, r: unit_barrel_r, z0: 0mm, z1: unit_lid_z0)
   barrel_bore := Post(std.top.origin, r: ring_tip_r, z0: case_floor, z1: unit_lid_z0 + 1mm)
   out_bore := Post(std.top.origin, r: (out_d + run) / 2, z0: -1mm, z1: case_floor + 1mm)
-  gearcase := solid(barrel.body)
-  barrel_bore.body cut gearcase
-  out_bore.body cut gearcase
-  teeth := BarrelTeeth(gearcase, space: tooth_space)
+  // `case_blank` is the gearcase but for its teeth: what a machine round the unit judges its
+  // clearance against, without building the teeth.
+  construction case_blank := solid(barrel.body)
+  barrel_bore.body cut case_blank
+  out_bore.body cut case_blank
+  gearcase := solid(case_blank)
+  teeth := BarrelTeeth(gearcase, z0: teeth_z0, z1: teeth_z1, shaped: shaped)
 
   // The unit's lid: a disc over the gearcase's top, its spigot down into the barrel's bore, an
   // ear over each rib, the motor's pad and cradle on it, and its boss's recess (a light press)
@@ -378,9 +373,9 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   repeat b in rib_bearings {
     rib := Rib()
     rib seats(turn: b, up: std.z, east: std.x) std.origin
-    rib.post.body union gearcase
-    rib.top_hole.body cut gearcase
-    rib.foot_hole.body cut gearcase
+    rib.post.body union case_blank
+    rib.top_hole.body cut case_blank
+    rib.foot_hole.body cut case_blank
     rib.ear.body union lid
     rib.ear_hole.body cut lid
     rib.sink.cone cut lid
@@ -428,9 +423,7 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
 }
 
 // The unit on the bench, its output scrubbed through a turn.  A file that uses this one as a
-// module draws neither the unit below nor the parameters.
+// module draws neither the unit below nor the parameter.
 param out_turn: Angle over (0deg, 360deg)
-param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 gearmotor := GearedMotor(roll: out_turn, out_rate: 1, ear_z0: unit_lid_z1 + 10mm, hub_len: 10mm,
-                         tooth_space: tooth_space, shaped: 1, checks: 0)
+                         shaped: 1, checks: 0)

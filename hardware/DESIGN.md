@@ -503,12 +503,10 @@ gitignored. The same run writes `radiatorbot.step`, the whole bot as one STEP as
 system: a part for each object (the valve as measured, the bought parts as their outlines and the
 printed parts), each placed where it stands, the valve's and the boards' grouped under them. Each
 gear's teeth are the rack's exact sweep, a helical gear's the leaned rack's, built as one tooth
-sector turned round the gear. The barrel's 55 tooth spaces are each its transverse section (an
-external tooth's, its involute flanks drawn as arcs through three points of each, within 4 µm)
-carried up a screw of the teeth's lead, the screw's exact sweep. (solventc v0.1.14 sweeps a
-section up a screw only as a face family over a parameter the document declares, so the space is
-swept in `radiatorbot.sv`, over the unit's foot, and handed to the unit to cut: `planetary.sv`
-says how.) Set `shaped := 0` in `radiatorbot.sv` to draw every
+sector turned round the gear. The barrel's 55 teeth are cut by an external helical gear of the
+same count, module and helix, rack-cut like the rest: its teeth are the ring's spaces, their
+flanks involute helicoids exactly, `thin` fatter so the ring's teeth come out `thin` thinner.
+Set `shaped := 0` in `radiatorbot.sv` to draw every
 gear and the socket as blanks while changing the layout.
 
 ## How it's checked
@@ -530,7 +528,7 @@ gear and the socket as blanks while changing the layout.
   - the unit's cradle and the strap clear the frame's floor, which goes down over them, and the
     strap's legs stand 0.5 mm over the ears, so it bears on the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part, so it takes about three minutes.
+  shaped part, so it takes about four minutes.
   - The socket turns with the handle and its hole is the same at every height, so only the
     handle's height in it changes. The socket and the stand are judged against the handle open,
     where they come nearest; A's compound against it closed. The socket clears the handle by

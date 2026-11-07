@@ -58,9 +58,9 @@ use boards (tb6612_dims, ina219_dims, header_dims, pitch)
 use fits (run, press, gap, bond, wall, slip, pa, thin, chamfer)
 use fits (pilot, m3_clear, m3_head_d, m3_head_h, m4_clear, m4_nut_af)
 use parts (Post, ScrewPost, Block, RoundedBlock, Dovetail, UnderSlope, Barb, BoreX, NutX, Collar)
-use planetary (stage_ratio, ToothSpace)
+use planetary (stage_ratio)
 use geared_motor (GearedMotor, Footprint, unit_lid_z1, unit_motor_z, unit_strap_top)
-use geared_motor (unit_barrel_r, cradle_f, strap_w, strap_reach, teeth_z0, teeth_z1)
+use geared_motor (unit_barrel_r, cradle_f, strap_w, strap_reach)
 
 shaped := 1                    // 1: shape the gears and the socket; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~2 minutes)
@@ -418,9 +418,9 @@ stand_collar.hole.body cut stand_part
 // A's ring drives the last pinion back, and the motor `stage_ratio` cubed faster.
 //
 // The unit stands in a frame of its own, `unit_frame`: its origin on P at the foot's height, its
-// axes the bot's.  (A frame the unit is drawn `in`, rather than the unit seated on P: seated, its
-// every part's rows join the seat's, and solventc v0.1.14 then takes minutes, not a minute, to
-// follow the handle's turns.)
+// axes the bot's.  (A frame the unit is drawn `in`, rather than the unit seated on P: seated,
+// solventc v0.1.15 spends about twice as long placing the drawing's planes before the solve,
+// and the bot's check takes 100 s rather than 60.)
 unit_at := point
 unit_at raised(d: unit_z0, along: std.z) p_c
 unit_frame := frame
@@ -428,17 +428,8 @@ unit_frame.origin coincident unit_at
 unit_frame.u parallel(sense: same) bot.u
 unit_frame.v parallel(sense: same) bot.v
 gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - unit_z0,
-                         hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
-                         checks: checks) in unit_frame
+                         hub_len: fin_face, shaped: shaped, checks: checks) in unit_frame
 unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0) in unit_frame
-// The barrel's tooth space, swept up its screw over the unit's foot (planetary.sv: solventc
-// v0.1.14 sweeps a screw only over a parameter the document declares), for the unit to cut.
-unit_foot := plane
-unit_foot.origin coincident unit_at
-unit_foot.u parallel(sense: same) bot.u
-unit_foot.v parallel(sense: same) bot.v
-param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 // its printed parts, as the export names them: the gearcase, the lid and the strap shown where
 // they stand, the parts that turn as construction (the unit shows them turning)
 construction motor_sun := solid(gearmotor.motor_sun)
@@ -523,7 +514,7 @@ ring_side.body cut base
 base_hole_a.body cut base
 unit_feet.holes cut base
 pinion_reach.body cut base
-claim gearmotor.gearcase clear(1mm) base_shell            // its ribs clear of the box's walls
+claim gearmotor.case_blank clear(1mm) base_shell          // its ribs clear of the box's walls
 
 // == The frame: the electronics bay ==============================================================
 // One print, the bot's backbone, printed on its floor: it stands on the base and the geared
