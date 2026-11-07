@@ -25,7 +25,7 @@
 unit mm
 use std
 use std.solids (cut, union)
-use std.place (vertical, on_u, raised, seats)
+use std.place (vertical, on_v, raised, seats)
 use std.motion (turns, screws)
 use gears (ShapedHelical)
 use fits (run, press, gap, bond, wall, pa, thin, chamfer)
@@ -95,7 +95,7 @@ component Helical(c: point, z: Length, rot: Angle, N: Int, hand: Int, face: Leng
 }
 
 // How a stage's gears stand at rest, the ring's teeth standing `ring_at` (a tooth space's middle
-// half a pitch on from +v, turned that much) at the planets' undersides: planet `k`'s turn,
+// on +v, turned that much) at the planets' undersides: planet `k`'s turn,
 // `planet`, and its sun's, `sun`, each the turn its Helical is seated at.  Planet `k` stands at
 // `bearing`, the first on the stage's x.  The planet's tooth that points out at the ring stands in
 // a tooth space of it, turned by as much as the space is from the planet's bearing, in their
@@ -103,7 +103,7 @@ component Helical(c: point, z: Length, rot: Angle, N: Int, hand: Int, face: Leng
 // rolling would bring them.  The other planets' meshes agree because (17 + 55) / 3 is whole.
 component Phasing(ring_at: Angle, k: Int) {
   bearing := k * 360deg / stack_planets
-  off := 90deg + ring_at + 180deg / ring_teeth                 // the ring's space off planet 0
+  off := 90deg + ring_at                                       // the ring's space off planet 0
   sun := (180deg * planet_n - off * ring_teeth) / sun_n - 90deg
   planet := bearing + 90deg - (90deg + sun + 180deg / sun_n - bearing) * sun_n / planet_n
 }
@@ -139,11 +139,12 @@ component CarrierPlate() {
       hub distance(<= orbit, along: arm) bp
       // the web square to the line midway between the arms
       line(hub, hp) equal line(hub, next.hm)
+      radius(pin_boss_r) boss
+      hub distance(carrier_web, side: left) web
+      // the walk, last: its round at the brace rounds the corner into the next arm
       (out := line(hm, bm)) -> (boss := arc(center: pin, start: bm, end: bp)) ->
         (back := line(bp, hp)) -> (corner := round(r: carrier_fillet))
         (web := line(hp, next.hm)) -> (elbow := round(r: carrier_fillet))
-      radius(pin_boss_r) boss
-      hub distance(carrier_web, side: left) web
     }
     hub distance(orbit, along: u) pin[0]
     hub level(v) pin[0]
@@ -171,12 +172,12 @@ component Flank(r: Length) {
 // == The stage ===================================================================================
 
 // One planetary stage at rest, and its planets turning: its carrier turns `rate` turns a turn of
-// `turn` about the frame's z, and each planet on its pin against it, ring_teeth / planet_n turns
+// `roll` about the frame's z, and each planet on its pin against it, ring_teeth / planet_n turns
 // the other way, carried round with it.  The carrier's plate with its pins' holes (`carrier`) and
 // the sun (`sun`, bored `sun_bore`) are drawn at rest, for the unit to make its compounds of: a
 // sun is printed with the carrier of the stage above it.  The pins (`pin`) and the planets
 // (`planet_shown`) are drawn turning; `pg[k].gear` is planet `k` at rest.
-component PlanetaryStage(ring_at: Angle, turn: Angle, rate: Scalar, sun_bore: Length,
+component PlanetaryStage(ring_at: Angle, roll: Angle, rate: Scalar, sun_bore: Length,
                          shaped: Int) {
   claim ring_teeth == sun_n + 2 * planet_n
   claim stack_planets == 3                              // CarrierPlate's outline has three arms
@@ -203,7 +204,7 @@ component PlanetaryStage(ring_at: Angle, turn: Angle, rate: Scalar, sun_bore: Le
   // with it, the carrier's rate: the same as riding the carrier's frame, as primer 0.207 has it.
   orbit_turn := frame
   orbit_turn turns(rate) spindle
-  fix(value == turn) orbit_turn
+  fix(value == roll) orbit_turn
   repeat stack_planets as k {
     ph := Phasing(ring_at: ring_at, k: k)
     pc_up := point
@@ -215,7 +216,7 @@ component PlanetaryStage(ring_at: Angle, turn: Angle, rate: Scalar, sun_bore: Le
                 z1: plate_t - pin_seat + pin_len)
     spin := frame
     spin turns(-rate * ring_teeth / planet_n) pc_spindle
-    fix(value == turn) spin
+    fix(value == roll) spin
     construction spun := pg.gear at spin
     planet_shown := spun at orbit_turn
     pin_shown := pin.body at orbit_turn
@@ -226,7 +227,7 @@ component PlanetaryStage(ring_at: Angle, turn: Angle, rate: Scalar, sun_bore: Le
 
 // The ring's teeth, cut from `body`: the internal gear of `ring_teeth` the stages' planets run in,
 // about the frame's z from z0 up to z1.  Its teeth climb right-handed (`planet_hand`), a turn a
-// lead; at z = 0 a tooth space's middle stands half a pitch on from +v, so at a height z its teeth
+// lead; at z = 0 a tooth space's middle stands on +v, so at a height z its teeth
 // stand `z * ring_twist` round from there, which `PlanetaryStage` is told as `ring_at`.
 //
 // An internal gear's tooth space is the tooth of an external gear of its count, module and helix:
@@ -247,26 +248,24 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
   claim planet_hand == 1          // the screw below climbs right-handed
   r_in := ring_tip_r - gap
   r_mid := (r_in + ring_root_r) / 2
-  space_mid := 90deg + 180deg / ring_teeth
   f_in := Flank(r: r_in)
   f_mid := Flank(r: r_mid)
   f_root := Flank(r: ring_root_r)
+  roll0 := 360deg * z0 / ring_lead              // the screw's rolls at z0 and at z1
+  roll1 := 360deg * z1 / ring_lead
   in std.front {
     construction spindle := vertical line(std.origin, hint((0, 10)))
     length(10mm) spindle
   }
   in std.top {
-    construction datum := line(std.top.origin, hint((10, 0)))
-    datum.p2 on_u(d: 10mm) std.top
-    construction middle := line(std.top.origin,
-                                hint(at: std.top.origin, toward: datum.p2, turn: space_mid))
-    length(10mm) middle
-    datum angle(space_mid) middle
-    // the left flank's three points, each at its radius and `th` round from the middle
-    li := point hint(at: std.top.origin, toward: middle.p2, by: r_in / 10mm, turn: f_in.th)
-    lm := point hint(at: std.top.origin, toward: middle.p2, by: r_mid / 10mm, turn: f_mid.th)
-    lr := point hint(at: std.top.origin, toward: middle.p2, by: ring_root_r / 10mm,
-                     turn: f_root.th)
+    // the space's middle, up +v
+    construction middle := line(std.top.origin, hint((0, 10)))
+    middle.p2 on_v(d: 10mm) std.top
+    // the left flank's three points, each at its radius and `th` round from the middle (seeded
+    // a small angle's run off it)
+    li := point hint((-r_in * f_in.th / 1rad, r_in))
+    lm := point hint((-r_mid * f_mid.th / 1rad, r_mid))
+    lr := point hint((-ring_root_r * f_root.th / 1rad, ring_root_r))
     construction to_li := line(std.top.origin, li)
     construction to_lm := line(std.top.origin, lm)
     construction to_lr := line(std.top.origin, lr)
@@ -277,24 +276,19 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
     middle angle(f_mid.th) to_lm
     middle angle(f_root.th) to_lr
     // the right flank's, mirrored
-    ri := point hint(at: std.top.origin, toward: middle.p2, by: r_in / 10mm, turn: -f_in.th)
-    rm := point hint(at: std.top.origin, toward: middle.p2, by: r_mid / 10mm, turn: -f_mid.th)
-    rr := point hint(at: std.top.origin, toward: middle.p2, by: ring_root_r / 10mm,
-                     turn: -f_root.th)
+    ri := point hint((r_in * f_in.th / 1rad, r_in))
+    rm := point hint((r_mid * f_mid.th / 1rad, r_mid))
+    rr := point hint((ring_root_r * f_root.th / 1rad, ring_root_r))
     ri symmetry(middle) li
     rm symmetry(middle) lm
     rr symmetry(middle) lr
     // each flank bulges away from the space's middle, its centre across the middle from it,
     // about 8.7 mm off: seeded 19deg round on the far side, 22.6 mm out
-    flank_l := arc(center: hint(at: std.top.origin, toward: lm, by: 22.6mm / r_mid,
-                                turn: -19deg - f_mid.th),
-                   start: lr, end: li)
+    flank_l := arc(center: hint((7.4, 21.4)), start: lr, end: li)
     lm coincident flank_l
-    flank_r := arc(center: hint(at: std.top.origin, toward: rm, by: 22.6mm / r_mid,
-                                turn: 19deg + f_mid.th),
-                   start: ri, end: rr)
+    flank_r := arc(center: hint((-7.4, 21.4)), start: ri, end: rr)
     rm coincident flank_r
-    root_arc := arc(center: hint(at: std.top.origin), start: rr, end: lr)
+    root_arc := arc(center: hint((0, 0)), start: rr, end: lr)
     radius(ring_root_r) root_arc
     inner_edge := line(ri, li)
   }
@@ -303,9 +297,7 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
   screw screws(ring_lead) spindle
   index := frame
   index turns(1) spindle
-  private construction space := solid({ p | some t in (360deg * z0 / ring_lead,
-                                                       360deg * z1 / ring_lead):
-                                            p in section at(under: screw) t })
+  private construction space := solid({ p | some t in (roll0, roll1): p in section at(under: screw) t })
   space cut body
   repeat ring_teeth - 1 as j {
     turned := space at(under: index) ((j + 1) * 360deg / ring_teeth)
@@ -314,7 +306,7 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
 }
 
 preview {
-  stage := PlanetaryStage(ring_at: stage_zb * ring_twist, turn: 0deg, rate: 1,
+  stage := PlanetaryStage(ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
                           sun_bore: 1.88mm, shaped: 1)
   rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h)
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
