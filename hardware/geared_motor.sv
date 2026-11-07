@@ -235,7 +235,8 @@ component Footprint(depth: Length, floor_t: Length) {
 //     tooth_space := solid({ p | some teeth_s: p in ToothSpace(foot, z0: teeth_z0, z1: teeth_z1,
 //                                                               s: teeth_s).section at teeth_s })
 //
-// `foot` the plane of the unit's foot, its origin on P and its axes the unit's x and y.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
+// `foot` the plane of the unit's foot, its origin on P and its axes the unit's x and y: the
+// instance's own `std.top`.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
 //
 // The printed parts, at rest: `gearcase`, `lid`, `strap_part`, `motor_sun`, `carrier1` (the first
 // carrier and the second sun), `carrier2` (the second and the third sun), `carrier3` (the last

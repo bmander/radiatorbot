@@ -447,17 +447,11 @@ unit_at raised(d: unit_z0, along: std.z) p_c
 gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - unit_z0,
                          hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
                          checks: checks)
-// The barrel's tooth space, swept up its screw over the unit's foot (planetary.sv: solventc
-// v0.1.14 sweeps a screw only over a parameter the document declares), for the unit to cut.
-unit_u := axis hint(dir: (0, 1, 0))
-unit_u parallel(sense: same) bot.u
-unit_at coincident unit_u
-unit_v := axis hint(dir: (-1, 0, 0))
-unit_v parallel(sense: same) bot.v
-unit_at coincident unit_v
-unit_foot := plane(u: unit_u, v: unit_v)
+// The barrel's tooth space, swept up its screw over the unit's foot, its own top plane
+// (planetary.sv: solventc v0.1.14 sweeps a screw only over a parameter the document declares),
+// for the unit to cut.
 param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
+tooth_space := solid({ p | some teeth_s: p in ToothSpace(gearmotor.std.top, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 gearmotor seats(turn: 0deg, up: std.z, east: bot.u) unit_at
 unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0)
 unit_feet seats(turn: 0deg, up: std.z, east: bot.u) unit_at
