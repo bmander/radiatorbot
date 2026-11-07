@@ -547,7 +547,7 @@ gear and the socket as blanks while changing the layout.
   - the unit's cradle and the strap clear the frame's floor, which goes down over them, and the
     strap's legs stand 0.5 mm over the ears, so it bears on the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part, so it takes about two minutes.
+  shaped part, so it takes about three minutes.
   - The socket turns with the handle and its hole is the same at every height, so only the
     handle's height in it changes. The socket and the stand are judged against the handle open,
     where they come nearest; A's compound against it closed. The socket clears the handle by

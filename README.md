@@ -73,8 +73,8 @@ sh hardware/export.sh            # every printed part as STL, and radiatorbot.st
 ```
 
 The models are checked with Solvent v0.1.14 (`SOLVENTC_VERSION=v0.1.14` pins the installer to
-it), which solves the bot and judges its claims in about a minute, and exports it in two and a
-half. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
+it), which solves the bot and judges its claims in about two minutes, and exports it in about
+three. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
 a part placed at its joint's value as `socket_part at socket_turn`), import the body words they use
 (`use std.solids (cut, union)`), and name a piece unioned into a part by its path for a fillet
 (`keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a`), which v0.1.12 brought; the
@@ -83,7 +83,7 @@ over a line and an axis, and the stack's screwed tooth spaces beside the gears s
 v0.1.14 (#819, #817), so they need v0.1.14 or later. Every gear is its rack's exact sweep, the
 helical ones a leaned rack's, and the planetary stack's barrel teeth are a screw's exact sweep;
 the printed parts' STLs come to 11 MB and the assembly's STEP to 57 MB. With `checks := 1` the
-bot's every clearance is judged in about two and a quarter minutes.
+bot's every clearance is judged in about three minutes.
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
 (`.github/workflows/export.yml`, Solvent pinned to v0.1.14 there too) and keeps its output on the
