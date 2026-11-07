@@ -76,8 +76,7 @@ The models are checked with Solvent v0.1.14 (`SOLVENTC_VERSION=v0.1.14` pins the
 it), which solves the bot and judges its claims in about two minutes, and exports it in about
 three. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
 a part placed at its joint's value as `socket_part at socket_turn`), import the body words they use
-(`use std.solids (cut, union)`), and name a piece unioned into a part by its path for a fillet
-(`keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a`), which v0.1.12 brought; the
+(`use std.solids (cut, union)`), which v0.1.12 brought; the
 socket's 64-tooth gear builds from v0.1.13 (bmander/geomsolver#812), and a helical gear's plane
 over a line and an axis, and the stack's screwed tooth spaces beside the gears seated on P, from
 v0.1.14 (#819, #817), so they need v0.1.14 or later. Every gear is its rack's exact sweep, the

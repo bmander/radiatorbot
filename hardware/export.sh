@@ -13,7 +13,7 @@ mkdir -p "$out"
 set --
 for part in socket_part a_part stand_part collar_part motor_sun carrier1 carrier2 carrier3 planet \
     pinion_part \
-    gearcase_part unit_lid_part base keeper_part \
+    gearcase_part unit_lid_part base \
     strap_part frame_part mount_part cap_part cover_part; do
   set -- "$@" --stl "$out/$part.stl" --solid "$part"
 done
