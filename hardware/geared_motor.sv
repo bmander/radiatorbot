@@ -88,7 +88,8 @@ spigot_in := sun_tip_r + 1mm                                 // a millimetre rou
 // own x, and the screws through them.
 unit_barrel_r := ring_root_r + wall
 rib_r := 3.2mm
-rib_c := unit_barrel_r + 0.8mm                              // the ribs' axes, off P
+rib_c := ring_root_r + gap + rib_r                           // the ribs' axes, off P: their insides a
+                                                            // print's clearance past the roots
 rib_bearings := [100deg, 220deg, 300deg]
 rib_pilot := 8mm                // each rib's hole up from its foot
 // The motor's strap: a bar `wall` thick across the end bell's back, its boss up through it, and a
