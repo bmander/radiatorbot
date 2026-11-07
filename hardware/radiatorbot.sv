@@ -3,7 +3,7 @@
 //
 // Coordinates are the valve's (radiator_valve.sv): the stem is std.z, z = 0 is the packing nut's
 // bottom face, the radiator lies toward +x.  The bot is laid out in a frame of its own, `bot`,
-// turned `bot_turn` (a quarter turn) about the stem, and hangs on that frame's -x side: the
+// turned a quarter turn about the stem, and hangs on that frame's -x side: the
 // valve's -y side, beside the outlet, turned 90deg clockwise seen from below from where it hung
 // off the outlet's far end.  In the bot's frame:
 //
@@ -338,7 +338,7 @@ param handle_open: Angle over (0deg, open_turns * 360deg)  // closed to open
 valve := RadiatorValve(handle_open: handle_open)
 
 // == The bot's frame =============================================================================
-// The bot is drawn in a frame of its own, `bot`, turned `bot_turn` about the stem from the
+// The bot is drawn in a frame of its own, `bot`, turned a quarter turn about the stem from the
 // valve's: every plan number above (the box, the spine, the clamp, the boards' places) is in it,
 // its x out from the stem through the clamp's split to the bot's far end at -x, its z the stem's.
 // A quarter turn stands the bot on the valve's -y side, beside the outlet rather than off its far
@@ -347,13 +347,10 @@ valve := RadiatorValve(handle_open: handle_open)
 // plan is drawn in the world's top plane, its ordinates along the bot's axes; and every part
 // seated on a point (the gears, the geared motor, the collars, the boards) takes its heading from
 // the bot's x.
-bot_turn := 90deg
 bot := frame
 fix(origin == (0mm, 0mm, 0mm)) bot
-bot.u perpendicular std.z
-bot.v perpendicular std.z
-std.x angle(bot_turn, about: std.z) bot.u
-bot.u perpendicular(sense: ccw, about: std.z) bot.v
+fix(dir == (0, 1, 0)) bot.u      // a quarter turn: the bot's x along the world's y
+fix(dir == (-1, 0, 0)) bot.v     // and its y along the world's -x
 
 // == The axles ===================================================================================
 // A, the socket's pinion's and the ring's, is `a_dist` out along the bot's -x; P, the geared
