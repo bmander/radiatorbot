@@ -244,7 +244,7 @@ component PlanetaryStage(ring_at: Angle, roll: Angle, rate: Scalar, sun_bore: Le
 //     cannot itself be cut from another (bmander/geomsolver#818);
 //   - v0.1.14 sweeps a section up a screw only as a face family over a parameter the document
 //     declares, at its top: `ToothSpace` is that face, and the document that draws the ring
-//     sweeps it (`solid({ p | some s: p in ToothSpace(level, z0: …, z1: …).section at s })`) and
+//     sweeps it, `solid({ p | some s: p in ToothSpace(level, …, s: s).section at s })`, and
 //     hands the space to what cuts it.  Run z0 and z1 past the body's other faces (a millimetre
 //     into a floor, half a millimetre over the top): flush, v0.1.14 leaves a sliver on the bore's
 //     rim, which the STL refuses (bmander/geomsolver#821, #836).

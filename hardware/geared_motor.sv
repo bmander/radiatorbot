@@ -33,7 +33,8 @@ use radiator_valve (HexBar)
 use motor130 (Motor130, MotorCan, MotorSizes, motor130_dims)
 use fits (run, press, gap, bond, wall, snug, pilot, m3_clear, m3_head_d, m3_head_h)
 use parts (Post, Block, Countersink)
-use planetary (PlanetaryStage, ToothSpace, BarrelTeeth, stage_ratio, stage_h, stage_zb, plate_t, planet_face)
+use planetary (PlanetaryStage, ToothSpace, BarrelTeeth, stage_ratio, stage_h, stage_zb, plate_t)
+use planetary (planet_face)
 use planetary (ring_twist, ring_tip_r, ring_root_r, p_rod_d, p_bore)
 
 // == Heights, from the foot up P =================================================================
@@ -236,7 +237,8 @@ component Footprint(depth: Length, floor_t: Length) {
 //                                                               s: teeth_s).section at teeth_s })
 //
 // `foot` the plane of the unit's foot, its origin on P and its axes the unit's x and y: the
-// instance's own `std.top`.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
+// instance's own `std.top`.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every
+// clearance inside.
 //
 // The printed parts, at rest: `gearcase`, `lid`, `strap_part`, `motor_sun`, `carrier1` (the first
 // carrier and the second sun), `carrier2` (the second and the third sun), `carrier3` (the last
