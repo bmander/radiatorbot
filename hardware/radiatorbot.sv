@@ -465,15 +465,16 @@ unit_foot.u parallel(sense: same) bot.u
 unit_foot.v parallel(sense: same) bot.v
 param teeth_s: Scalar over (0, 1)
 tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
-// its printed parts, as the export names them
+// its printed parts, as the export names them: the gearcase, the lid and the strap shown where
+// they stand, the parts that turn as construction (the unit shows them turning)
 construction motor_sun := solid(gearmotor.motor_sun)
 construction carrier1 := solid(gearmotor.carrier1)
 construction carrier2 := solid(gearmotor.carrier2)
 construction carrier3 := solid(gearmotor.carrier3)
 construction planet := solid(gearmotor.planet)
-construction gearcase_part := solid(gearmotor.gearcase)
-construction unit_lid_part := solid(gearmotor.lid)
-construction strap_part := solid(gearmotor.strap_part)
+gearcase_part := solid(gearmotor.gearcase)
+unit_lid_part := solid(gearmotor.lid)
+strap_part := solid(gearmotor.strap_part)
 motor_at := point
 motor_at raised(d: motor_z, along: std.z) p_c
 
