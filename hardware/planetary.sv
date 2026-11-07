@@ -251,9 +251,9 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length, shaped: Int) {
 preview {
   stage := PlanetaryStage(z0: 0mm, ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
                           sun_bore: 1.88mm, shaped: 1)
-  rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h)
-  bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
+  rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h + 1mm)
+  bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 2mm)
   barrel := solid(rim.body)
   bore.body cut barrel
-  teeth := BarrelTeeth(barrel, z0: -0.5mm, z1: stage_h + 0.5mm, shaped: 1)
+  teeth := BarrelTeeth(barrel, z0: -0.5mm, z1: stage_h + 1.5mm, shaped: 1)
 }
