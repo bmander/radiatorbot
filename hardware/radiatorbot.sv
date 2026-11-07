@@ -443,16 +443,16 @@ stand_collar.hole.body cut stand_part
 // lid, and its hole round the cradle's flats keeps the unit square.  Its output shaft turns as
 // A's ring drives the last pinion back, and the motor `stage_ratio` cubed faster.
 //
-// The unit stands in a frame of its own, `unit_frame`, held in the bot's at P's place in the plan
-// and its foot's height, square to the bot.  (Held rather than seated on P: with every part of
-// the unit seated in a frame the solve places, solventc v0.1.14 takes minutes to follow the
-// handle's turns rather than seconds.)
-in bot {
-  unit_frame := frame
-  fix(origin == (p_x, p_y, unit_z0)) unit_frame
-  fix(dir == (1, 0, 0)) unit_frame.u
-  fix(dir == (0, 1, 0)) unit_frame.v
-}
+// The unit stands in a frame of its own, `unit_frame`: its origin on P at the foot's height, its
+// axes the bot's.  (A frame the unit is drawn `in`, rather than the unit seated on P: seated, its
+// every part's rows join the seat's, and solventc v0.1.14 then takes minutes, not a minute, to
+// follow the handle's turns.)
+unit_at := point
+unit_at raised(d: unit_z0, along: std.z) p_c
+unit_frame := frame
+unit_frame.origin coincident unit_at
+unit_frame.u parallel(sense: same) bot.u
+unit_frame.v parallel(sense: same) bot.v
 gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - unit_z0,
                          hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
                          checks: checks) in unit_frame
