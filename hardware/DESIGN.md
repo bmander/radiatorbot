@@ -10,17 +10,27 @@ the motor stalls. A 9 V wall adapter in the RedBoard's barrel jack powers it all
 puts the bot on the home network, for a phone.
 
 Everything is FDM-printed except the drill rod the gears turn on, the planets' steel pins and the
-screws. The model is
-`radiatorbot.sv`. The valve it fits is `radiator_valve.sv`, and the parts libraries are
-`gears.sv`, `motor130.sv` and `boards.sv` (the RedBoard, its shield, the motor driver and the
-current monitor).
+screws. The model is `radiatorbot.sv`, the assembly, drawn from modules:
+
+- `geared_motor.sv`, the geared motor: the motor and its planetary stack as one component, with
+  an output shaft out of its foot and the posts it stands on;
+- `planetary.sv`, one planetary stage as a component (its sun, planets, pins and carrier) and
+  the barrel's internal teeth;
+- `fits.sv`, the stock and the FDM fits every printed part reads, and `parts.sv`, the building
+  blocks (posts, blocks, bores, dovetails, collars);
+- `gears.sv`, `motor130.sv` and `boards.sv` (the RedBoard, its shield, the motor driver and the
+  current monitor).
+
+The valve it fits is `radiator_valve.sv`. `planetary.sv` and `geared_motor.sv` each open on
+their own: a stage with a band of the barrel, and the geared motor on the bench, its output
+scrubbed through a turn.
 
 ## How it works
 
 The bot hangs on the valve's −y side, beside the outlet. Seen from below, looking up at the
 handle, it stands a quarter turn clockwise from where it hung before, off the outlet's far end
-(−x). `radiatorbot.sv` lays the bot out in a frame of its own, `bot`, turned `bot_turn` (90°)
-about the stem. Its x runs out from the stem through the clamp's split, and the bot hangs on its
+(−x). `radiatorbot.sv` lays the bot out in a frame of its own, `bot`, turned 90° about the
+stem. Its x runs out from the stem through the clamp's split, and the bot hangs on its
 −x side. Directions below (the bay's −y half, the driver toward +x) are that frame's.
 
 - **The socket** is a 64-tooth gear (module 1.364) round the handle, turning about the stem
@@ -43,62 +53,63 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     pin never fights it for the centre, however the stand is set. The pad only bears the
     socket's weight.
 - **A** is a fixed ½ in axle 60 mm from the stem. A's compound turns on it: a 24-tooth pinion
-  driving the socket, and over it a 48-tooth ring (module 1.5) driven by the stack's pinion, one
+  driving the socket, and over it a 48-tooth ring (module 1.5) driven by the last pinion, one
   print. The upper collar over the ring and the stand under the pinion keep it in place.
-- **The geared motor** is the 130 motor and the planetary stack as one unit, whole and working on
-  the bench, which drops into the base. It stands on P, the motor's axis, 45 mm from A where the
-  motor stood beside the boards.
-  - **The gearcase** is a cup round P, one print: a 6 mm floor, P's rod pressed into it, and the
-    **barrel** up from it, its bore the stack's ring gear. It has a window low on A's side, where
-    A's ring comes in to the stack's pinion, and three ribs down its outside.
+- **The geared motor** is the 130 motor and the planetary stack as one unit (`GearedMotor` in
+  `geared_motor.sv`), whole and working on the bench, with an output shaft out of its foot. It
+  stands on P, the motor's axis, 45 mm from A where the motor stood beside the boards.
+  - **The gearcase** is a cup round P, one print: a 4 mm floor, the output shaft's bearing, and
+    the **barrel** up from it, its bore the stack's ring gear, closed all round. Three ribs run
+    down its outside, from its foot to its top.
   - **The unit's lid** sits on the gearcase's top, held by three countersunk M3s down through
     ears over the ribs, self-tapping into them. The motor stands face down on a 2.8 mm pad on it,
     in a cradle, the can's flats keying it against its torque.
+  - **The lid's registration.** A spigot 2.5 mm deep under the lid presses down into the barrel's
+    bore, 0.05 mm inside its teeth's tips all round (`snug`, a light press), so the lid stands
+    concentric with the ring gear itself, the reference the stages run in. The spigot's underside
+    stands 0.3 mm over the first stage's planets, keeping them on their pins, and its middle is
+    open 1 mm round the motor's sun, which stands up into it.
   - The motor's front boss presses into a recess in the pad, 0.05 mm over its size (`snug`), so
-    the motor's shaft, and the first sun on it, stand on P's axis as truly as the lid stands on
-    the case.
-  - **Mounting.** The gearcase's foot stands in a hole through the base's floor, 0.3 mm clear,
-    which centres it, and its ribs stand on the floor round the hole. The frame's floor bears down
-    on the lid. Its hole round the cradle's flats keeps the unit from turning against the
-    pinion's reaction.
-  - Out of the bot, the unit runs on its own: power the motor, and the pinion turns in the window.
-- **The planetary stack** is three like stages, each a 17-tooth sun, three 19-tooth planets and
-  the 55-tooth ring round them, under the motor:
+    the motor's shaft, and the first sun on it, stand on the ring's axis as truly as the spigot
+    stands in it.
+  - **The output shaft** is the last carrier's: an 8 mm round shaft printed under its plate, down
+    through the floor's bore (0.35 mm over it) to a shoulder 0.3 mm under the foot, and a 6 mm
+    hexagon (across the flats) 5 mm on down from there. The carrier's plate runs 0.3 mm over the
+    floor's top and the part on the shaft 0.3 mm under its underside, so the floor is the shaft's
+    bearing and its thrust faces both ways. Any part the unit drives is cut by the unit's
+    `out_socket`: the hexagon grown 0.05 mm, a light press, and an M3 up through the part into
+    the shaft's end, its pan head in a counterbore in the part's underside, drawing it up against
+    the shoulder.
+  - **The last pinion** is a print of its own outside the unit: the 12-tooth spur pinion
+    (module 1.5) on the output shaft's hexagon under the gearcase, in mesh with A's ring.
+  - **Mounting.** The unit stands on three posts up from the base's floor, one under each rib
+    (`Footprint`: the unit's module gives what it stands on), an M3 up through the floor and the
+    post into the rib's foot, its head in a counterbore under the floor. The frame's floor bears
+    down on the lid, and its hole round the cradle's flats keeps the unit square.
+  - Out of the bot, the unit runs on its own: power the motor, and the output shaft turns under
+    its foot.
+- **The planetary stack** is three like stages (`PlanetaryStage` in `planetary.sv`), each a
+  17-tooth sun, three 19-tooth planets on pins in a carrier, and the 55-tooth ring round them,
+  under the motor:
   - The first sun is pressed on the motor's shaft. Each carrier is a hub, with the next stage's sun
-    under it, one print; the last carrier has the 12-tooth spur pinion (module 1.5) under it
-    instead, which drives A's ring.
+    under it, one print; the last carrier has the output shaft under it instead.
   - A carrier is not a plate. It is one outline 4.5 mm thick: three arms 6.2 mm wide out to
-    7.8 mm bosses round the planets' pins, and a straight web from each arm to the next, its
-    corners 12 mm from P and rounded 2 mm into the arms. A carrier with its sun is 2 990 mm³ where
-    the plate's was 8 280, and the last with its pinion 4 590 where it was 9 870.
-  - Every carrier turns on a fixed 4 mm rod, P, pressed into the gearcase's floor. The motor's
-    shaft runs on down into the first carrier's bore, a millimetre past the rod's top.
+    7.8 mm bosses round the planets' pins, and a straight web from each arm to the next, 8.5 mm
+    from P and rounded 2 mm into the arms. It is drawn as one arm and the web after it, turned
+    round P for the others.
+  - P's 4 mm rod is pressed into the last carrier, down into its output shaft, and the carriers
+    above turn on it. The motor's shaft runs on down into the first carrier's bore, a millimetre
+    past the rod's top.
   - Each carrier holds its stage's planets on 3 × 10 mm steel dowel pins pressed 4 mm into its
     bosses. A planet runs 0.3 mm over its boss. The webs of the carrier over it stand 8.5 mm from P:
     over the sun's tips, and 1.8 mm in over every planet's inner rim, 0.3 mm above it, however
     the two carriers stand. So the planets can't climb off their pins.
   - The ring is one internal gear, the barrel's: all three stages' planets run in its one band of
-    teeth, so each carrier, its planets on, screws down the barrel into place from the top.
+    teeth, so each carrier, its planets on, screws down the barrel into place from the top. Each
+    stage is told how the ring's teeth stand at its planets' undersides, and stands its sun and
+    planets to mesh with them.
   - The teeth are helical, 25°: the suns left-handed, the planets and the barrel right-handed.
     See *The drive* for why.
-- **The keeper** is a print of its own pressed down into the top of the base, a cross of beams 6 mm
-  wide and 3 mm deep: a spine from A out to the end wall over the bridge, and a cross beam over the
-  bulkhead from side wall to side wall. It holds A's top and ties the walls. It stands on the bridge
-  and the bulkhead.
-  - Only its three beams' ends touch the base's walls, each a pad 14 mm along its wall and 6 mm
-    deep. Up the middle of each wall's inside face where a pad meets it stands a **dovetail
-    rail**, 5 mm across at the wall, its flanks 15° off square like the mount's joint, standing
-    3 mm out. Each pad has the rail's slot through it, the rail grown 0.05 mm all round (`snug`):
-    the keeper slides straight down over all three, a light press on the flanks. The rails hold
-    each pad to its wall and square along it, so the keeper can neither spread nor pull in off
-    the walls.
-  - Each rail runs from the base's top down to its foot, which slopes off the wall at 45°, full
-    depth at the keeper's underside, so the base prints it without support. The end rail stands
-    over the bridge, the side rails over the bulkhead's ends.
-  - The base's walls run up 3 mm past the gears to the keeper's top, and its four corner posts
-    with them, beside the keeper and clear of it.
-  - Every beam runs into A's hub or its pad through a 3 mm fillet in plan, filleted the beams'
-    depth only, so none reaches up to the frame's floor or down to the gears.
 - **The motor's strap** holds the motor down on its pad, the usual way to hold a 130 that has no
   screw holes in its face: a printed bar 2.4 mm thick across its end bell, the end bell's boss up
   through a ring in it, and a leg down each side past the flats onto an **ear** up from the
@@ -110,12 +121,11 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
     with the top of the RedBoard's LiPo socket (7.1 mm over the board's underside), clear of the
     board's edge beside the cradle and of the socket, which the +y ear passes over.
 - **The frame** is one print: the electronics bay (the boards beside the motor) on a 2.4 mm floor
-  of its own, standing on the base's walls, the keeper and the geared motor's lid, with a dovetail
-  rail up the outside of its end wall toward the valve. Its floor has a hole round A's post on the
-  keeper and round the cradle, its ears and the strap, 0.3 mm clear, so it goes down over the
-  keeper and the unit with the motor strapped in. The base's four screws pass down through its
-  floor into the base's corner posts. Its floor bears down on the keeper's beams, holding it on
-  the bridge and the bulkhead, and on the unit's lid.
+  of its own, standing on the base's walls, its bridge and bulkhead, and the geared motor's lid,
+  with a dovetail rail up the outside of its end wall toward the valve. Its floor has a hole round
+  the cradle, its ears and the strap, 0.3 mm clear, so it goes down over the unit with the motor
+  strapped in. The base's four screws pass down through its floor into the base's corner posts,
+  and its floor bears down on the unit's lid.
   - The screws stand 6.2 mm in from the box's outside, so their pan heads (5.6 mm across) sit on
     the frame's floor 1 mm clear of the bay's walls. The posts under them are 8.6 mm across,
     reaching out into both walls. The RedBoard stands 1.2 mm over the head in its corner; fit
@@ -157,22 +167,20 @@ about the stem. Its x runs out from the stem through the clamp's split, and the 
   above the ring.
   - The bridge runs from A out to the end wall. That wall stops over the ring, so on its own it
     is a thin plate that flexes under the bridge. A **bulkhead** 4.8 mm thick runs across the
-    whole box through A, from just over the ring's room up to the keeper, 0.3 mm clear round the
-    collar, so the bridge is tied into both side walls as well as the end wall. The keeper's
-    cross beam lies along its top, pressed against both side walls.
-  - The geared motor's gearcase stands in a hole through its floor round P. The barrel's teeth
-    run from the last carrier's hub up past the first stage's planets; under them is its plain
-    bore, where the last pinion turns and A's ring comes in through the window.
+    whole box through A, from just over the ring's room up to the base's top, 0.3 mm clear round
+    the collar, so the bridge is tied into both side walls as well as the end wall. The frame's
+    floor lies on both.
+  - The geared motor stands on three posts up from its floor, its foot 0.3 mm over the last
+    pinion, which turns over the floor beside A's ring. A hole through the floor under P reaches
+    the pinion's screw.
   - The box's −y side moved out 13.5 mm to take the gearcase (it was 31 mm off A's line, and is
     44.5 mm).
 - **The rods' seats.** Each rod is pressed into the housing, not just through a plate, so it is
   held square over a length rather than pivoting in a thin wall:
-  - A's axle stands in the bridge, which runs from the upper collar all the way up to the
-    keeper's underside, and up into a post on the keeper's top, 2.5 mm tall, its hole blind
-    under a 1 mm roof. The post comes up through the frame's floor, 0.1 mm proud of it.
-  - P's rod stands in the gearcase's 6 mm floor; the last pinion runs on the floor just over it,
-    so there's no room for a post there. The carriers find their own centres among their planets too, so
-    the rod mostly takes their tilt.
+  - A's axle is pressed up into the bridge, which runs from the upper collar all the way up to
+    the base's top, 37.6 mm, the axle's top 0.5 mm under the frame's floor.
+  - P's rod is pressed into the last carrier, which turns in the gearcase's 4 mm floor. The
+    carriers find their own centres among their planets too, so the rod mostly takes their tilt.
 
 ## The drive
 
@@ -198,7 +206,7 @@ centres the rods only roughly held. The stack replaces the four fast spur meshes
 - **Held true.** The stack is coaxial: every carrier turns about one rod and the barrel is one
   print round them, and each carrier also finds its centre among its three planets. The fast
   meshes no longer depend on several rods' holes in two prints agreeing.
-- **Slow spur meshes kept.** A's ring and the socket's teeth stay spur: the stack's pinion turns at
+- **Slow spur meshes kept.** A's ring and the socket's teeth stay spur: the last pinion turns at
   about 180 rpm and A at 45, where spur teeth are quiet, and a helix on the socket would push it
   up and down the handle.
 
@@ -224,7 +232,7 @@ At 6 V the same motor would give 8 700 rpm and 4.7 mN·m: 1.9 N·m at the handle
 margin. Its winding is 7.5 Ω, so at 9 V it stalls at 1.2 A, well inside the driver.
 
 The motor turns the same way for a handle turn as it did with the spur train: between the motor
-and A there is now one external mesh (P's pinion on A's ring), the three stages each keeping the
+and A there is now one external mesh (the last pinion on A's ring), the three stages each keeping the
 direction, where the spur train had five. The firmware sets
 which way is open when it's commissioned (`motor_invert`, in [firmware/README.md](../firmware/README.md)),
 so a bot already commissioned keeps its setting.
@@ -232,7 +240,8 @@ so a bot already commissioned keeps its setting.
 `radiatorbot.sv` states the requirements as claims, which every check judges: stall torque
 ≥ 2 N·m at the handle, and between 70 % and 80 % of the spur train's; free speed ≥ 6 rpm; the
 ring's tooth count (sun + 2 planets) and the even spacing of the planets; and a wall of at least
-1.5 mm between each sun's and planet's roots and its bore. Read any figure back in its unit, for
+1.5 mm between each sun's and planet's roots and its bore. The stage's claims are in
+`planetary.sv`, the unit's in `geared_motor.sv`, judged for each instance. Read any figure back in its unit, for
 example `solventc hardware/radiatorbot.sv --where handle_stall_torque`.
 
 The current trip sets the torque that actually seats the valve. Set it with the valve in hand,
@@ -445,7 +454,7 @@ of milliseconds so the start-up surge doesn't trip it, then stop.
 
 ## Printing
 
-The fits are an FDM printer's. They're set in one table at the top of `radiatorbot.sv`:
+The fits are an FDM printer's. They're set in one table, `fits.sv`, which every module reads:
 
 | fit | allowance |
 |---|---|
@@ -453,7 +462,7 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 | a rod or a pin pressed into a print | +0.05 mm (drill or ream to fit) |
 | printed faces that meet or pass | 0.3 mm |
 | a glued joint's faces (the mount's slot on the frame's rail) | 0.15 mm each side |
-| a printed part pressed onto another (the keeper's slots on the base's rails) | 0.05 mm each side (sand to fit) |
+| a printed part pressed into another (the geared motor's lid's spigot in its barrel) | 0.05 mm each side (sand to fit) |
 | each gear's teeth, thinned on the pitch circle (square to a helical gear's teeth) | 0.15 mm (0.3 mm backlash a mesh); the barrel's teeth too |
 | each gear's tips, chamfered 45° at both faces | 0.4 mm |
 | the socket's hole round the chrome handle | 0.3 mm each side |
@@ -465,28 +474,28 @@ The fits are an FDM printer's. They're set in one table at the top of `radiatorb
 - Gears print flat, face down. The stack's module 0.8 is the finest; it wants a 0.4 mm nozzle and
   0.12–0.16 mm layers. Helical teeth at 25° print as spur teeth do, each layer a spur section
   turned a little from the last.
-- Print the socket, A's compound and the last carrier in PETG or ASA rather than PLA. A radiator
+- Print the socket, A's compound, the last carrier and the last pinion in PETG or ASA rather than
+  PLA. A radiator
   is warm, and those parts carry the torque.
-- Each carrier prints as one part with the sun or the pinion under it: upside down, its webs and
-  arms on the bed and the sun standing up from it, so nothing overhangs, the pins' blind holes
-  opening on the bed and roofed by a short bridge.
+- Each carrier prints as one part with the sun or the output shaft under it: upside down, its
+  webs and arms on the bed and the sun or the shaft standing up from it, so nothing overhangs,
+  the pins' blind holes opening on the bed and roofed by a short bridge.
+- The last pinion prints on its top face, the hexagon's socket opening on the bed and the screw's
+  counterbore at the top, over a short bridge.
 - The planets print flat; print all nine at once, so they come out alike.
 - The chamfers keep the first layer's squash (elephant's foot) and the top edge's burr out of the
   mesh.
 - The gearcase prints floor down, the barrel and its ribs standing up from it: its helical teeth
-  print as the gears' do. Over its window to A's ring, the barrel's wall (about a third of its round)
-  is a bridge across the window's top; support it from the bed, or let it bridge.
-- The unit's lid prints on its underside, the pad and cradle standing up from it, the ears' 45°
-  undersides off the cradle's walls.
+  print as the gears' do, and nothing overhangs.
+- The unit's lid prints on its underside, the spigot on the bed and the pad and cradle standing
+  up from it, the ears' 45° undersides off the cradle's walls.
 - The socket prints floor down, its hole open at the top.
-- The keeper prints on its beams' undersides, A's post standing up from them. The strap prints on
-  its top, its legs up.
+- The strap prints on its top, its legs up.
 - The frame and the mount print without support. The frame prints on its floor, the bay and the
   rail standing up from it, the rail's foot a 45° slope off the wall. The mount prints upside
   down on its top (the clamp's and the spine's, flush): the pipe's bore and the slot stand
   upright, the hex pocket opens upward, and the shelf at the slot's foot is a 45° ceiling. What
-  is left overhanging is short bridges (the end wall's windows, the blind rod hole in the keeper,
-  the finger's pocket) and the clamp's horizontal bolt holes and nut pockets.
+  is left overhanging is short bridges (the end wall's windows, the finger's pocket) and the clamp's horizontal bolt holes and nut pockets.
 
 Generate the STLs with `sh hardware/export.sh`. It's one `solventc` run that builds every part
 once, and every gear of one size and face once, placed for each copy; `*.stl` and `*.step` are
@@ -496,7 +505,10 @@ printed parts), each placed where it stands, the valve's and the boards' grouped
 gear's teeth are the rack's exact sweep, a helical gear's the leaned rack's, built as one tooth
 sector turned round the gear. The barrel's 55 tooth spaces are each its transverse section (an
 external tooth's, its involute flanks drawn as arcs through three points of each, within 4 µm)
-carried up a screw of the teeth's lead, the screw's exact sweep. Set `shaped := 0` in `radiatorbot.sv` to draw every
+carried up a screw of the teeth's lead, the screw's exact sweep. (solventc v0.1.14 sweeps a
+section up a screw only as a face family over a parameter the document declares, so the space is
+swept in `radiatorbot.sv`, over the unit's foot, and handed to the unit to cut: `planetary.sv`
+says how.) Set `shaped := 0` in `radiatorbot.sv` to draw every
 gear and the socket as blanks while changing the layout.
 
 ## How it's checked
@@ -518,7 +530,7 @@ gear and the socket as blanks while changing the layout.
   - the unit's cradle and the strap clear the frame's floor, which goes down over them, and the
     strap's legs stand 0.5 mm over the ears, so it bears on the motor.
 - With `checks := 1` in `radiatorbot.sv`, every clearance is judged as well. That builds every
-  shaped part, so it takes about two minutes.
+  shaped part, so it takes about three minutes.
   - The socket turns with the handle and its hole is the same at every height, so only the
     handle's height in it changes. The socket and the stand are judged against the handle open,
     where they come nearest; A's compound against it closed. The socket clears the handle by
@@ -527,32 +539,35 @@ gear and the socket as blanks while changing the layout.
     clears it by 3 mm, at the pivot pin's top. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs clear between flanks: every planet against the barrel, and the last
     stage's first against its sun and its carrier.
-  - The carriers clear one another, the gearcase and the motor's sun; the motor's shaft's end
-    clears the first carrier's bore.
-  - The geared motor clears the base and the keeper but where its ribs stand on the base's floor;
-    its lid clears the base's corner posts.
+  - The carriers clear one another, the gearcase and the motor's sun; the output shaft clears its
+    bore in the floor; the motor's shaft's end clears the first carrier's bore.
+  - The last pinion clears A's ring in mesh, the base's floor and the unit's foot.
+  - The geared motor clears the base; its ribs clear the base's walls by 1 mm (on every check),
+    and its lid clears the base's corner posts. Its lid's spigot clears the first stage's planets
+    by 0.3 mm and the motor's sun by 1 mm.
   - Every housing part clears the valve, except the contacts meant to be there (the motor on its
-    pad and under its strap, the keeper's slots on the base's rails, the frame on both, the clamp
-    on the pipe). The keeper's slots clear the rails by the press's 0.05 mm all round, and the
-    keeper clears the base's corner posts by 7.5 mm. Both of the clamp's halves clear the
+    pad and under its strap, the lid's spigot in the barrel, the frame on the base and the lid,
+    the clamp on the pipe). Both of the clamp's halves clear the
     outlet's union nut by 2 mm and its boss by 1.2 mm.
 - The mount's joint is claimed on every check: the mount clears the frame by the glue's 0.15 mm
   all round, at the dovetail's flanks, the rail's foot on the shelf, and the barb in its notch.
 
 ## Bill of materials
 
-- **Printed:** frame, mount, base, keeper, the geared motor's gearcase (`gearcase_part`) and lid
+- **Printed:** frame, mount, base, the geared motor's gearcase (`gearcase_part`) and lid
   (`unit_lid_part`), motor strap (`strap_part`), clamp
   cap, cover, socket, A's compound (its pinion and the ring), the stand, the upper collar
   (`collar_part`), the motor's sun (`motor_sun`), the three carriers (`carrier1`, `carrier2`,
-  `carrier3`), and nine planets (`planet`).
-- **Drill rod:** ½ in × 90.7 mm (A's axle); 4 mm × 37.6 mm (P).
+  `carrier3`), nine planets (`planet`) and the last pinion (`pinion_part`).
+- **Drill rod:** ½ in × 93.8 mm (A's axle); 4 mm × 26.9 mm (P).
 - **Dowel pins:** 3 × 10 mm hardened steel, nine (the planets' pins).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (the base to the frame, the cover);
   - M3 × 12 countersunk (flat head) self-tapping, two (the motor's strap), and three (the unit's
     lid to its gearcase);
+  - M3 × 20 pan head self-tapping, three (the unit up onto its posts), and M3 × 10, one (the last
+    pinion onto the output shaft);
   - M3 × 8 self-tapping, four (the RedBoard);
   - M3 set screws, two (the collar and the stand).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
@@ -586,25 +601,24 @@ gear and the socket as blanks while changing the layout.
    what squeezes out at the slot's top, and let it set before going on.
 1. Press the ½ in axle into the base's bridge. Slide the upper collar up the axle from below,
    against the bridge, and tighten its set screw.
-2. Build the geared motor. Press P's rod into the gearcase's floor. Press three pins into each
-   carrier's bosses, and put a planet on each. Drop the last carrier (the one with the spur
-   pinion) down the barrel onto P's rod: its planets screw down the barrel's teeth as it goes, so
-   turn it gently. Then the second carrier, its sun turning down in among the last carrier's
-   planets, and the first.
+2. Build the geared motor. Press P's rod down into the last carrier (the one with the output
+   shaft). Press three pins into each carrier's bosses, and put a planet on each. Drop the last
+   carrier down the barrel, its shaft into the floor's bore: its planets screw down the barrel's
+   teeth as it goes, so turn it gently. Then the second carrier, down over the rod, its sun turning
+   down in among the last carrier's planets, and the first. Press the last pinion onto the output
+   shaft's hexagon under the foot and screw it up against the shoulder.
 3. Set the motor face down in the lid's cradle, its boss pressed into the pad's recess and its
    shaft down through the pad and the lid, and press the first sun onto the shaft under the lid.
    Lay the strap over its end bell, the boss up through its ring, and drive the two countersunk
    M3s down into the ears until the strap bears on the end bell. Set the lid on the gearcase,
-   turning the motor's shaft a little to bring its sun in among the first stage's planets, and
-   drive the three countersunk M3s down through its ears into the ribs. The unit can be run and
+   turning the motor's shaft a little to bring its sun in among the first stage's planets, press
+   its spigot down into the barrel (sand the spigot if it's too tight), and drive the three
+   countersunk M3s down through its ears into the ribs. The unit can be run and
    tested on the bench now.
-4. Drop the geared motor into the base, its foot into the floor's hole and its window toward A,
-   until its ribs stand on the floor. Press the keeper down into the base, its three pads' slots
-   over the rails on the walls and A's axle's top into its post, until it sits on the bridge and
-   the bulkhead. If it's too tight, sand the rails' flanks. Set the frame down over both, its
-   floor's holes over the post and the strapped motor, and fit the base's four M3 screws from
-   inside the bay, down through the frame's floor into the corner posts; draw them up evenly, so
-   the frame's floor presses the keeper and the unit home square.
+4. Set the geared motor down on its three posts in the base and drive the three M3s up through
+   the floor into its ribs. Set the frame down over the base, its floor's hole over the strapped
+   motor, and fit the base's four M3 screws from inside the bay, down through the frame's floor
+   into the corner posts; draw them up evenly, so the frame's floor bears down on the unit's lid.
 5. Make the shield. Plug the male headers into the RedBoard's power, analog and 25–RX sockets, lay
    the perfboard on them (cut to 18 × 20 holes, its first row on the power header and its first
    column two holes out from that header's first pin, its 7 cm across the board) and solder them,
@@ -618,8 +632,8 @@ gear and the socket as blanks while changing the layout.
    cable through the grommet to its terminal.
 7. Slide the bot onto the valve from −y, so the inlet hex enters the clamp's pocket. Drop the
    four M4 nuts into their pockets in the fixed half's back (the mount's), and bolt on the cap from +y.
-8. **Push A's compound up its axle from below**, its ring into mesh with the last carrier's
-   pinion, up against the upper collar.
+8. **Push A's compound up its axle from below**, its ring into mesh with the last pinion, up
+   against the upper collar.
 9. Turn the handle so it's closed. **Push the socket up over the handle from below**, its teeth
    into mesh with A's pinion, until its top stands 1 mm over the handle's top face. Turn the
    handle a little to bring its arms into the hole: the hole is straight and the arms narrow
@@ -648,12 +662,14 @@ gear and the socket as blanks while changing the layout.
 - **The ring and last pinion run open** under the base, beside the packing nut. A guard would be
   a small printed part.
 - **The bigger box.** The gearcase moved the box's −y side out 13.5 mm, toward the radiator, and the
-  gearbox is 10.8 mm taller (the keeper's top at 50.8 mm over the packing nut's underside, from
-  40), so the bay and its cover stand that much higher. Check the radiator and whatever is over the
+  gearbox is 16.9 mm taller (the base's top at 56.9 mm over the packing nut's underside, from
+  40: 4.6 mm for the gearcase's floor under the stack, now the output shaft's bearing, and
+  1.5 mm for the lid's spigot),
+  so the bay and its cover stand that much higher. Check the radiator and whatever is over the
   valve leave it room.
-- **The unit's mounting.** Nothing but the frame's floor holds the geared motor down, and only the
-  cradle's flats in the frame's floor stop it turning. If the unit creeps or rattles, two screws
-  from the lid's ears down into posts on the base would hold it outright.
+- **The output shaft.** The last pinion carries about 0.33 N·m at stall on a printed 6 mm hexagon
+  and an 8 mm shaft turning in the printed floor: well inside what PETG bears, but the floor is a
+  plain bearing. Grease it, and check it for wear with the planets' pins.
 - **The stack's planets and pins.** The first stage's planets spin at about 9 000 rpm on their
   pins when the motor runs free. Grease the pins (a PTFE or lithium grease), and the barrel's
   teeth lightly; listen after the first hours for a planet wearing its bore.
@@ -666,6 +682,9 @@ gear and the socket as blanks while changing the layout.
   section the can's, and takes its terminal tabs to be at the round sides, clear of the 8 mm bar.
   Check the motor in hand: if its tabs stand across the flats' middle, the bar wants turning or
   notching for them.
-- **The keeper's press.** 0.05 mm each side is a light press for a typical FDM print; how tight
-  its four slots are on the rails depends on the printer. Print the keeper and try it in the base
-  before printing the rest.
+- **The lid's press.** 0.05 mm each side is a light press for a typical FDM print; how tight the
+  spigot is in the barrel's teeth depends on the printer. Print the lid and try it in the
+  gearcase before printing the rest.
+- **A's axle** is held by the bridge alone now, pressed 37 mm up into it, and overhangs down
+  through the collar, its compound and the stand. If it flexes under the socket's mesh, a post up
+  from the frame's floor or a longer bridge would steady its top.
