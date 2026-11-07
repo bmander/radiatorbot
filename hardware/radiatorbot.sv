@@ -457,12 +457,14 @@ gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - 
                          hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
                          checks: checks) in unit_frame
 unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0) in unit_frame
-// The barrel's tooth space, swept up its screw in the unit's frame (planetary.sv: solventc v0.1.14
-// sweeps a screw only over a parameter the document declares), for the unit to cut.
+// The barrel's tooth space, swept up its screw over the unit's foot (planetary.sv: solventc
+// v0.1.14 sweeps a screw only over a parameter the document declares), for the unit to cut.
+unit_foot := plane
+unit_foot.origin coincident unit_at
+unit_foot.u parallel(sense: same) bot.u
+unit_foot.v parallel(sense: same) bot.v
 param teeth_s: Scalar over (0, 1)
-in unit_frame {
-  tooth_space := solid({ p | some teeth_s: p in ToothSpace(z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
-}
+tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 // its printed parts, as the export names them
 construction motor_sun := solid(gearmotor.motor_sun)
 construction carrier1 := solid(gearmotor.carrier1)
