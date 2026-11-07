@@ -9,9 +9,9 @@ valve under motor control.
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
-  - `radiatorbot.sv` — the bot: a 130 motor and a printed stack of three helical planetary stages
-    turning the valve's star handle through a socket round it, which the handle screws through as
-    it opens. It also has the
+  - `radiatorbot.sv` — the bot: a geared motor (a 130 motor and a printed stack of three helical
+    planetary stages, one unit that runs on the bench) turning the valve's star handle through a
+    socket round it, which the handle screws through as it opens. It also has the
     gearbox, an electronics bay with a SparkFun IoT RedBoard ESP32 and a perfboard shield carrying
     the motor driver and its current monitor, and a split clamp round the valve's inlet hex and
     supply pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with
@@ -64,19 +64,20 @@ solventc --no-check hardware/radiatorbot.sv   # the layout alone, its solids' cl
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.13 (`SOLVENTC_VERSION=v0.1.13` pins the installer to
-it), which solves the bot and judges its claims in about half a minute, and exports it in a little
-over two. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
+The models are checked with Solvent v0.1.14 (`SOLVENTC_VERSION=v0.1.14` pins the installer to
+it), which solves the bot and judges its claims in about a minute, and exports it in two and a
+half. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
 a part placed at its joint's value as `socket_part at socket_turn`), import the body words they use
 (`use std.solids (cut, union)`), and name a piece unioned into a part by its path for a fillet
 (`keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a`), which v0.1.12 brought; the
-socket's 64-tooth gear builds from v0.1.13 (bmander/geomsolver#812), so they need v0.1.13 or
-later. Every gear is its rack's exact sweep, the helical ones a leaned rack's, and the planetary
-stack's barrel teeth are a screw's exact sweep; the printed parts' STLs come to 9.1 MB and the
-assembly's STEP to 141 MB, most of it the helical gears' surfaces. With `checks := 1` the bot's
-every clearance is judged in about two and a quarter minutes.
+socket's 64-tooth gear builds from v0.1.13 (bmander/geomsolver#812), and a helical gear's plane
+over a line and an axis, and the stack's screwed tooth spaces beside the gears seated on P, from
+v0.1.14 (#819, #817), so they need v0.1.14 or later. Every gear is its rack's exact sweep, the
+helical ones a leaned rack's, and the planetary stack's barrel teeth are a screw's exact sweep;
+the printed parts' STLs come to 11 MB and the assembly's STEP to 57 MB. With `checks := 1` the
+bot's every clearance is judged in about two and a quarter minutes.
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
-(`.github/workflows/export.yml`, Solvent pinned to v0.1.13 there too) and keeps its output on the
+(`.github/workflows/export.yml`, Solvent pinned to v0.1.14 there too) and keeps its output on the
 run's page: `radiatorbot-stl-<sha>`, a zip of the printed parts' STLs, and `radiatorbot-step-<sha>`,
 the assembly. It can also be run by hand from the Actions tab.

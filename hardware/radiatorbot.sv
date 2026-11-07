@@ -140,6 +140,7 @@ planet_n := 19
 ring_teeth := 55                // the barrel's internal teeth
 claim ring_teeth == sun_n + 2 * planet_n
 stack_planets := 3
+claim stack_planets == 3                // CarrierPlate's outline is drawn for three arms
 claim (sun_n + ring_teeth) / stack_planets == 24             // the planets spaced evenly
 m_t := m_stack / cos(helix)                                  // the transverse module, 0.883 mm
 orbit := m_t * (sun_n + planet_n) / 2                        // P to each planet, 15.89 mm
@@ -305,15 +306,25 @@ clamp_z1 := clamp_z0 + 31.7mm
 // runs into it; its +y side stands 4.4 mm off the RedBoard's 2.3 in across the bay.
 box_x0 := -136mm
 box_x1 := -35mm
-box_y0 := -42mm
+box_y0 := -44.5mm
 box_y1 := 64mm
-// The stack's barrel about P, a wall round its teeth's root; the keeper's plate over it stands on
-// the barrel's top.
+// The gearcase's barrel about P, a wall round its teeth's root, and the ribs down its outside the
+// unit's lid is screwed to.
 barrel_r := ring_root_r + wall
-carrier_r := ring_tip_r - 0.5mm                             // the carriers' plates, in its bore
-lid_disc_r := ring_root_r + 1.2mm                           // the keeper's plate over P
-claim box_y0 + 1mm <= p_y - barrel_r                         // the barrel within the box's -y wall
-claim box_y0 + wall + 0.5mm <= p_y - lid_disc_r
+rib_r := 3.2mm
+rib_c := barrel_r + 0.8mm                                   // the ribs' axes, off P
+// The carriers: a hub of three straight webs and an arm out to each planet's pin.  Each web stands
+// over the whole of the sun's top under it, and out over the inner rims of the planets below it,
+// so whichever way the carrier stands, it keeps them down on their pins.
+carrier_hub_r := 12mm                                       // the webs' corners, off P
+carrier_turn := atan(carrier_arm / 2 / sqrt(carrier_hub_r ^ 2 - (carrier_arm / 2) ^ 2))   // a corner off its arm
+carrier_web := carrier_hub_r * cos(180deg / stack_planets - carrier_turn)    // P to a web
+claim carrier_web >= m_t * sun_n / 2 + m_stack              // over the sun's tips
+claim carrier_web >= orbit - m_t * planet_n / 2 - m_stack + 1mm   // over the planets' inner rims
+carrier_fillet := 2mm
+carrier_arm := 1.6 * pin_boss_r                          // 6.2 mm, short of the bosses' 7.8
+pin_boss_r := pin_d / 2 + wall
+claim box_y0 + wall + 1mm <= p_y - barrel_r - gap          // the gearcase inside the box's walls
 // The box's four upright corners are rounded outside, and inside by as much less the wall, so the
 // walls keep their thickness round them: a square corner is where a print's floor lifts first.
 box_r := 5mm
@@ -351,7 +362,7 @@ screw_inset := wall + 2mm       // the cover's screws, in from the box's outside
 // The base's screws, in from the box's outside: their heads stand on the frame's floor in the
 // bay's corners, a millimetre clear of its walls; their posts reach out into both walls.
 base_screw_inset := wall + m3_head_d / 2 + 1mm
-base_post_r := base_screw_inset - wall + 0.5mm
+base_post_r := base_screw_inset - wall + 0.7mm   // past the cavity's rounded corner, not tangent to it
 // The RedBoard and its shield (boards.sv) stand beside the motor, by the RedBoard's frame, its
 // power header's first pin at (board_ox, board_oy): its jack's mouth a millimetre in from the end
 // wall's inside face, its edge 2 mm off the motor's cradle's flat.
@@ -605,6 +616,15 @@ component MotorStrap(s: MotorSizes) {
   sink_minus cut part
 }
 
+// A countersink for an M3 flat head (6 mm across, 90deg), drawn with the face it opens on on
+// std.top: seated at a screw's hole where it opens, it sinks the head flush.
+component Countersink() {
+  in std.top {
+    rim := radius(3mm) circle(center: std.top.origin)
+  }
+  cone := solid(std.solids.Drafted(face(rim), from: -1.7mm, to: 0.5mm, draft: 45deg))
+}
+
 // A printed gear seated on an axle: its figure (gears.sv) with its origin `z` up the axle from
 // `c`, its axis up the world's z.  `bearing` is the line of centres' to the gear it meshes with,
 // from the pinion's axle to the gear's, read from the bot's x (`bot_turn` from the world's), and
@@ -668,13 +688,71 @@ component Flank(r: Length) {
   th := space_half + (tan(ring_alpha) * 1rad - ring_alpha) - (tan(at_r) * 1rad - at_r)
 }
 
-// A carrier's plate on P, `c_z0` up, less its pins' holes, blind `pin_seat` down from its top
-// (`part`), and the carrier's bore down through the sun or the pinion under it (`bore`, cut from
-// the compound).
+// A carrier on P, `c_z0` up and `plate_t` thick, drawn as one outline: an arm out to each planet's
+// pin, a little narrower than the boss round the pin, its sides running into the boss's round end
+// (as wide as the boss, they would meet it on a diameter, which the solve holds only by a double
+// root), and a straight web from each arm to the next, its corners `carrier_hub_r` from P, rounded
+// `carrier_fillet` into the arms (a chain rounds only where two lines meet); less the pins' holes, blind
+// `pin_seat` down from its top (`part`).  The carrier's bore runs down through the sun or the
+// pinion under it (`bore`, cut from the compound).  One outline and a prism, rather than bars and
+// posts unioned and filleted, which solventc v0.1.14 builds slowly and meshes badly.
 component CarrierPlate(c: point, c_z0: Length) {
-  plate := Post(c, r: carrier_r, z0: c_z0, z1: c_z0 + plate_t)
-  bore := Post(c, r: p_bore / 2, z0: c_z0 - 20mm, z1: c_z0 + plate_t + 1mm)
-  part := solid(plate.body)
+  half := carrier_arm / 2
+  reach := sqrt(carrier_hub_r ^ 2 - half ^ 2)          // where an arm's side meets the hub
+  past := sqrt(pin_boss_r ^ 2 - half ^ 2)             // and the boss, short of the pin
+  pl0 := PlanetPlace(k: 0)
+  hp0 := At(x: pw_x + reach * cos(pl0.bearing) - half * sin(pl0.bearing),
+             y: pw_y + reach * sin(pl0.bearing) + half * cos(pl0.bearing))
+  hm0 := At(x: pw_x + reach * cos(pl0.bearing) + half * sin(pl0.bearing),
+             y: pw_y + reach * sin(pl0.bearing) - half * cos(pl0.bearing))
+  bp0 := At(x: pw_x + (orbit - past) * cos(pl0.bearing) - half * sin(pl0.bearing),
+             y: pw_y + (orbit - past) * sin(pl0.bearing) + half * cos(pl0.bearing))
+  bm0 := At(x: pw_x + (orbit - past) * cos(pl0.bearing) + half * sin(pl0.bearing),
+             y: pw_y + (orbit - past) * sin(pl0.bearing) - half * cos(pl0.bearing))
+  pl1 := PlanetPlace(k: 1)
+  hp1 := At(x: pw_x + reach * cos(pl1.bearing) - half * sin(pl1.bearing),
+             y: pw_y + reach * sin(pl1.bearing) + half * cos(pl1.bearing))
+  hm1 := At(x: pw_x + reach * cos(pl1.bearing) + half * sin(pl1.bearing),
+             y: pw_y + reach * sin(pl1.bearing) - half * cos(pl1.bearing))
+  bp1 := At(x: pw_x + (orbit - past) * cos(pl1.bearing) - half * sin(pl1.bearing),
+             y: pw_y + (orbit - past) * sin(pl1.bearing) + half * cos(pl1.bearing))
+  bm1 := At(x: pw_x + (orbit - past) * cos(pl1.bearing) + half * sin(pl1.bearing),
+             y: pw_y + (orbit - past) * sin(pl1.bearing) - half * cos(pl1.bearing))
+  pl2 := PlanetPlace(k: 2)
+  hp2 := At(x: pw_x + reach * cos(pl2.bearing) - half * sin(pl2.bearing),
+             y: pw_y + reach * sin(pl2.bearing) + half * cos(pl2.bearing))
+  hm2 := At(x: pw_x + reach * cos(pl2.bearing) + half * sin(pl2.bearing),
+             y: pw_y + reach * sin(pl2.bearing) - half * cos(pl2.bearing))
+  bp2 := At(x: pw_x + (orbit - past) * cos(pl2.bearing) - half * sin(pl2.bearing),
+             y: pw_y + (orbit - past) * sin(pl2.bearing) + half * cos(pl2.bearing))
+  bm2 := At(x: pw_x + (orbit - past) * cos(pl2.bearing) + half * sin(pl2.bearing),
+             y: pw_y + (orbit - past) * sin(pl2.bearing) - half * cos(pl2.bearing))
+  in std.top {
+    outline := (out0 := line(hm0.p, bm0.p)) ->
+      (end0 := arc(center: hint((pw_x + orbit * cos(pl0.bearing),
+                                  pw_y + orbit * sin(pl0.bearing))),
+                     start: bm0.p, end: bp0.p)) ->
+      (back0 := line(bp0.p, hp0.p)) -> round(r: carrier_fillet)
+      (web0 := line(hp0.p, hm1.p)) -> round(r: carrier_fillet)
+      (out1 := line(hm1.p, bm1.p)) ->
+      (end1 := arc(center: hint((pw_x + orbit * cos(pl1.bearing),
+                                  pw_y + orbit * sin(pl1.bearing))),
+                     start: bm1.p, end: bp1.p)) ->
+      (back1 := line(bp1.p, hp1.p)) -> round(r: carrier_fillet)
+      (web1 := line(hp1.p, hm2.p)) -> round(r: carrier_fillet)
+      (out2 := line(hm2.p, bm2.p)) ->
+      (end2 := arc(center: hint((pw_x + orbit * cos(pl2.bearing),
+                                  pw_y + orbit * sin(pl2.bearing))),
+                     start: bm2.p, end: bp2.p)) ->
+      (back2 := line(bp2.p, hp2.p)) -> round(r: carrier_fillet)
+      (web2 := line(hp2.p, hm0.p)) -> round(r: carrier_fillet)
+      close
+    radius(pin_boss_r) end0
+    radius(pin_boss_r) end1
+    radius(pin_boss_r) end2
+  }
+  bore := Post(c, r: p_bore / 2, z0: c_z0 - 10.5mm, z1: c_z0 + plate_t + 1mm)  // through the sun or pinion
+  part := solid(std.solids.Prism(outline, from: c_z0, to: c_z0 + plate_t))
   repeat stack_planets as k {
     place := PlanetPlace(k: k)
     hole := Post(place.centre.p, r: (pin_d + press) / 2, z0: c_z0 + plate_t - pin_seat,
@@ -870,8 +948,7 @@ carrier_1 := carrier1 at c1_turn
 sun_1 := motor_sun at motor_turn
 
 // Every planet and its pin: each turned on its pin against its carrier, then carried round P with
-// it, the stage's carrier's rate.  Drawn so, not riding the carrier's frame, since a frame with a
-// value carries nothing drawn in it (bmander/geomsolver#823).
+// it, the stage's carrier's rate: the same as riding the carrier's frame, as primer 0.207 has it.
 stages := [
   {zb: zb3, rate: c3_rate},
   {zb: zb2, rate: c2_rate},
@@ -897,17 +974,26 @@ repeat st in stages {
     planet_shown := spun at orbit_turn
     pin_shown := pin.body at orbit_turn
     when checks == 1 {
-      claim pg.gear clear(0.05mm) base               // in mesh with the barrel
+      claim pg.gear clear(0.05mm) gearcase_part      // in mesh with the barrel
     }
   }
 }
 
-// == The motor ===================================================================================
-// Face down on a pad on the keeper's plate over P, its boss pressed into a recess, its shaft down
-// through the pad and the plate to the first sun, pressed on it; held in a cradle of its own
-// section grown by a wall, a print's clearance inside, the pad the cradle's section under it.  The
-// flats key it against its torque; a strap across its end bell holds it down on the pad, screwed
-// into two ears up from the cradle's flat walls.
+// == The geared motor ============================================================================
+// The motor and the planetary stack are one unit, whole on the bench, which drops into the base:
+//   - the **gearcase**, one print, a cup round P: a floor that holds P's rod, and the barrel up
+//     from it, its bore the 55 internal teeth every stage's planets run in (below), with a window
+//     low on A's side, where A's ring comes in to the last pinion;
+//   - the **unit's lid**, one print, over the gearcase's top: the motor's pad and cradle on it,
+//     and three countersunk M3s down through it into ribs on the gearcase's outside;
+//   - the motor, face down on its pad, its boss pressed into a recess in it, its shaft down
+//     through the pad and the lid to the first sun, pressed on it.  It stands in a cradle of its
+//     own section grown by a wall, a print's clearance inside, the pad the cradle's section under
+//     it.  The flats key it against its torque; a strap across its end bell holds it down on the
+//     pad, screwed into two ears up from the cradle's flat walls.
+// The unit stands in a hole through the base's floor, which centres the gearcase's foot, its ribs
+// standing on the floor round the hole.  The frame's floor bears down on the lid, and its hole
+// round the cradle's flats keeps the unit from turning against the last pinion's reaction.
 motor_at := point
 motor_at raised(d: motor_z, along: std.z) p_c
 motor := Motor130(motor130_dims)
@@ -923,6 +1009,48 @@ ears := StrapEars(motor130_dims, z0: ear_z0 - motor_z, z1: ear_z1 - motor_z)
 ears seats(turn: bot_turn, up: std.z, east: std.x) motor_at
 ears.body union cradle
 ears.holes cut cradle
+
+// The gearcase: the barrel and its floor, round P from the base's underside to the lid; its bore
+// the teeth's tips up past them to the lid, with P's rod pressed into the floor.  A's ring comes
+// in through the ring's room, cut from the gearcase as from the base.  Down its outside, three
+// ribs, each with an M3's self-tapping hole down from its top, away from A's side and the box's
+// walls; they stand on the base's floor round the gearcase's hole through it.
+rib_bearings := [100deg, 220deg, 300deg]
+barrel := Post(p_c, r: barrel_r, z0: floor_z0, z1: lid_z0)
+barrel_bore := Post(p_c, r: ring_tip_r, z0: floor_z1, z1: lid_z0 + 1mm)
+case_hole_p := Post(p_c, r: (p_rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
+construction case_body := solid(barrel.body)
+barrel_bore.body cut case_body
+case_hole_p.body cut case_body
+gearcase_part := solid(case_body)
+// The unit's lid: a disc over the gearcase's top, an ear over each rib, the motor's pad and
+// cradle on it, and its boss's recess (a light press) and its shaft's hole through it.
+lid_disc := Post(p_c, r: barrel_r, z0: lid_z0, z1: lid_z1)
+motor_boss_room := Post(p_c, r: motor130_dims.boss_d / 2 + snug,
+                        z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
+motor_shaft_room := Post(p_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
+unit_lid_part := solid(lid_disc.body)
+cradle union unit_lid_part
+motor_boss_room.body cut unit_lid_part
+motor_shaft_room.body cut unit_lid_part
+repeat b in rib_bearings {
+  rib_at := At(x: pw_x + rib_c * cos(bot_turn + b), y: pw_y + rib_c * sin(bot_turn + b))
+  rib := Post(rib_at.p, r: rib_r, z0: floor_z1, z1: lid_z0)
+  rib_hole := Post(rib_at.p, r: pilot / 2, z0: lid_z0 - 10mm, z1: lid_z0 + 1mm)
+  rib.body union gearcase_part
+  claim box_y0 + wall + 1mm <= p_y + rib_c * sin(b) - rib_r   // each rib clear of the walls
+  claim box_x0 + wall + 1mm <= p_x + rib_c * cos(b) - rib_r
+  rib_hole.body cut gearcase_part
+  lid_ear := Post(rib_at.p, r: rib_r, z0: lid_z0, z1: lid_z1)
+  lid_hole := Post(rib_at.p, r: m3_clear / 2, z0: lid_z0 - 1mm, z1: lid_z1 + 1mm)
+  sink_at := point
+  sink_at raised(d: lid_z1, along: std.z) rib_at.p
+  sink := Countersink()
+  sink seats(turn: 0deg, up: std.z, east: std.x) sink_at
+  lid_ear.body union unit_lid_part
+  lid_hole.body cut unit_lid_part
+  sink.cone cut unit_lid_part
+}
 
 strap_at := point
 strap_at raised(d: strap_top, along: std.z) p_c
@@ -940,12 +1068,9 @@ claim strap_part clear(0.4mm) cradle      // its legs short of the ears: it bear
 // as well: on its own the end wall, a thin plate over the ring's room, would flex under it.  The
 // bulkhead stands from the ring's room up to the keeper, a print's clearance round the collar.
 //
-// The stack's barrel stands up from the floor round P, into the -y wall, to the keeper's
-// underside: through its bore the 55 internal teeth every stage's planets run in, one right-handed
-// helical gear from the last carrier's plate up through the barrel's top (below);
-// under them its plain bore, where the last pinion turns and A's ring comes in through the ring's room.  P's rod stands
-// in the floor, the last pinion running just over it.  Four M3 screws down through the frame's floor
-// and the keeper hold the base up to the frame (below), the keeper clamped between them.
+// The geared motor's gearcase stands in a hole through the floor round P, a print's clearance
+// round it, its ribs on the floor.  Four M3 screws down through the frame's floor hold the base
+// up to the frame (below), the keeper and the unit's lid clamped between them.
 base_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: floor_z0,
                          z1: lid_z1) in bot
 base_cavity := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
@@ -964,21 +1089,17 @@ ring_room := Post(a_c, r: ring_r, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
 ring_side := Block(x0: -a_dist, x1: box_x1 + 1mm, y0: box_y0 - 1mm, y1: box_y1 + 1mm,
                    z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm) in bot  // and the box's end over it
 base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: bridge_z1 + 1mm)
-barrel := Post(p_c, r: barrel_r, z0: floor_z1 - 1mm, z1: lid_z0)
-barrel_bore := Post(p_c, r: ring_tip_r, z0: floor_z1, z1: lid_z0 + 1mm)
-base_hole_p := Post(p_c, r: (p_rod_d + press) / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
+unit_hole := Post(p_c, r: barrel_r + gap, z0: floor_z0 - 1mm, z1: lid_z1 + 1mm)
 
 base := solid(base_shell)
 bridge.body union base
 bridge_boss.body union base
 bulkhead.body union base
-barrel.body union base
 collar_room.body cut base
 ring_room.body cut base
 ring_side.body cut base
-barrel_bore.body cut base
+unit_hole.body cut base
 base_hole_a.body cut base
-base_hole_p.body cut base
 
 // The barrel's teeth.  An internal gear's tooth space is the tooth of an external gear of its
 // count, module and helix: its flanks are involutes of the same base circle, curving away from the
@@ -989,14 +1110,12 @@ base_hole_p.body cut base
 // 4 µm of it.  The space stands centred half a pitch on from +y at `band_z0` (`ring_turn`, as
 // `Phasing` reads it), and is turned a pitch at a time round P for the rest.
 //
-// Three workarounds for solventc v0.1.13, each to undo when geomsolver fixes it:
+// Two workarounds for solventc v0.1.14, each to undo when geomsolver fixes it:
 //   - the spaces are drawn rather than cut by a 55-tooth helical gear, since a body cut by sweeps
 //     cannot itself be cut from another (bmander/geomsolver#818);
-//   - the screw turns about `ring_axis`, held outright, not about P's drawn spindle, which leaves
-//     the section's station unheld beside the gears seated on P (bmander/geomsolver#817);
 //   - the spaces run from a millimetre under the teeth's band to half a millimetre over the
-//     barrel's top, so their ends are flush with no other cut's face, which leaves the STL a
-//     degenerate triangle (bmander/geomsolver#821).
+//     barrel's top, so their ends are flush with no other cut's face: flush, v0.1.14 still leaves
+//     a sliver on the bore's rim, which the STL refuses (bmander/geomsolver#821, #836).
 claim planet_hand == 1          // the screw below climbs right-handed
 space_z0 := band_z0 - 1mm
 ring_rise := lid_z0 + 0.5mm - space_z0
@@ -1020,11 +1139,9 @@ ring_y := axis
 fix(dir == (1, 0, 0), origin == (pw_x, pw_y, space_z0)) ring_x
 fix(dir == (0, 1, 0), origin == (pw_x, pw_y, space_z0)) ring_y
 ring_level := plane(u: ring_x, v: ring_y)
-ring_axis := axis
-fix(dir == (0, 0, 1), origin == (pw_x, pw_y, 0)) ring_axis
 param ring_s: Scalar over (0, 1)
 ring_screw := frame
-ring_screw screws(ring_lead) ring_axis
+ring_screw screws(ring_lead) p_spindle
 fix(value == 360deg * ring_rise / ring_lead * ring_s) ring_screw
 in ring_screw {
   in ring_level {
@@ -1056,31 +1173,27 @@ in ring_screw {
 }
 ring_space := solid({ p | some ring_s: p in space_section at ring_s })
 ring_index := frame
-ring_index turns(1) ring_axis
-ring_space cut base
+ring_index turns(1) p_spindle
+ring_space cut gearcase_part
+ring_room.body cut gearcase_part
 repeat ring_teeth - 1 as j {
   turned_space := ring_space at(under: ring_index) ((j + 1) * 360deg / ring_teeth)
-  turned_space cut base
+  turned_space cut gearcase_part
 }
 
-// == The keeper: the gearbox's lid, A's top and the motor ========================================
-// One print, a frame of beams 3 mm deep with open bays between them and a plate over the stack,
-// held in the base by four pads slotted down over dovetail rails on its walls: it holds the top
-// of A's axle, in a post on its top, and the motor, on the plate in its cradle, so the gearbox and
-// its motor are whole without the frame.
-//   - A spine runs from end wall to end wall through the plate and A, over the bridge, and a cross
-//     beam over the bulkhead from side wall to side wall: the keeper stands on the bridge, the
-//     bulkhead and the barrel's top, and each of the four ends is a pad `anchor_w` along its wall;
+// == The keeper: A's top and the base's walls ====================================================
+// One print, a cross of beams 3 mm deep, held in the base by three pads slotted down over dovetail
+// rails on its walls: it holds the top of A's axle, in a post on its top, and ties the walls.
+//   - A spine runs from A out to the end wall over the bridge, and a cross beam over the bulkhead
+//     from side wall to side wall: the keeper stands on the bridge and the bulkhead, and each of
+//     the three ends is a pad `anchor_w` along its wall;
 //   - up the middle of each pad's end, a dovetail slot, the rail grown `snug` all round: it
 //     slides down over the rail, a light press on its flanks, and the rail holds the pad to its
 //     wall and square along it, so the keeper can neither spread nor pull in off the walls;
-//   - the plate over P stands on the barrel's top, and the motor's boss presses into a recess in
-//     it, `snug` all round, so the motor's shaft, and the first sun on it, stand on P's axis as
-//     truly as the rails stand the keeper;
-//   - every beam runs into its hub, the plate or a pad through a fillet in plan.
+//   - every beam runs into A's hub or its pad through a fillet in plan.
 // Nothing else touches the walls.  The frame stands on the base's walls and its corner posts, A's
-// post and the cradle up through holes in its floor, and its floor bears down on the keeper's
-// beams and plate.  It prints on its beams' undersides.
+// post and the motor's cradle up through holes in its floor, and its floor bears down on the
+// keeper's beams and the geared motor's lid.  It prints on its beams' undersides.
 keeper_beam := 6mm
 anchor_w := 14mm
 anchor_d := 6mm                 // the pads' depth, in from the walls
@@ -1091,43 +1204,35 @@ anchor_d := 6mm                 // the pads' depth, in from the walls
 rail_h := 3mm
 rail_root := 5mm
 rail_tip := rail_root + 2 * rail_h * tan(dove_angle)
-keeper_x0 := box_x0 + wall + snug
 keeper_x1 := box_x1 - wall - snug
 keeper_y0 := box_y0 + wall + snug
 keeper_y1 := box_y1 - wall - snug
-spine_beam := Bar(x0: keeper_x0, y0: 0mm, x1: keeper_x1, y1: 0mm, w: keeper_beam, z0: lid_z0,
+spine_beam := Bar(x0: -a_dist, y0: 0mm, x1: keeper_x1, y1: 0mm, w: keeper_beam, z0: lid_z0,
                   z1: lid_z1) in bot
 cross_beam := Bar(x0: -a_dist, y0: keeper_y0, x1: -a_dist, y1: keeper_y1, w: keeper_beam,
                   z0: lid_z0, z1: lid_z1) in bot
 // Each rail's frame: its origin on the wall's inside face at the rail's middle, at z = 0, its x
 // in from the wall, its y along it; `a` is that inward direction's bearing in the bot's plan.
 keeper_rails_at := [
-  {x: box_x0 + wall, y: 0mm, a: 0deg},             // west, the far end wall
   {x: box_x1 - wall, y: 0mm, a: 180deg},           // east, over the bridge
   {x: -a_dist, y: box_y0 + wall, a: 90deg},        // south, over the bulkhead
   {x: -a_dist, y: box_y1 - wall, a: -90deg},       // north, over the bulkhead
 ]
 keeper_rails := solid()
-// A's post on the keeper's top and its hole up into it; the plate over P, the motor's boss's
-// recess, a light press, and its shaft's hole
+// A's post on the keeper's top and its hole up into it
 lid_post_r := axle_d / 2 + boss_wall
 hub_a := Post(a_c, r: lid_post_r, z0: lid_z0, z1: lid_z1)
 lid_post_a := Post(a_c, r: lid_post_r, z0: lid_z1, z1: post_z1)
 lid_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: lid_z0 - 1mm, z1: rod_z1)
-hub_p := Post(p_c, r: lid_disc_r, z0: lid_z0, z1: lid_z1)
-motor_boss_room := Post(p_c, r: motor130_dims.boss_d / 2 + snug,
-                        z0: motor_z - motor130_dims.boss_h - gap, z1: motor_z + 1mm)
-motor_shaft_room := Post(p_c, r: 2.5mm, z0: lid_z0 - 1mm, z1: motor_z)
 
 // The keeper's pieces unioned whole, each named by its path in the keeper for its fillets:
-// `keeper_fillet` in plan wherever a beam meets a hub, the plate or a pad, all within the beams'
+// `keeper_fillet` in plan wherever a beam meets A's hub or a pad, all within the beams'
 // depth, so none reaches up past the keeper's top to the frame's floor or down to the gears.
 keeper_fillet := 3mm
 keeper_part := solid()
 spine_beam.body union keeper_part
 cross_beam.body union keeper_part
 hub_a.body union keeper_part
-hub_p.body union keeper_part
 repeat r in keeper_rails_at {
   rail_f := frame
   fix(origin == (r.x * cos(bot_turn) - r.y * sin(bot_turn),
@@ -1145,16 +1250,12 @@ repeat r in keeper_rails_at {
   pad_bar.body union keeper_part
 }
 claim keeper_rails clear(0.04mm) keeper_part          // the press: `snug` all round each rail
-cradle union keeper_part
 keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_a
-keeper_part.spine_beam round(r: keeper_fillet) keeper_part.hub_p
 keeper_part.spine_beam round(r: keeper_fillet) keeper_part.pad_bar
 keeper_part.cross_beam round(r: keeper_fillet) keeper_part.hub_a
 keeper_part.cross_beam round(r: keeper_fillet) keeper_part.pad_bar
 lid_post_a.body union keeper_part
 lid_hole_a.body cut keeper_part
-motor_boss_room.body cut keeper_part
-motor_shaft_room.body cut keeper_part
 
 // == The frame: the electronics bay ==============================================================
 // One print, the bot's backbone, printed on its floor: it stands on the base and the keeper, the
@@ -1272,6 +1373,7 @@ repeat 2 as i {
     base_screw.hole cut base
     lid_screw.body cut frame_part
     claim base_screw.post clear(0.5mm) keeper_part
+    claim base_screw.post clear(0.5mm) unit_lid_part
     claim base_head.body clear(0.5mm) bay_shell
     claim base_head.body clear(0.5mm) redboard.board
     claim base_head.body clear(0.5mm) redboard.tails
@@ -1479,11 +1581,16 @@ when checks == 1 {
   claim carrier_3 clear(0.2mm) carrier_2
   claim carrier_2 clear(0.2mm) carrier_1
   claim carrier_1 clear(0.2mm) sun_1
-  claim carrier_3 clear(0.2mm) base
-  claim carrier_2 clear(0.2mm) base
-  claim carrier_1 clear(0.2mm) base
-  claim sun_1 clear(0.2mm) base
-  claim sun_1 clear(0.2mm) keeper_part
+  claim carrier_3 clear(0.2mm) gearcase_part
+  claim carrier_2 clear(0.2mm) gearcase_part
+  claim carrier_1 clear(0.2mm) gearcase_part
+  claim sun_1 clear(0.2mm) gearcase_part
+  claim sun_1 clear(0.2mm) unit_lid_part
+  claim a_compound clear(0.3mm) gearcase_part             // through its window
+  claim case_body clear(0.25mm) base                      // its ribs stand on the base's floor
+  claim gearcase_part clear(0.5mm) keeper_part
+  claim unit_lid_part clear(0.5mm) base
+  claim unit_lid_part clear(0.5mm) keeper_part
   claim carrier_1 clear(0.5mm) motor.motor              // the shaft's end, in its bore
   claim planet clear(0.2mm) carrier3                     // on its carrier's plate
   claim planet clear(0.05mm) carrier2                    // in mesh with its sun
