@@ -1,48 +1,51 @@
 cd hardware
-git show 935a57e:hardware/radiatorbot.sv > old_bot.sv
-echo "== old shaped=0"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 old_bot.sv 2>&1 | grep -E "followed| s$" || true
-echo "== new shaped=0"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$" || true
-# B: no planet motion
-rm -rf /tmp/b && cp -r . /tmp/b && cd /tmp/b
+# E: each planet's pin a point seated at its bearing
+rm -rf /tmp/e && cp -r . /tmp/e && cd /tmp/e
 python3 - <<'PY'
 s=open('planetary.sv').read()
-a=s.index("    spin := frame\n"); b=s.index("    pin_shown := pin.body at orbit_turn\n")+len("    pin_shown := pin.body at orbit_turn\n")
-s=s[:a]+s[b:]
-open('planetary.sv','w').write(s)
-PY
-echo "== B no planet motion"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$|error" || true
-cd - >/dev/null
-# C: no planets' gears at all (pg, pin) but motion frames kept
-rm -rf /tmp/c && cp -r . /tmp/c && cd /tmp/c
-python3 - <<'PY'
-s=open('planetary.sv').read()
-a=s.index("  orbit_turn := frame\n"); b=s.index("// == The ring")
-s=s[:a]+"}\n\n"+s[b:]
-s=s.replace("  construction planet := solid(st3.pg[0].gear)       // the part printed nine times\n","")
-open('planetary.sv','w').write(s)
-g=open('geared_motor.sv').read()
-g=g.replace("  construction planet := solid(st3.pg[0].gear)       // the part printed nine times\n","  construction planet := solid(st3.sun)\n")
-open('geared_motor.sv','w').write(g)
-PY
-echo "== C no planets"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$|error" | head || true
-cd - >/dev/null
-# D: carriers drawn plain (no CarrierPlate ring): the plate a disc
-rm -rf /tmp/d && cp -r . /tmp/d && cd /tmp/d
-python3 - <<'PY'
-s=open('planetary.sv').read()
-a=s.index("  half := carrier_arm / 2\n"); b=s.index("  construction plate := solid(std.solids.Prism(outline")
-s=s[:a]+"""  in std.top {
-    hub := point
-    hub coincident std.top.origin
-    ring stack_planets about hub {
-      pin := point hint((orbit, 0))
-    }
-    hub distance(orbit, along: u) pin[0]
-    hub level(v) pin[0]
-    disc := radius(orbit + pin_boss_r) circle(center: hub)
-    outline := face(disc)
+s=s.replace("""// == The stage ===""","""// A planet's pin's centre, `orbit` out along the frame's x: seated at its bearing.
+component PinAt() {
+  in std.top {
+    c := point hint((orbit, 0))
+    c on_u(d: orbit) std.top
   }
-"""+s[b:]
+}
+
+// == The stage ===""")
+s=s.replace("""    ph := Phasing(ring_at: ring_at, k: k)
+""","""    ph := Phasing(ring_at: ring_at, k: k)
+    at := PinAt()
+    at seats(turn: ph.bearing, up: std.z, east: std.x) std.origin
+""")
+a=s.index("    ph := Phasing(ring_at: ring_at, k: k)"); b=s.index("// == The ring")
+blk=s[a:b].replace("plate.pin[k]","at.c")
+s=s[:a]+blk+s[b:]
 open('planetary.sv','w').write(s)
 PY
-echo "== D plain plates"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$|error" | head || true
+grep -n "at.c\|PinAt" planetary.sv | head
+echo "== E seated pins"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$|error|params" | head || true
+cd - >/dev/null
+# F: each planet's pin a point at its radius and bearing off the stage's x
+rm -rf /tmp/f && cp -r . /tmp/f && cd /tmp/f
+python3 - <<'PY'
+s=open('planetary.sv').read()
+s=s.replace("""  orbit_turn := frame
+  orbit_turn turns(rate) spindle""","""  in std.top {
+    construction datum := line(std.top.origin, hint((10, 0)))
+    datum.p2 on_u(d: 10mm) std.top
+  }
+  orbit_turn := frame
+  orbit_turn turns(rate) spindle""")
+s=s.replace("""    ph := Phasing(ring_at: ring_at, k: k)
+""","""    ph := Phasing(ring_at: ring_at, k: k)
+    pc := point hint((orbit * cos(ph.bearing), orbit * sin(ph.bearing))) in std.top
+    construction to_pin := line(std.top.origin, pc) in std.top
+    length(orbit) to_pin
+    datum angle(ph.bearing) to_pin
+""")
+a=s.index("    ph := Phasing(ring_at: ring_at, k: k)"); b=s.index("// == The ring")
+blk=s[a:b].replace("plate.pin[k]","pc")
+s=s[:a]+blk+s[b:]
+open('planetary.sv','w').write(s)
+PY
+echo "== F angled pins"; /usr/bin/time -f "%e s" solventc --no-progress --no-check --set shaped=0 radiatorbot.sv 2>&1 | grep -E "followed| s$|error|params" | head || true
