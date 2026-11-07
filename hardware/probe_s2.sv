@@ -22,9 +22,5 @@ component Sec(s: Scalar) {
     section := face(sq.loop)
   }
 }
-component Outer(s: Scalar) {
-  space := solid({ p | some s: p in Sec().section at s })
-}
 param s: Scalar over (0, 1)
 top_space := solid({ p | some s: p in Sec().section at s })
-inner := Outer(s: s)

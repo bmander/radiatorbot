@@ -21,7 +21,7 @@ component BT(s: Scalar) {
     }
     section := face(sq.loop)
   }
-  space := solid({ p | some s: p in section at s })
+  space := solid({ p | some s in (0, 1): p in section at s })
 }
 param s: Scalar over (0, 1)
 x := BT(s: s)
