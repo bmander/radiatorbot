@@ -59,9 +59,9 @@ use boards (tb6612_dims, ina219_dims, header_dims, pitch)
 use fits (run, press, gap, bond, wall, boss_wall, slip, snug, pa, thin, chamfer)
 use fits (pilot, m3_clear, m3_head_d, m3_head_h, m4_clear, m4_nut_af)
 use parts (Post, ScrewPost, Block, RoundedBlock, Dovetail, UnderSlope, Barb, BoreX, NutX, Collar)
-use planetary (stage_ratio)
+use planetary (stage_ratio, ToothSpace)
 use geared_motor (GearedMotor, Footprint, unit_lid_z0, unit_lid_z1, unit_motor_z, unit_strap_top)
-use geared_motor (unit_barrel_r, cradle_f, strap_w, strap_reach)
+use geared_motor (unit_barrel_r, cradle_f, strap_w, strap_reach, teeth_z0, teeth_z1)
 
 shaped := 1                    // 1: shape the gears and the socket; 0: blanks, for a quick look
 checks := 0                    // 1: judge every clearance (needs `shaped`; ~2 minutes)
@@ -450,7 +450,19 @@ stand_collar.hole.body cut stand_part
 unit_at := point
 unit_at raised(d: unit_z0, along: std.z) p_c
 gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - unit_z0,
-                         hub_len: fin_face, shaped: shaped, checks: checks)
+                         hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
+                         checks: checks)
+// The barrel's tooth space, swept up its screw over the unit's foot (planetary.sv: solventc
+// v0.1.14 sweeps a screw only over a parameter the document declares), for the unit to cut.
+unit_u := axis
+unit_u parallel(sense: same) bot.u
+unit_at coincident unit_u
+unit_v := axis
+unit_v parallel(sense: same) bot.v
+unit_at coincident unit_v
+unit_foot := plane(u: unit_u, v: unit_v)
+param teeth_s: Scalar over (0, 1)
+tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1).section at teeth_s })
 gearmotor seats(turn: 0deg, up: std.z, east: bot.u) unit_at
 unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0)
 unit_feet seats(turn: 0deg, up: std.z, east: bot.u) unit_at

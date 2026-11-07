@@ -224,80 +224,92 @@ component PlanetaryStage(ring_at: Angle, roll: Angle, rate: Scalar, sun_bore: Le
 }
 
 // == The ring ====================================================================================
-
-// The ring's teeth, cut from `body`: the internal gear of `ring_teeth` the stages' planets run in,
-// about the frame's z from z0 up to z1.  Its teeth climb right-handed (`planet_hand`), a turn a
-// lead; at z = 0 a tooth space's middle stands on +v, so at a height z its teeth
-// stand `z * ring_twist` round from there, which `PlanetaryStage` is told as `ring_at`.
+// The ring's teeth: the internal gear of `ring_teeth` the stages' planets run in, about the axis.
+// Its teeth climb right-handed (`planet_hand`), a turn a lead; on the plane a machine names its
+// teeth's datum (`level`, square to the axis, its origin on it) a tooth space's middle stands on
+// the plane's +v, so `z` over it the teeth stand `z * ring_twist` round from there, which
+// `PlanetaryStage` is told as `ring_at`.
 //
 // An internal gear's tooth space is the tooth of an external gear of its count, module and helix:
 // its flanks are involutes of the same base circle, curving away from the space's middle.  So one
-// space is drawn in the transverse plane, std.top, as that tooth stands (`thin` thicker, so the
-// ring's teeth come out `thin` thinner), and swept up a screw about the axis of the teeth's lead
-// from z0 to z1: the screw's sweep of the section, exactly.  Each flank is the arc through three
-// points of its involute, from a print's clearance inside the teeth's tips to their root, within
-// 4 µm of it; the right flank is the left mirrored in the space's middle.  The space is turned a
-// pitch at a time round the axis for the rest.
+// space is drawn in the transverse plane as that tooth stands (`thin` thicker, so the ring's teeth
+// come out `thin` thinner), and swept up a screw about the axis of the teeth's lead: the screw's
+// sweep of the section, exactly.  Each flank is the arc through three points of its involute, from
+// a print's clearance inside the teeth's tips to their root, within 4 µm of it; the right flank is
+// the left mirrored in the space's middle.  The space is turned a pitch at a time round the axis
+// for the rest (`BarrelTeeth`).
 //
-// The spaces are drawn rather than cut by a 55-tooth helical gear, since a body cut by sweeps
-// cannot itself be cut from another (bmander/geomsolver#818); undo that when geomsolver fixes it.
-// Run z0 and z1 past the body's other faces (a millimetre into a floor, half a millimetre over
-// the top): flush, solventc v0.1.14 leaves a sliver on the bore's rim, which the STL refuses
-// (bmander/geomsolver#821, #836).
-component BarrelTeeth(body: solid, z0: Length, z1: Length) {
+// Two workarounds for solventc v0.1.14, each to undo when geomsolver fixes it:
+//   - the spaces are drawn rather than cut by a 55-tooth helical gear, since a body cut by sweeps
+//     cannot itself be cut from another (bmander/geomsolver#818);
+//   - v0.1.14 sweeps a section up a screw only as a face family over a parameter the document
+//     declares, at its top: `ToothSpace` is that face, and the document that draws the ring
+//     sweeps it (`solid({ p | some s: p in ToothSpace(level, z0: …, z1: …).section at s })`) and
+//     hands the space to what cuts it.  Run z0 and z1 past the body's other faces (a millimetre
+//     into a floor, half a millimetre over the top): flush, v0.1.14 leaves a sliver on the bore's
+//     rim, which the STL refuses (bmander/geomsolver#821, #836).
+
+// One tooth space's section, carried up the screw from `z0` to `z1` over `level` as `s` runs from
+// 0 to 1.
+component ToothSpace(level: plane, z0: Length, z1: Length, s: Scalar) {
   claim planet_hand == 1          // the screw below climbs right-handed
   r_in := ring_tip_r - gap
   r_mid := (r_in + ring_root_r) / 2
   f_in := Flank(r: r_in)
   f_mid := Flank(r: r_mid)
   f_root := Flank(r: ring_root_r)
-  roll0 := 360deg * z0 / ring_lead              // the screw's rolls at z0 and at z1
-  roll1 := 360deg * z1 / ring_lead
+  screw := frame
+  screw screws(ring_lead) level.normal
+  fix(value == 360deg * (z0 + (z1 - z0) * s) / ring_lead) screw
+  in screw {
+    in level {
+      // the space's middle, up +v
+      construction middle := line(level.origin, hint((0, 10)))
+      middle.p2 on_v(d: 10mm) level
+      // the left flank's three points, each at its radius and `th` round from the middle (seeded
+      // a small angle's run off it)
+      li := point hint((-r_in * f_in.th / 1rad, r_in))
+      lm := point hint((-r_mid * f_mid.th / 1rad, r_mid))
+      lr := point hint((-ring_root_r * f_root.th / 1rad, ring_root_r))
+      construction to_li := line(level.origin, li)
+      construction to_lm := line(level.origin, lm)
+      construction to_lr := line(level.origin, lr)
+      length(r_in) to_li
+      length(r_mid) to_lm
+      length(ring_root_r) to_lr
+      middle angle(f_in.th) to_li
+      middle angle(f_mid.th) to_lm
+      middle angle(f_root.th) to_lr
+      // the right flank's, mirrored
+      ri := point hint((r_in * f_in.th / 1rad, r_in))
+      rm := point hint((r_mid * f_mid.th / 1rad, r_mid))
+      rr := point hint((ring_root_r * f_root.th / 1rad, ring_root_r))
+      ri symmetry(middle) li
+      rm symmetry(middle) lm
+      rr symmetry(middle) lr
+      // each flank bulges away from the space's middle, its centre across the middle from it,
+      // about 8.7 mm off: seeded 19deg round on the far side, 22.6 mm out
+      flank_l := arc(center: hint((7.4, 21.4)), start: lr, end: li)
+      lm coincident flank_l
+      flank_r := arc(center: hint((-7.4, 21.4)), start: ri, end: rr)
+      rm coincident flank_r
+      root_arc := arc(center: hint((0, 0)), start: rr, end: lr)
+      radius(ring_root_r) root_arc
+      inner_edge := line(ri, li)
+    }
+    section := face(flank_l, root_arc, flank_r, inner_edge)
+  }
+}
+
+// The ring's teeth cut from `body`, about the frame's z: `space`, one tooth space swept
+// (`ToothSpace`), and it turned a pitch at a time for the rest.
+component BarrelTeeth(body: solid, space: solid) {
   in std.front {
     construction spindle := vertical line(std.origin, hint((0, 10)))
     length(10mm) spindle
   }
-  in std.top {
-    // the space's middle, up +v
-    construction middle := line(std.top.origin, hint((0, 10)))
-    middle.p2 on_v(d: 10mm) std.top
-    // the left flank's three points, each at its radius and `th` round from the middle (seeded
-    // a small angle's run off it)
-    li := point hint((-r_in * f_in.th / 1rad, r_in))
-    lm := point hint((-r_mid * f_mid.th / 1rad, r_mid))
-    lr := point hint((-ring_root_r * f_root.th / 1rad, ring_root_r))
-    construction to_li := line(std.top.origin, li)
-    construction to_lm := line(std.top.origin, lm)
-    construction to_lr := line(std.top.origin, lr)
-    length(r_in) to_li
-    length(r_mid) to_lm
-    length(ring_root_r) to_lr
-    middle angle(f_in.th) to_li
-    middle angle(f_mid.th) to_lm
-    middle angle(f_root.th) to_lr
-    // the right flank's, mirrored
-    ri := point hint((r_in * f_in.th / 1rad, r_in))
-    rm := point hint((r_mid * f_mid.th / 1rad, r_mid))
-    rr := point hint((ring_root_r * f_root.th / 1rad, ring_root_r))
-    ri symmetry(middle) li
-    rm symmetry(middle) lm
-    rr symmetry(middle) lr
-    // each flank bulges away from the space's middle, its centre across the middle from it,
-    // about 8.7 mm off: seeded 19deg round on the far side, 22.6 mm out
-    flank_l := arc(center: hint((7.4, 21.4)), start: lr, end: li)
-    lm coincident flank_l
-    flank_r := arc(center: hint((-7.4, 21.4)), start: ri, end: rr)
-    rm coincident flank_r
-    root_arc := arc(center: hint((0, 0)), start: rr, end: lr)
-    radius(ring_root_r) root_arc
-    inner_edge := line(ri, li)
-  }
-  section := face(flank_l, root_arc, flank_r, inner_edge)
-  screw := frame
-  screw screws(ring_lead) spindle
   index := frame
   index turns(1) spindle
-  space := solid({ p | some t in (roll0, roll1): p in section at(under: screw) t })
   space cut body
   repeat ring_teeth - 1 as j {
     turned := space at(under: index) ((j + 1) * 360deg / ring_teeth)
@@ -306,11 +318,13 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
 }
 
 preview {
+  param teeth_s: Scalar over (0, 1)
   stage := PlanetaryStage(ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
                           sun_bore: 1.88mm, shaped: 1)
   rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h)
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
   barrel := solid(rim.body)
   bore.body cut barrel
-  teeth := BarrelTeeth(barrel, z0: -1mm, z1: stage_h + 0.5mm)
+  space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: -1mm, z1: stage_h + 0.5mm).section at teeth_s })
+  teeth := BarrelTeeth(barrel, space: space)
 }

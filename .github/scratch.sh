@@ -1,4 +1,7 @@
 set -x
 cd hardware
-solventc --no-progress probe_s4.sv --stl /tmp/s4.stl --solid x.tube --step-assembly /tmp/s4.step || true
-ls -la /tmp/*.stl /tmp/*.step || true
+time solventc --no-check planetary.sv --where stage.plate.pin[1] --where stage.plate.hp[0] || true
+time solventc --no-progress planetary.sv --stl /tmp/barrel.stl --solid barrel --stl /tmp/carrier.stl --solid stage.carrier || true
+time solventc --no-check geared_motor.sv || true
+time solventc --no-check radiatorbot.sv || true
+ls -la /tmp/*.stl || true
