@@ -52,16 +52,15 @@ stage_ratio := 1 + ring_teeth / sun_n                        // sun turns a carr
 
 // == The pins, the carrier and the heights =======================================================
 // The planets turn on 3 x 10 mm hardened dowel pins pressed `pin_seat` down into their carrier's
-// plate; the carriers turn on a 6 mm steel shaft up the axis (the geared motor's output shaft,
-// geared_motor.sv, round where they turn on it).  From the carrier's underside up: its
+// plate; the carriers turn on a 4 mm drill rod up the axis.  From the carrier's underside up: its
 // plate, then a print's clearance, the planets, and a print's clearance under the next stage's
 // plate.  The sun stands level with its planets and runs `bond` up into the plate over them, the
 // carrier it is printed with.
 pin_d := 3mm
 pin_len := 10mm
 pin_seat := 4mm
-p_rod_d := 6mm
-p_bore := p_rod_d + run         // a carrier's bore, turning on the shaft
+p_rod_d := 4mm
+p_bore := p_rod_d + run         // a carrier's bore, turning on the rod
 planet_bore := pin_d + run
 plate_t := 4.5mm
 planet_face := 6mm

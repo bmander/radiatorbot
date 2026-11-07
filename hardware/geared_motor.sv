@@ -2,20 +2,18 @@
 // (planetary.sv), one unit that runs on the bench, with an output shaft out of its foot.  A
 // machine that uses it draws `GearedMotor`, seats it where its foot stands, mounts it on
 // `Footprint`'s posts, and fixes what it drives to the output shaft: a part on the shaft is cut by
-// `out_socket`, pressed onto the shaft's flat and screwed up into the shaft's end.
+// `out_socket` and screwed up into the shaft's end.
 //
 // Drawn about its own origin: P, the motor's axis, is std.z, and z = 0 is the unit's foot, the
 // underside of the gearcase's floor.  From the foot up:
 //   - the **gearcase**, one print, a cup: a floor the output shaft turns in, and the barrel up from
 //     it, its bore the 55 internal teeth every stage's planets run in, and three ribs down its
 //     outside, each with an M3's self-tapping hole down from its top and another up from its foot;
-//   - the **output shaft**, a steel shaft up P with a flat milled up one side from its foot, the
-//     stack's axle and its output in one;
-//   - the **stages**, each a carrier on the output shaft and three planets on pins in it: the
-//     motor's sun on its shaft at the top, and under each carrier's plate the next stage's sun,
-//     printed as one with it.  The last carrier has a hub under its plate instead, down through
-//     the floor's bore, and is pressed onto the shaft's flat; the carriers above turn on the shaft
-//     where it is round;
+//   - the **stages**, each a carrier on P's rod and three planets on pins in it: the motor's sun
+//     on its shaft at the top, and under each carrier's plate the next stage's sun, printed as one
+//     with it.  The last carrier carries the **output shaft** under its plate instead, down
+//     through the floor's bore, its end a hexagon; P's rod is pressed into it, and the carriers
+//     above turn on the rod;
 //   - the **unit's lid**, one print, over the gearcase's top: the motor's pad and cradle on it,
 //     and an ear over each rib, a countersunk M3 down through each into the rib.  A spigot under
 //     it presses down into the barrel's bore, onto its teeth's tips, so the lid, the motor and the
@@ -26,13 +24,14 @@
 //     torque, and a strap across its end bell holds it down on the pad, screwed into two ears up
 //     from the cradle's flat walls.
 // The output shaft is a print's clearance up and down in the floor: the last carrier's plate over
-// the floor's top, and the part screwed to the shaft under its underside, against the hub's end.
+// the floor's top, and the part screwed to the shaft under its underside, the shaft's shoulder.
 
 unit mm
 use std
 use std.solids (cut, union)
 use std.place (vertical, coords, on_u, on_v, raised, seats)
 use std.motion (turns)
+use radiator_valve (HexBar)
 use motor130 (Motor130, MotorCan, MotorSizes, motor130_dims)
 use fits (run, press, gap, bond, wall, snug, pilot, m3_clear, m3_head_d, m3_head_h)
 use parts (Post, Block, Countersink)
@@ -45,7 +44,7 @@ use planetary (ring_twist, ring_tip_r, ring_root_r, p_rod_d, p_bore)
 // the barrel's teeth up past the first stage's planets and on up past the lid's spigot, which
 // stands a print's clearance over them, and the lid on the barrel's top.  The motor stands on the
 // lid on a pad, its shaft down through it to the first sun and on into the first carrier's bore,
-// over the top of the output shaft.
+// over the top of P's rod.
 case_floor := 4mm               // the gearcase's floor, the output shaft's bearing
 c3_z0 := case_floor + gap       // the last carrier's plate, a print's clearance over the floor
 c2_z0 := c3_z0 + stage_h
@@ -59,26 +58,19 @@ unit_lid_z0 := spigot_z0 + spigot_h
 unit_lid_z1 := unit_lid_z0 + 3mm
 unit_motor_z := unit_lid_z1 + 2.8mm                         // the motor's front face, on its pad
 unit_strap_top := unit_motor_z + motor130_dims.len + wall
-p_rod_z1 := unit_motor_z - motor130_dims.shaft_len - 1mm    // the output shaft's top, a
-                                                            // millimetre under the motor's shaft
+p_rod_z1 := unit_motor_z - motor130_dims.shaft_len - 1mm    // a millimetre under the shaft's end
 
 // == The output shaft ============================================================================
-// A steel shaft `p_rod_d` across (planetary.sv), cut to length and milled: one flat `out_flat`
-// deep up its +x side from its foot to the last carrier's top, ended square there, and an M3
-// tapped up into its foot.  The last carrier is pressed onto the flat: its plate, and a hub under
-// the plate down through the floor's bore, the floor its bearing, to the hub's end a print's
-// clearance under the foot (the shoulder).  The flat's square end stands on the carrier's top, so
-// the shaft can't drop through it.  Over the carrier the shaft is round, and the carriers above
-// turn on it.  Under the shoulder the flat runs `out_engage` on down: the part the shaft drives is
-// pressed onto it, and drawn up against the hub's end by the M3, which draws the shaft's flat end
-// down onto the carrier in turn, so the carrier, the shaft and the part are one.
-out_flat := 1mm                 // the flat's depth: 5 mm from it across to the far side
-out_hub_d := 11mm               // the last carrier's hub, through the floor
-out_z := -gap                   // the shoulder: the hub's end
-out_engage := 5mm               // the flat, on down from the shoulder into the part it drives
-out_foot := out_z - out_engage  // the shaft's foot
-out_flat_z1 := c3_z0 + plate_t  // the flat's square end: the last carrier's top
-out_tap := 8mm                  // the M3's hole up into the foot, drilled 2.5 mm and tapped
+// Round through the floor's bore, from the last carrier's plate down to its shoulder a print's
+// clearance under the foot, and a hexagon `out_hex_len` on down from there, the part it drives
+// pressed onto it and drawn up against the shoulder by an M3 into the shaft's end.  P's rod is
+// pressed down into the carrier, its foot a millimetre over the screw's hole.
+out_d := 8mm
+out_z := -gap                   // the shoulder
+out_hex_af := 6mm               // across the flats; its corners inside the round
+out_hex_len := 5mm
+out_pilot := 6mm                // the screw's self-tapping hole up into the shaft's end
+rod_z0 := out_z - out_hex_len + out_pilot + 1mm
 // The barrel's teeth, from the last carrier's underside to half a millimetre over the barrel's
 // top (planetary.sv), their datum the foot: a tooth space's middle on the unit's +y there.
 teeth_z0 := c3_z0
@@ -212,16 +204,6 @@ component Rib() {
   sink seats(turn: 0deg, up: std.z, east: std.x) sink_at
 }
 
-// The hole a print is pressed onto the output shaft's flat by, about the frame's z from z0 to z1:
-// the shaft's section, at rest, `press` over it across and at the flat.
-component DHole(z0: Length, z1: Length) {
-  bore := Post(std.top.origin, r: (p_rod_d + press) / 2, z0: z0, z1: z1)
-  key := Block(x0: p_rod_d / 2 - out_flat + press / 2, x1: p_rod_d / 2 + 1mm,
-               y0: -p_rod_d / 2 - 1mm, y1: p_rod_d / 2 + 1mm, z0: z0 - 1mm, z1: z1 + 1mm)
-  body := solid(bore.body)
-  key.body cut body
-}
-
 // == The mounting ================================================================================
 
 // One of the posts the unit stands on, under a rib, drawn as `Rib` is: from `depth` under the foot
@@ -255,29 +237,30 @@ component Footprint(depth: Length, floor_t: Length) {
 
 // == The unit ====================================================================================
 
-// The geared motor at rest, and turning: its output shaft and the last carrier on it turn
-// `out_rate` turns a turn of `roll` about the frame's z, each carrier above it and the motor
-// `stage_ratio` faster, the same way.  The strap's ears start to swell out of the cradle's flats
-// at `ear_z0`.  A part on the output shaft is `hub_len` long, from the shoulder down; `out_socket`
-// is what it is cut by.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance
-// inside.
+// The geared motor at rest, and turning: its output shaft (the last carrier) turns `out_rate`
+// turns a turn of `roll` about the frame's z, each carrier above it and the motor `stage_ratio`
+// faster, the same way.  The strap's ears start to swell out of the cradle's flats at `ear_z0`.  A
+// part on the output shaft is `hub_len` long, from the shoulder down; `out_socket` is what it is
+// cut by.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
 //
 // The printed parts, at rest: `gearcase` (`case_blank` and its teeth), `lid`, `strap_part`,
 // `motor_sun`, `carrier1` (the first carrier and the second sun), `carrier2` (the second and the
-// third sun), `carrier3` (the last carrier and its hub) and `planet`, one of the nine; and the
-// steel output shaft, `shaft`.  `carrier_1` … `sun_1` and `out_shaft` are the carriers, the
-// motor's sun and the shaft turning.
+// third sun), `carrier3` (the last carrier and the output shaft) and `planet`, one of the nine.
+// `carrier_1` … `sun_1` are the carriers and the motor's sun turning.
 component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Length,
                       shaped: Int, checks: Int) {
-  claim p_rod_z1 >= zb2 + 4mm     // the first carrier turns on 4 mm of the shaft, or more
+  claim p_rod_z1 >= zb2 + 4mm     // the first carrier turns on 4 mm of the rod, or more
   claim unit_motor_z - motor130_dims.shaft_len >= zb2 + 4mm      // the shaft's end in it
   claim unit_motor_z - motor130_dims.boss_h - gap >= unit_lid_z0 + 1mm   // a floor under its boss
-  claim hub_len >= out_engage + 0.5mm + 1.5mm + m3_head_h + 0.5mm   // a ledge under the shaft
-  claim (out_hub_d - p_rod_d) / 2 >= wall                           // the hub's wall
+  claim hub_len >= out_hex_len + 0.5mm + 1.5mm + m3_head_h + 0.5mm  // a ledge under the hexagon
 
   in std.front {
     construction spindle := vertical line(std.origin, hint((0, 10)))
     length(10mm) spindle
+  }
+  in std.top {
+    construction out_ref := line(std.top.origin, hint((5, 0)))
+    out_ref.p2 on_u(d: 5mm) std.top
   }
   c2_rate := out_rate * stage_ratio
   c1_rate := c2_rate * stage_ratio
@@ -294,8 +277,7 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
                         sun_bore: sun_bore, shaped: shaped)
 
   // The prints the stages make: the motor's sun; each carrier with the next stage's sun under it,
-  // the carrier's bore down through both; the last with its hub, and the shaft's flat through
-  // both.
+  // the carrier's bore down through both; the last with the output shaft.
   construction motor_sun := solid(st1.sun)
   construction carrier1 := solid(st1.carrier)
   st2.sun union carrier1
@@ -306,29 +288,29 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   bore2 := Post(std.top.origin, r: p_bore / 2, z0: c2_z0 - 10.5mm, z1: c2_z0 + plate_t + 1mm)
   bore2.body cut carrier2
   construction carrier3 := solid(st3.carrier)
-  hub := Post(std.top.origin, r: out_hub_d / 2, z0: out_z, z1: c3_z0 + bond)
-  c3_hole := DHole(z0: out_z - 1mm, z1: out_flat_z1 + 1mm)
-  hub.body union carrier3
-  c3_hole.body cut carrier3
+  shaft := Post(std.top.origin, r: out_d / 2, z0: out_z, z1: c3_z0 + bond)
+  hex := HexBar(std.top.origin, out_ref, af: out_hex_af, phase: 0deg, z0: out_z - out_hex_len,
+                z1: out_z + bond)
+  rod_hole := Post(std.top.origin, r: (p_rod_d + press) / 2, z0: rod_z0,
+                   z1: c3_z0 + plate_t + 1mm)
+  end_hole := Post(std.top.origin, r: pilot / 2, z0: out_z - out_hex_len - 1mm,
+                   z1: out_z - out_hex_len + out_pilot)
+  shaft.body union carrier3
+  hex.bar union carrier3
+  rod_hole.body cut carrier3
+  end_hole.body cut carrier3
   construction planet := solid(st3.pg[0].gear)       // the part printed nine times
+  rod := Post(std.top.origin, r: p_rod_d / 2, z0: rod_z0, z1: p_rod_z1)
 
-  // The output shaft, at rest: round from its foot to its top, less its flat and its foot's hole.
-  shaft_round := Post(std.top.origin, r: p_rod_d / 2, z0: out_foot, z1: p_rod_z1)
-  shaft_flat := Block(x0: p_rod_d / 2 - out_flat, x1: p_rod_d / 2 + 1mm, y0: -p_rod_d / 2 - 1mm,
-                      y1: p_rod_d / 2 + 1mm, z0: out_foot - 1mm, z1: out_flat_z1)
-  shaft_tap := Post(std.top.origin, r: pilot / 2, z0: out_foot - 1mm, z1: out_foot + out_tap)
-  construction shaft := solid(shaft_round.body)
-  shaft_flat.body cut shaft
-  shaft_tap.body cut shaft
-
-  // What a part on the output shaft is cut by: the shaft's section, a press, half a millimetre
-  // past its foot; the screw's clearance on down through the part; and its pan head's
-  // counterbore up into the part's underside.
-  socket_d := DHole(z0: out_foot - 0.5mm, z1: out_z + 1mm)
+  // What a part on the output shaft is cut by: the hexagon grown `snug` all round, a light
+  // press, half a millimetre past the shaft's end; the screw's clearance on down through the
+  // part; and its pan head's counterbore up into the part's underside.
+  socket_hex := HexBar(std.top.origin, out_ref, af: out_hex_af + 2 * snug, phase: 0deg,
+                       z0: out_z - out_hex_len - 0.5mm, z1: out_z + 1mm)
   socket_screw := Post(std.top.origin, r: m3_clear / 2, z0: out_z - hub_len - 1mm, z1: out_z)
   socket_head := Post(std.top.origin, r: m3_head_d / 2 + gap, z0: out_z - hub_len - 1mm,
                       z1: out_z - hub_len + m3_head_h + 0.5mm)
-  construction out_socket := solid(socket_d.body)
+  construction out_socket := solid(socket_hex.bar)
   socket_screw.body union out_socket
   socket_head.body union out_socket
 
@@ -357,10 +339,10 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   claim strap_part clear(0.4mm) cradle      // its legs short of the ears: it bears on the motor
 
   // The gearcase: the barrel and its floor, its bore the teeth's tips from the floor up past them
-  // to the lid, the last carrier's hub's bore through the floor, and the ribs.
+  // to the lid, the output shaft's bore through the floor, and the ribs.
   barrel := Post(std.top.origin, r: unit_barrel_r, z0: 0mm, z1: unit_lid_z0)
   barrel_bore := Post(std.top.origin, r: ring_tip_r, z0: case_floor, z1: unit_lid_z0 + 1mm)
-  out_bore := Post(std.top.origin, r: (out_hub_d + run) / 2, z0: -1mm, z1: case_floor + 1mm)
+  out_bore := Post(std.top.origin, r: (out_d + run) / 2, z0: -1mm, z1: case_floor + 1mm)
   // `case_blank` is the gearcase but for its teeth: what a machine round the unit judges its
   // clearance against, without building the teeth.
   construction case_blank := solid(barrel.body)
@@ -413,7 +395,6 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   motor_turn turns(motor_rate) spindle
   fix(value == roll) motor_turn
   carrier_3 := carrier3 at c3_turn
-  out_shaft := shaft at c3_turn
   carrier_2 := carrier2 at c2_turn
   carrier_1 := carrier1 at c1_turn
   sun_1 := motor_sun at motor_turn
@@ -421,10 +402,7 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   // With `checks` 1, every clearance inside the unit.  Gears in mesh run 0.15 mm clear a flank;
   // the motor rests on its pad and under its strap, and the lid on the gearcase.
   when checks == 1 {
-    claim carrier_3 clear(0.15mm) gearcase                // its hub in the floor's bore
-    claim out_shaft clear(0.15mm) carrier_2               // the carriers turning on the shaft
-    claim out_shaft clear(0.15mm) carrier_1
-    claim out_shaft clear(0.15mm) gearcase
+    claim carrier_3 clear(0.15mm) gearcase                // its shaft in the floor's bore
     claim carrier_3 clear(0.2mm) carrier_2
     claim carrier_2 clear(0.2mm) carrier_1
     claim carrier_1 clear(0.2mm) sun_1
