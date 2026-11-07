@@ -1,8 +1,6 @@
 set -x
 cd hardware
-time solventc probe_frame.sv --where q --where b.c || true
-time solventc probe_frame2.sv --where q --where b.c || true
-time solventc planetary.sv --where stage.plate.pin[1] --where stage.plate.hp[0] || true
-time solventc --no-progress planetary.sv --stl /tmp/barrel.stl --solid barrel --stl /tmp/carrier.stl --solid stage.carrier || true
-time solventc --no-check geared_motor.sv || true
+solventc --no-progress probe_s1.sv --stl /tmp/s1.stl --solid x.space || true
+solventc --no-progress probe_s2.sv --stl /tmp/s2.stl --solid top_space || true
+solventc --no-progress probe_s2.sv --stl /tmp/s3.stl --solid inner.space || true
 ls -la /tmp/*.stl || true
