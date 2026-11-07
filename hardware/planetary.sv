@@ -297,7 +297,7 @@ component BarrelTeeth(body: solid, z0: Length, z1: Length) {
   screw screws(ring_lead) spindle
   index := frame
   index turns(1) spindle
-  private construction space := solid({ p | some t in (roll0, roll1): p in section at(under: screw) t })
+  space := solid({ p | some t in (roll0, roll1): p in section at(under: screw) t })
   space cut body
   repeat ring_teeth - 1 as j {
     turned := space at(under: index) ((j + 1) * 360deg / ring_teeth)

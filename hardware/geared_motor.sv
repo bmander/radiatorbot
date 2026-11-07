@@ -86,6 +86,7 @@ strap_lift := 0.5mm
 ear_t := 6mm                    // the ears, out from the cradle's pocket
 ear_z1 := unit_strap_top - strap_h - strap_lift
 cradle_f := motor130_dims.flats / 2 + wall + gap            // the cradle's flats, off P
+strap_reach := motor130_dims.flats / 2 + gap + ear_t        // the ears' outer faces, off P
 
 // == Building blocks =============================================================================
 
@@ -189,27 +190,27 @@ component Rib() {
 // == The mounting ================================================================================
 
 // One of the posts the unit stands on, under a rib, drawn as `Rib` is: from `depth` under the foot
-// up to it, and the M3 up through the floor under it (`floor` thick) and the post into the rib's
+// up to it, and the M3 up through the floor under it (`floor_t` thick) and the post into the rib's
 // foot, its pan head in a counterbore in the floor's underside.
-component Foot(depth: Length, floor: Length) {
+component Foot(depth: Length, floor_t: Length) {
   in std.top {
     c := point hint((rib_c, 0))
     c on_u(d: rib_c) std.top
   }
   post := Post(c, r: rib_r, z0: -depth, z1: 0mm)
-  hole := Post(c, r: m3_clear / 2, z0: -depth - floor - 1mm, z1: 1mm)
-  head := Post(c, r: m3_head_d / 2 + gap, z0: -depth - floor - 1mm,
-               z1: -depth - floor + m3_head_h + 0.5mm)
+  hole := Post(c, r: m3_clear / 2, z0: -depth - floor_t - 1mm, z1: 1mm)
+  head := Post(c, r: m3_head_d / 2 + gap, z0: -depth - floor_t - 1mm,
+               z1: -depth - floor_t + m3_head_h + 0.5mm)
 }
 
 // What a machine gives the unit to stand on, seated where the unit is: a post under each rib,
-// `depth` tall, on a floor `floor` thick (`posts`), and the screws' holes up through both
+// `depth` tall, on a floor `floor_t` thick (`posts`), and the screws' holes up through both
 // (`holes`).
-component Footprint(depth: Length, floor: Length) {
+component Footprint(depth: Length, floor_t: Length) {
   posts := solid()
   holes := solid()
   repeat b in rib_bearings {
-    foot := Foot(depth: depth, floor: floor)
+    foot := Foot(depth: depth, floor_t: floor_t)
     foot seats(turn: b, up: std.z, east: std.x) std.origin
     foot.post.body union posts
     foot.hole.body union holes

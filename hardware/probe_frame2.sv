@@ -10,5 +10,6 @@ fix(dir == (-1, 0, 0)) bot.v
 b := Block(x0: 10mm, x1: 20mm, y0: -1mm, y1: 1mm, z0: 0mm, z1: 1mm) in bot
 in std.top {
   q := point
-  q coords(du: 10mm, dv: 2mm) bot
+  std.origin distance(10mm, along: bot.u) q
+  std.origin distance(2mm, along: bot.v) q
 }
