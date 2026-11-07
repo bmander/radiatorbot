@@ -72,19 +72,19 @@ solventc hardware/geared_motor.sv  # the geared motor on its own
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
-The models are checked with Solvent v0.1.14 (`SOLVENTC_VERSION=v0.1.14` pins the installer to
-it), which solves the bot and judges its claims in about two minutes, and exports it in about
-three. The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
+The models are checked with Solvent v0.1.15 (`SOLVENTC_VERSION=v0.1.15` pins the installer to
+it), which solves the bot and judges its claims in about a minute, and exports it in about
+seven (the barrel's 55-tooth cutter is most of that). The models write sets in its notation (`p in S`, `some t: p in tooth at(under: rack) t`,
 a part placed at its joint's value as `socket_part at socket_turn`), import the body words they use
 (`use std.solids (cut, union)`), which v0.1.12 brought; the
 socket's 64-tooth gear builds from v0.1.13 (bmander/geomsolver#812), and a helical gear's plane
-over a line and an axis, and the stack's screwed tooth spaces beside the gears seated on P, from
-v0.1.14 (#819, #817), so they need v0.1.14 or later. Every gear is its rack's exact sweep, the
-helical ones a leaned rack's, and the planetary stack's barrel teeth are a screw's exact sweep;
-the printed parts' STLs come to 11 MB and the assembly's STEP to 57 MB. With `checks := 1` the
-bot's every clearance is judged in about three minutes.
+over a line and an axis from v0.1.14 (#819), and the barrel's teeth, cut by a 55-tooth helical gear,
+from v0.1.15 (#818), so they need v0.1.15 or later. Every gear is its rack's exact sweep, the
+helical ones a leaned rack's, and the barrel's teeth are cut by such a gear;
+the printed parts' STLs come to 11 MB and the assembly's STEP to 63 MB. With `checks := 1` the
+bot's every clearance is judged in about four minutes.
 
 Every push that changes a model, or `export.sh`, runs `export.sh` in GitHub Actions
-(`.github/workflows/export.yml`, Solvent pinned to v0.1.14 there too) and keeps its output on the
+(`.github/workflows/export.yml`, Solvent pinned to v0.1.15 there too) and keeps its output on the
 run's page: `radiatorbot-stl-<sha>`, a zip of the printed parts' STLs, and `radiatorbot-step-<sha>`,
 the assembly. It can also be run by hand from the Actions tab.
