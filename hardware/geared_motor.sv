@@ -264,22 +264,14 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   motor_rate := c1_rate * stage_ratio
   sun_bore := motor130_dims.shaft_d - 0.1mm      // every sun is one figure, pressed on the shaft
 
-  // The stages, each told how the barrel's teeth stand at its planets' undersides.
-  st1_at := point
-  st1_at raised(d: c1_z0, along: std.z) std.origin
-  st1 := PlanetaryStage(ring_at: zb1 * ring_twist, roll: roll, rate: c1_rate, sun_bore: sun_bore,
-                        shaped: shaped)
-  st1 seats(turn: 0deg, up: std.z, east: std.x) st1_at
-  st2_at := point
-  st2_at raised(d: c2_z0, along: std.z) std.origin
-  st2 := PlanetaryStage(ring_at: zb2 * ring_twist, roll: roll, rate: c2_rate, sun_bore: sun_bore,
-                        shaped: shaped)
-  st2 seats(turn: 0deg, up: std.z, east: std.x) st2_at
-  st3_at := point
-  st3_at raised(d: c3_z0, along: std.z) std.origin
-  st3 := PlanetaryStage(ring_at: zb3 * ring_twist, roll: roll, rate: out_rate, sun_bore: sun_bore,
-                        shaped: shaped)
-  st3 seats(turn: 0deg, up: std.z, east: std.x) st3_at
+  // The stages, each from its carrier's underside, and told how the barrel's teeth stand at its
+  // planets' undersides.
+  st1 := PlanetaryStage(z0: c1_z0, ring_at: zb1 * ring_twist, roll: roll, rate: c1_rate,
+                        sun_bore: sun_bore, shaped: shaped)
+  st2 := PlanetaryStage(z0: c2_z0, ring_at: zb2 * ring_twist, roll: roll, rate: c2_rate,
+                        sun_bore: sun_bore, shaped: shaped)
+  st3 := PlanetaryStage(z0: c3_z0, ring_at: zb3 * ring_twist, roll: roll, rate: out_rate,
+                        sun_bore: sun_bore, shaped: shaped)
 
   // The prints the stages make: the motor's sun; each carrier with the next stage's sun under it,
   // the carrier's bore down through both; the last with the output shaft.

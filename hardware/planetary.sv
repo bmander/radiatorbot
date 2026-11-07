@@ -25,7 +25,7 @@
 unit mm
 use std
 use std.solids (cut, union)
-use std.place (vertical, on_v, raised, seats)
+use std.place (vertical, on_u, on_v, raised, seats)
 use std.motion (turns, screws)
 use gears (ShapedHelical)
 use fits (run, press, gap, bond, wall, pa, thin, chamfer)
@@ -108,7 +108,7 @@ component Phasing(ring_at: Angle, k: Int) {
   planet := bearing + 90deg - (90deg + sun + 180deg / sun_n - bearing) * sun_n / planet_n
 }
 
-// The carrier's plate, drawn as one outline on std.top, `plate_t` thick: one arm and the web after
+// The carrier's plate, drawn as one outline on std.top, from `z0` up `plate_t`: one arm and the web after
 // it, turned round the axis for each planet.  The arm runs out to the pin (`pin`, the first on
 // std.x), a little narrower than the boss round the pin's end, its sides running into the boss
 // (as wide as the boss, they would meet it on a diameter, which the solve holds only by a double
@@ -116,7 +116,7 @@ component Phasing(ring_at: Angle, k: Int) {
 // `carrier_fillet` into both.  Less the pins' holes, blind `pin_seat` down from its top.  One
 // outline and a prism, rather than bars and posts unioned and filleted, which solventc v0.1.14
 // builds slowly and meshes badly.
-component CarrierPlate() {
+component CarrierPlate(z0: Length) {
   half := carrier_arm / 2
   hub_x := 2 * carrier_web - sqrt(3) * half       // seeds: where a web meets an arm, for three
   in std.top {
@@ -152,9 +152,10 @@ component CarrierPlate() {
                     out[1], boss[1], back[1], corner[1], web[1], elbow[1],
                     out[2], boss[2], back[2], corner[2], web[2], elbow[2])
   }
-  construction plate := solid(std.solids.Prism(outline, from: 0mm, to: plate_t))
+  construction plate := solid(std.solids.Prism(outline, from: z0, to: z0 + plate_t))
   repeat stack_planets as k {
-    hole := Post(pin[k], r: (pin_d + press) / 2, z0: plate_t - pin_seat, z1: plate_t + 1mm)
+    hole := Post(pin[k], r: (pin_d + press) / 2, z0: z0 + plate_t - pin_seat,
+                 z1: z0 + plate_t + 1mm)
     hole.body cut plate
   }
 }
@@ -171,14 +172,16 @@ component Flank(r: Length) {
 
 // == The stage ===================================================================================
 
-// One planetary stage at rest, and its planets turning: its carrier turns `rate` turns a turn of
-// `roll` about the frame's z, and each planet on its pin against it, ring_teeth / planet_n turns
+// One planetary stage at rest, and its planets turning, drawn up the frame's z from its carrier's
+// underside at `z0` (a number, not a seat: drawn in the frame of what holds it, the stage's
+// rows stay out of that frame's, which keeps the bot's follow of its handle quick).  Its
+// carrier turns `rate` turns a turn of `roll` about the frame's z, and each planet on its pin against it, ring_teeth / planet_n turns
 // the other way, carried round with it.  The carrier's plate with its pins' holes (`carrier`) and
 // the sun (`sun`, bored `sun_bore`) are drawn at rest, for the unit to make its compounds of: a
 // sun is printed with the carrier of the stage above it.  The pins (`pin`) and the planets
 // (`planet_shown`) are drawn turning; `pg[k].gear` is planet `k` at rest.
-component PlanetaryStage(ring_at: Angle, roll: Angle, rate: Scalar, sun_bore: Length,
-                         shaped: Int) {
+component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
+                         sun_bore: Length, shaped: Int) {
   claim ring_teeth == sun_n + 2 * planet_n
   claim stack_planets == 3                              // CarrierPlate's outline has three arms
   claim (sun_n + ring_teeth) / stack_planets == 24      // the planets spaced evenly
@@ -193,27 +196,37 @@ component PlanetaryStage(ring_at: Angle, roll: Angle, rate: Scalar, sun_bore: Le
     construction spindle := vertical line(std.origin, hint((0, 10)))
     length(10mm) spindle
   }
-  plate := CarrierPlate()
+  plate := CarrierPlate(z0: z0)
   construction carrier := solid(plate.plate)
   at_sun := Phasing(ring_at: ring_at, k: 0)
-  sun_gear := Helical(std.top.origin, z: stage_zb, rot: at_sun.sun, N: sun_n, hand: sun_hand,
+  sun_gear := Helical(std.top.origin, z: z0 + stage_zb, rot: at_sun.sun, N: sun_n, hand: sun_hand,
                       face: sun_face, bore: sun_bore, shaped: shaped)
   construction sun := solid(sun_gear.gear)
 
   // Every planet and its pin: each turned on its pin against its carrier, then carried round
   // with it, the carrier's rate: the same as riding the carrier's frame, as primer 0.207 has it.
+  // Each pin's centre stands `orbit` out at its planet's bearing from the frame's x, where the
+  // carrier's arm is drawn to it.
+  in std.top {
+    construction datum := line(std.top.origin, hint((10, 0)))
+    datum.p2 on_u(d: 10mm) std.top
+  }
   orbit_turn := frame
   orbit_turn turns(rate) spindle
   fix(value == roll) orbit_turn
   repeat stack_planets as k {
     ph := Phasing(ring_at: ring_at, k: k)
+    pc := point hint((orbit, 0)) in std.top
+    construction to_pin := line(std.top.origin, pc) in std.top
+    length(orbit) to_pin
+    datum angle(ph.bearing) to_pin
     pc_up := point
-    pc_up raised(d: 10mm, along: std.z) plate.pin[k]
-    construction pc_spindle := line(plate.pin[k], pc_up)
-    pg := Helical(plate.pin[k], z: stage_zb, rot: ph.planet, N: planet_n, hand: planet_hand,
+    pc_up raised(d: 10mm, along: std.z) pc
+    construction pc_spindle := line(pc, pc_up)
+    pg := Helical(pc, z: z0 + stage_zb, rot: ph.planet, N: planet_n, hand: planet_hand,
                   face: planet_face, bore: planet_bore, shaped: shaped)
-    pin := Post(plate.pin[k], r: pin_d / 2, z0: plate_t - pin_seat,
-                z1: plate_t - pin_seat + pin_len)
+    pin := Post(pc, r: pin_d / 2, z0: z0 + plate_t - pin_seat,
+                z1: z0 + plate_t - pin_seat + pin_len)
     spin := frame
     spin turns(-rate * ring_teeth / planet_n) pc_spindle
     fix(value == roll) spin
@@ -319,7 +332,7 @@ component BarrelTeeth(body: solid, space: solid) {
 
 preview {
   param teeth_s: Scalar over (0, 1)
-  stage := PlanetaryStage(ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
+  stage := PlanetaryStage(z0: 0mm, ring_at: stage_zb * ring_twist, roll: 0deg, rate: 1,
                           sun_bore: 1.88mm, shaped: 1)
   rim := Post(std.top.origin, r: ring_root_r + wall, z0: 0mm, z1: stage_h)
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
