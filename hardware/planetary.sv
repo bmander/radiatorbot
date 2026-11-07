@@ -238,10 +238,9 @@ component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
 
 // == The ring ====================================================================================
 // The ring's teeth: the internal gear of `ring_teeth` the stages' planets run in, about the axis.
-// Its teeth climb right-handed (`planet_hand`), a turn a lead; on the plane a machine names its
-// teeth's datum (`level`, square to the axis, its origin on it) a tooth space's middle stands on
-// the plane's +v, so `z` over it the teeth stand `z * ring_twist` round from there, which
-// `PlanetaryStage` is told as `ring_at`.
+// Its teeth climb right-handed (`planet_hand`), a turn a lead; on the frame's std.top a tooth
+// space's middle stands on +v, so at a height `z` the teeth stand `z * ring_twist` round from
+// there, which `PlanetaryStage` is told as `ring_at`.
 //
 // An internal gear's tooth space is the tooth of an external gear of its count, module and helix:
 // its flanks are involutes of the same base circle, curving away from the space's middle.  So one
@@ -257,36 +256,40 @@ component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
 //     cannot itself be cut from another (bmander/geomsolver#818);
 //   - v0.1.14 sweeps a section up a screw only as a face family over a parameter the document
 //     declares, at its top: `ToothSpace` is that face, and the document that draws the ring
-//     sweeps it, `solid({ p | some s: p in ToothSpace(level, …, s: s).section at s })`, and
-//     hands the space to what cuts it.  Run z0 and z1 past the body's other faces (a millimetre
+//     sweeps it in the ring's frame, `solid({ p | some s: p in ToothSpace(…, s: s).section at
+//     s })`, and hands the space to what cuts it.  Run z0 and z1 past the body's other faces (a millimetre
 //     into a floor, half a millimetre over the top): flush, v0.1.14 leaves a sliver on the bore's
 //     rim, which the STL refuses (bmander/geomsolver#821, #836).
 
-// One tooth space's section, carried up the screw from `z0` to `z1` over `level` as `s` runs from
-// 0 to 1.
-component ToothSpace(level: plane, z0: Length, z1: Length, s: Scalar) {
+// One tooth space's section, drawn about the frame's z, carried up the screw from `z0` to `z1` as
+// `s` runs from 0 to 1.
+component ToothSpace(z0: Length, z1: Length, s: Scalar) {
   claim planet_hand == 1          // the screw below climbs right-handed
   r_in := ring_tip_r - gap
   r_mid := (r_in + ring_root_r) / 2
   f_in := Flank(r: r_in)
   f_mid := Flank(r: r_mid)
   f_root := Flank(r: ring_root_r)
+  in std.front {
+    construction spindle := vertical line(std.origin, hint((0, 10)))
+    length(10mm) spindle
+  }
   screw := frame
-  screw screws(ring_lead) level.normal
+  screw screws(ring_lead) spindle
   fix(value == 360deg * (z0 + (z1 - z0) * s) / ring_lead) screw
   in screw {
-    in level {
+    in std.top {
       // the space's middle, up +v
-      construction middle := line(level.origin, hint((0, 10)))
-      middle.p2 on_v(d: 10mm) level
+      construction middle := line(std.top.origin, hint((0, 10)))
+      middle.p2 on_v(d: 10mm) std.top
       // the left flank's three points, each at its radius and `th` round from the middle (seeded
       // a small angle's run off it)
       li := point hint((-r_in * f_in.th / 1rad, r_in))
       lm := point hint((-r_mid * f_mid.th / 1rad, r_mid))
       lr := point hint((-ring_root_r * f_root.th / 1rad, ring_root_r))
-      construction to_li := line(level.origin, li)
-      construction to_lm := line(level.origin, lm)
-      construction to_lr := line(level.origin, lr)
+      construction to_li := line(std.top.origin, li)
+      construction to_lm := line(std.top.origin, lm)
+      construction to_lr := line(std.top.origin, lr)
       length(r_in) to_li
       length(r_mid) to_lm
       length(ring_root_r) to_lr
@@ -338,6 +341,6 @@ preview {
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
   barrel := solid(rim.body)
   bore.body cut barrel
-  space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: -1.5mm, z1: stage_h + 0.5mm, s: teeth_s).section at teeth_s })
+  space := solid({ p | some teeth_s: p in ToothSpace(z0: -1.5mm, z1: stage_h + 0.5mm, s: teeth_s).section at teeth_s })
   teeth := BarrelTeeth(barrel, space: space)
 }

@@ -442,19 +442,27 @@ stand_collar.hole.body cut stand_part
 // floor and each post into a rib on the gearcase's outside; the frame's floor bears down on its
 // lid, and its hole round the cradle's flats keeps the unit square.  Its output shaft turns as
 // A's ring drives the last pinion back, and the motor `stage_ratio` cubed faster.
-unit_at := point
-unit_at raised(d: unit_z0, along: std.z) p_c
+//
+// The unit stands in a frame of its own, `unit_frame`, held in the bot's at P's place in the plan
+// and its foot's height, square to the bot.  (Held rather than seated on P: with every part of
+// the unit seated in a frame the solve places, solventc v0.1.14 takes minutes to follow the
+// handle's turns rather than seconds.)
+in bot {
+  unit_frame := frame
+  fix(origin == (p_x, p_y, unit_z0)) unit_frame
+  fix(dir == (1, 0, 0)) unit_frame.u
+  fix(dir == (0, 1, 0)) unit_frame.v
+}
 gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - unit_z0,
                          hub_len: fin_face, tooth_space: tooth_space, shaped: shaped,
-                         checks: checks)
-// The barrel's tooth space, swept up its screw over the unit's foot, its own top plane
-// (planetary.sv: solventc v0.1.14 sweeps a screw only over a parameter the document declares),
-// for the unit to cut.
+                         checks: checks) in unit_frame
+unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0) in unit_frame
+// The barrel's tooth space, swept up its screw in the unit's frame (planetary.sv: solventc v0.1.14
+// sweeps a screw only over a parameter the document declares), for the unit to cut.
 param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(gearmotor.std.top, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
-gearmotor seats(turn: 0deg, up: std.z, east: bot.u) unit_at
-unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0)
-unit_feet seats(turn: 0deg, up: std.z, east: bot.u) unit_at
+in unit_frame {
+  tooth_space := solid({ p | some teeth_s: p in ToothSpace(z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
+}
 // its printed parts, as the export names them
 construction motor_sun := solid(gearmotor.motor_sun)
 construction carrier1 := solid(gearmotor.carrier1)
