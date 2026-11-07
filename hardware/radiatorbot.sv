@@ -357,10 +357,10 @@ fix(dir == (-1, 0, 0)) bot.v     // and its y along the world's -x
 // motor's, is `cd_fin` from it at (p_x, p_y), its pinion on the ring.  The lines of centres run
 // from each pinion's axle to its gear's.
 in std.top {
-  a_c := point
+  a_c := point hint((0, -a_dist))         // seeds in the world's plan: the bot's (x, y) is (-y, x)
   std.origin distance(-a_dist, along: bot.u) a_c
   std.origin distance(0mm, along: bot.v) a_c
-  p_c := point
+  p_c := point hint((-p_y, p_x))
   std.origin distance(p_x, along: bot.u) p_c
   std.origin distance(p_y, along: bot.v) p_c
   construction a_mesh := line(a_c, std.top.origin)
@@ -449,10 +449,10 @@ gearmotor := GearedMotor(roll: handle_open, out_rate: c3_rate, ear_z0: ear_z0 - 
                          checks: checks)
 // The barrel's tooth space, swept up its screw over the unit's foot (planetary.sv: solventc
 // v0.1.14 sweeps a screw only over a parameter the document declares), for the unit to cut.
-unit_u := axis
+unit_u := axis hint(dir: (0, 1, 0))
 unit_u parallel(sense: same) bot.u
 unit_at coincident unit_u
-unit_v := axis
+unit_v := axis hint(dir: (-1, 0, 0))
 unit_v parallel(sense: same) bot.v
 unit_at coincident unit_v
 unit_foot := plane(u: unit_u, v: unit_v)
@@ -599,7 +599,7 @@ spine_beam.body union keeper_part
 cross_beam.body union keeper_part
 hub_a.body union keeper_part
 repeat r in keeper_rails_at {
-  rail_at := point in std.top
+  rail_at := point hint((-r.y, r.x)) in std.top
   std.origin distance(r.x, along: bot.u) rail_at
   std.origin distance(r.y, along: bot.v) rail_at
   joint := KeeperJoint()
@@ -725,7 +725,7 @@ repeat 2 as i {
   repeat 2 as j {
     bx := box_x0 + base_screw_inset + i * (box_x1 - box_x0 - 2 * base_screw_inset)
     by := box_y0 + base_screw_inset + j * (box_y1 - box_y0 - 2 * base_screw_inset)
-    base_at := point in std.top
+    base_at := point hint((-by, bx)) in std.top
     std.origin distance(bx, along: bot.u) base_at
     std.origin distance(by, along: bot.v) base_at
     base_screw := ScrewPost(base_at, r: base_post_r, z0: floor_z1, z1: lid_z1, hole_d: pilot,
@@ -762,7 +762,7 @@ cover_screws := [
   (-55mm, box_y1 - screw_inset),                   // north
 ]
 repeat c in cover_screws {
-  cover_at := point in std.top
+  cover_at := point hint((-c.y, c.x)) in std.top
   std.origin distance(c.x, along: bot.u) cover_at
   std.origin distance(c.y, along: bot.v) cover_at
   cover_screw := ScrewPost(cover_at, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
@@ -838,13 +838,13 @@ cover_part := solid(cover.body)
 //     the grommet, its pins in the shield's column 1, rows 7 and 9;
 //   - another for the motor's leads, at its +x end, its pins in column 17, rows 2 and 4.
 in std.top {
-  board_c := point
+  board_c := point hint((-board_oy, board_ox))
   std.origin distance(board_ox, along: bot.u) board_c
   std.origin distance(board_oy, along: bot.v) board_c
-  drv_c := point
+  drv_c := point hint((-drv_cy, drv_cx))
   std.origin distance(drv_cx, along: bot.u) drv_c
   std.origin distance(drv_cy, along: bot.v) drv_c
-  ina_c := point
+  ina_c := point hint((-ina_cy, ina_cx))
   std.origin distance(ina_cx, along: bot.u) ina_c
   std.origin distance(ina_cy, along: bot.v) ina_c
 }
