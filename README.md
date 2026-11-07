@@ -9,13 +9,20 @@ valve under motor control.
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
-  - `radiatorbot.sv` — the bot: a geared motor (a 130 motor and a printed stack of three helical
-    planetary stages, one unit that runs on the bench) turning the valve's star handle through a
-    socket round it, which the handle screws through as it opens. It also has the
+  - `radiatorbot.sv` — the bot, the assembly: a geared motor turning the valve's star handle
+    through a socket round it, which the handle screws through as it opens. It also has the
     gearbox, an electronics bay with a SparkFun IoT RedBoard ESP32 and a perfboard shield carrying
     the motor driver and its current monitor, and a split clamp round the valve's inlet hex and
     supply pipe. `handle_open` scrubs the handle open, screwing down its stem, and the train with
     it.
+  - `geared_motor.sv` — the geared motor as one component: a 130 motor on a printed stack of three
+    helical planetary stages in a gearcase, one unit that runs on the bench, with an output shaft
+    out of its foot that the bot's last pinion screws onto, and the posts it stands on. Opened by
+    itself, it scrubs the output through a turn.
+  - `planetary.sv` — one planetary stage as a component (sun, planets on pins, carrier), and the
+    stages' shared internal gear, the barrel's teeth.
+  - `fits.sv` — the stock and the FDM fits every printed part reads; `parts.sv` — the building
+    blocks the printed parts are made of (posts, blocks, bores, dovetails, collars).
   - `radiator_valve.sv` — the existing radiator angle valve as measured: body, supply pipe,
     union, bonnet, packing nut and star handle. It's a `RadiatorValve` component the bot draws;
     opened by itself, its `handle_open` scrubs the handle open, screwing it down the stem 2.06 mm
@@ -61,6 +68,7 @@ Check a model, and write the printed parts and the assembly:
 solventc hardware/radiator_valve.sv
 solventc hardware/radiatorbot.sv
 solventc --no-check hardware/radiatorbot.sv   # the layout alone, its solids' claims unjudged
+solventc hardware/geared_motor.sv  # the geared motor on its own
 sh hardware/export.sh            # every printed part as STL, and radiatorbot.step, into hardware/stl
 ```
 
