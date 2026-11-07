@@ -243,18 +243,8 @@ component ShapedHelical(N: Int, m: Length, phi: Angle, beta: Angle, hand: Int, s
     construction lean := line(std.origin, lean_at)
   }
   // the rack tooth's normal section: across its teeth (`lean`) and out along the radius through
-  // it (std.y); its extrusion, square to it, climbs aslant the blank.  Its axes are minted and held
-  // parallel to drawn lines, as geomsolver's twist_drill/wheel.sv draws its section: the plane
-  // over `lean` and std.y directly is refused inside a part (bmander/geomsolver#819)
-  in std.top {
-    radial_at := point hint((0, 10))
-    radial_at on_v(d: 10mm) std.top
-    construction radial := line(std.top.origin, radial_at)
-  }
-  normal := plane(u: hint(dir: lean), v: hint(dir: radial))
-  lean parallel(sense: same) normal.u
-  radial parallel(sense: same) normal.v
-  std.origin coincident normal.origin
+  // it (std.y); its extrusion, square to it, climbs aslant the blank
+  normal := plane(u: lean, v: std.y)
   in std.top {
     // the rack's pitch line in the transverse plane, tangent at +v and running -u, the way the
     // blank's pitch point goes as it turns counter-clockwise
