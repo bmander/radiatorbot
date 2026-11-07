@@ -325,6 +325,6 @@ preview {
   bore := Post(std.top.origin, r: ring_tip_r, z0: -1mm, z1: stage_h + 1mm)
   barrel := solid(rim.body)
   bore.body cut barrel
-  space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: -1mm, z1: stage_h + 0.5mm).section at teeth_s })
+  space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: -1mm, z1: stage_h + 0.5mm, s: teeth_s).section at teeth_s })
   teeth := BarrelTeeth(barrel, space: space)
 }

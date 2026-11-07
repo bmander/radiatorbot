@@ -232,8 +232,8 @@ component Footprint(depth: Length, floor_t: Length) {
 // document that draws it (planetary.sv says why):
 //
 //     param teeth_s: Scalar over (0, 1)
-//     tooth_space := solid({ p | some teeth_s: p in ToothSpace(foot, z0: teeth_z0,
-//                                                               z1: teeth_z1).section at teeth_s })
+//     tooth_space := solid({ p | some teeth_s: p in ToothSpace(foot, z0: teeth_z0, z1: teeth_z1,
+//                                                               s: teeth_s).section at teeth_s })
 //
 // `foot` the plane of the unit's foot, its origin on P and its axes the unit's x and y.  `shaped` 0 draws the gears as blanks; `checks` 1 judges every clearance inside.
 //
@@ -416,6 +416,6 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
 // module draws neither the unit below nor the parameters.
 param out_turn: Angle over (0deg, 360deg)
 param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: teeth_z0, z1: teeth_z1).section at teeth_s })
+tooth_space := solid({ p | some teeth_s: p in ToothSpace(std.top, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 gearmotor := GearedMotor(roll: out_turn, out_rate: 1, ear_z0: unit_lid_z1 + 10mm, hub_len: 10mm,
                          tooth_space: tooth_space, shaped: 1, checks: 0)

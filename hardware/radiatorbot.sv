@@ -321,10 +321,8 @@ component BoardPosts(z0: Length, depth: Length) {
   posts := solid()
   holes := solid()
   repeat h in uno_holes {
-    in std.top {
-      c := point hint((h.x, h.y))
-      c coords(du: h.x, dv: h.y) std.top
-    }
+    c := point hint((h.x, h.y)) in std.top
+    c coords(du: h.x, dv: h.y) std.top
     screw := ScrewPost(c, r: 2.5mm, z0: z0, z1: 0mm, hole_d: pilot, depth: depth)
     screw.post union posts
     screw.hole union holes
@@ -462,7 +460,7 @@ unit_v parallel(sense: same) bot.v
 unit_at coincident unit_v
 unit_foot := plane(u: unit_u, v: unit_v)
 param teeth_s: Scalar over (0, 1)
-tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1).section at teeth_s })
+tooth_space := solid({ p | some teeth_s: p in ToothSpace(unit_foot, z0: teeth_z0, z1: teeth_z1, s: teeth_s).section at teeth_s })
 gearmotor seats(turn: 0deg, up: std.z, east: bot.u) unit_at
 unit_feet := Footprint(depth: unit_z0 - floor_z1, floor_t: floor_z1 - floor_z0)
 unit_feet seats(turn: 0deg, up: std.z, east: bot.u) unit_at
@@ -604,11 +602,9 @@ spine_beam.body union keeper_part
 cross_beam.body union keeper_part
 hub_a.body union keeper_part
 repeat r in keeper_rails_at {
-  in std.top {
-    rail_at := point
-    std.origin distance(r.x, along: bot.u) rail_at
-    std.origin distance(r.y, along: bot.v) rail_at
-  }
+  rail_at := point in std.top
+  std.origin distance(r.x, along: bot.u) rail_at
+  std.origin distance(r.y, along: bot.v) rail_at
   joint := KeeperJoint()
   joint seats(turn: r.a, up: std.z, east: bot.u) rail_at
   joint.rail union base
@@ -732,11 +728,9 @@ repeat 2 as i {
   repeat 2 as j {
     bx := box_x0 + base_screw_inset + i * (box_x1 - box_x0 - 2 * base_screw_inset)
     by := box_y0 + base_screw_inset + j * (box_y1 - box_y0 - 2 * base_screw_inset)
-    in std.top {
-      base_at := point
-      std.origin distance(bx, along: bot.u) base_at
-      std.origin distance(by, along: bot.v) base_at
-    }
+    base_at := point in std.top
+    std.origin distance(bx, along: bot.u) base_at
+    std.origin distance(by, along: bot.v) base_at
     base_screw := ScrewPost(base_at, r: base_post_r, z0: floor_z1, z1: lid_z1, hole_d: pilot,
                             depth: 12mm)
     lid_screw := Post(base_at, r: m3_clear / 2, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
@@ -771,11 +765,9 @@ cover_screws := [
   (-55mm, box_y1 - screw_inset),                   // north
 ]
 repeat c in cover_screws {
-  in std.top {
-    cover_at := point
-    std.origin distance(c.x, along: bot.u) cover_at
-    std.origin distance(c.y, along: bot.v) cover_at
-  }
+  cover_at := point in std.top
+  std.origin distance(c.x, along: bot.u) cover_at
+  std.origin distance(c.y, along: bot.v) cover_at
   cover_screw := ScrewPost(cover_at, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
   cover_screw.post union frame_part
   cover_screw.hole cut frame_part
