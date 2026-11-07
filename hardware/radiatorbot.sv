@@ -55,11 +55,11 @@ use gears (ShapedSpur)
 use motor130 (MotorCan, motor130_dims, motor130_free, motor130_stall_torque)
 use boards (RedBoardEsp32, Shield, Tb6612, Ina219, redboard_dims, uno_holes, shield_dims)
 use boards (tb6612_dims, ina219_dims, header_dims, pitch)
-use fits (run, press, gap, bond, wall, slip, snug, pa, thin, chamfer)
+use fits (run, press, gap, bond, wall, slip, pa, thin, chamfer)
 use fits (pilot, m3_clear, m3_head_d, m3_head_h, m4_clear, m4_nut_af)
 use parts (Post, ScrewPost, Block, RoundedBlock, Dovetail, UnderSlope, Barb, BoreX, NutX, Collar)
 use planetary (stage_ratio, ToothSpace)
-use geared_motor (GearedMotor, Footprint, unit_lid_z0, unit_lid_z1, unit_motor_z, unit_strap_top)
+use geared_motor (GearedMotor, Footprint, unit_lid_z1, unit_motor_z, unit_strap_top)
 use geared_motor (unit_barrel_r, cradle_f, strap_w, strap_reach, teeth_z0, teeth_z1)
 
 shaped := 1                    // 1: shape the gears and the socket; 0: blanks, for a quick look
@@ -150,8 +150,7 @@ ring_z1 := ring_z0 + 10mm
 fin_z0 := ring_z0 + 0.5mm       // the last pinion, its face up to the output shaft's shoulder
 fin_face := 10mm
 unit_z0 := fin_z0 + fin_face + gap                      // the geared motor's foot
-lid_z0 := unit_z0 + unit_lid_z0                         // its lid; the base's top at its top
-lid_z1 := unit_z0 + unit_lid_z1
+base_z1 := unit_z0 + unit_lid_z1                        // the base's top, level with its lid's
 motor_z := unit_z0 + unit_motor_z                       // the motor's front face, on its pad
 strap_top := unit_z0 + unit_strap_top
 // Under the ring, round the handle: the socket's top a millimetre over the handle's top face
@@ -179,21 +178,20 @@ collar_h := 6mm
 collar_r := axle_d / 2 + 5mm
 collar_z0 := ring_z1 + gap
 bridge_z0 := collar_z0 + collar_h
-bridge_z1 := lid_z1
-rod_z1 := bridge_z1 - 0.5mm     // A's axle's top, just under the bridge's
+rod_z1 := base_z1 - 0.5mm       // A's axle's top, just under the bridge's
 stand_z1 := socket_z0 - gap
 stand_z0 := stand_z1 - 4mm
 // The base's walls run up past the gears to the geared motor's lid's top; the frame (the
 // electronics bay) stands on the base and the lid, its own floor `case_z1` thick round the
 // motor's cradle, which comes up through it.
-case_z1 := lid_z1 + wall
+case_z1 := base_z1 + wall
 // The mount's joint: the frame's rail leaves the end wall 2 mm up from the frame's underside, its
 // foot sloped up and out at 45deg so it prints from the wall, and stands on the mount's shelf,
 // sloped so under it, the mount's foot flush with the frame's underside; the snap's finger hangs
 // in the slot's floor, its barb's underside 2.5 mm over the foot at the rail's face, a lip of it.
-rail_z0 := lid_z1 + 2mm
+rail_z0 := base_z1 + 2mm
 finger_z0 := rail_z0 + dove_h + 2.5mm
-board_z := lid_z1 + 6mm                                 // the RedBoard's underside, on its posts
+board_z := base_z1 + 6mm                                 // the RedBoard's underside, on its posts
 shield_z := board_z + shield.top                          // the shield's top face
 bay_z1 := motor_z + motor130_dims.len + motor130_dims.back_h + 3mm  // room over it for its leads
 // The motor's strap's ears swell out of the cradle's flats from level with the top of the
@@ -495,23 +493,23 @@ pinion := pinion_part at c3_turn
 // screw.  Four M3 screws down through the frame's floor hold the base up to the frame (below),
 // the frame's floor bearing down on the unit's lid.
 base_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: floor_z0,
-                         z1: lid_z1) in bot
+                         z1: base_z1) in bot
 base_cavity := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
-                            y1: box_y1 - wall, r: box_r_in, z0: floor_z1, z1: lid_z1 + 1mm) in bot
+                            y1: box_y1 - wall, r: box_r_in, z0: floor_z1, z1: base_z1 + 1mm) in bot
 base_shell := solid(base_box.body)
 base_cavity.body cut base_shell
 
 bridge := Block(x0: -a_dist, x1: box_x1 - wall, y0: -collar_r, y1: collar_r, z0: bridge_z0,
-                z1: bridge_z1) in bot
-bridge_boss := Post(a_c, r: collar_r, z0: bridge_z0, z1: bridge_z1)
+                z1: base_z1) in bot
+bridge_boss := Post(a_c, r: collar_r, z0: bridge_z0, z1: base_z1)
 bulkhead := Block(x0: -a_dist - wall, x1: -a_dist + wall, y0: box_y0, y1: box_y1,
-                  z0: ring_z1 + 0.5mm, z1: bridge_z1) in bot
+                  z0: ring_z1 + 0.5mm, z1: base_z1) in bot
 collar_room := Post(a_c, r: collar_r + gap, z0: ring_z1, z1: bridge_z0)
 ring_r := 39mm                  // the room A's ring turns in, about A
 ring_room := Post(a_c, r: ring_r, z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm)
 ring_side := Block(x0: -a_dist, x1: box_x1 + 1mm, y0: box_y0 - 1mm, y1: box_y1 + 1mm,
                    z0: floor_z0 - 1mm, z1: ring_z1 + 0.5mm) in bot  // and the box's end over it
-base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: bridge_z1 + 1mm)
+base_hole_a := Post(a_c, r: (axle_d + press) / 2, z0: bridge_z0 - 1mm, z1: base_z1 + 1mm)
 pinion_reach := Post(p_c, r: m3_head_d / 2, z0: floor_z0 - 1mm, z1: floor_z1 + 1mm)
 
 base := solid(base_shell)
@@ -532,20 +530,20 @@ claim gearmotor.gearcase clear(1mm) base_shell            // its ribs clear of t
 // motor's lid, the boards stand on its floor, and the mount is glued onto the rail up its end
 // wall.  Its floor has a hole round the motor's cradle, its ears and its strap, a print's
 // clearance all round, so it goes down over the unit with the motor strapped in.
-case_floor := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: lid_z1,
+case_floor := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: base_z1,
                            z1: case_z1) in bot
-bay_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: lid_z1,
+bay_box := RoundedBlock(x0: box_x0, x1: box_x1, y0: box_y0, y1: box_y1, r: box_r, z0: base_z1,
                         z1: bay_z1) in bot
 bay_room := RoundedBlock(x0: box_x0 + wall, x1: box_x1 - wall, y0: box_y0 + wall,
-                         y1: box_y1 - wall, r: box_r_in, z0: lid_z1 - 1mm, z1: bay_z1 + 1mm) in bot
+                         y1: box_y1 - wall, r: box_r_in, z0: base_z1 - 1mm, z1: bay_z1 + 1mm) in bot
 bay_shell := solid(bay_box.body)
 bay_room.body cut bay_shell
-floor_hole_m := MotorCan(motor130_dims, grow: wall + 2 * gap, z0: lid_z1 - 1mm - motor_z,
+floor_hole_m := MotorCan(motor130_dims, grow: wall + 2 * gap, z0: base_z1 - 1mm - motor_z,
                          z1: case_z1 + 1mm - motor_z)
 floor_hole_m seats(turn: 0deg, up: std.z, east: bot.u) motor_at
 floor_hole_ears := Block(x0: -strap_w / 2 - gap, x1: strap_w / 2 + gap,
                          y0: -strap_reach - gap, y1: strap_reach + gap,
-                         z0: lid_z1 - 1mm - motor_z, z1: case_z1 + 1mm - motor_z)
+                         z0: base_z1 - 1mm - motor_z, z1: case_z1 + 1mm - motor_z)
 floor_hole_ears seats(turn: 0deg, up: std.z, east: bot.u) motor_at
 
 // the mount's rail, from its sloped foot up the end wall to its top, and the notch the snap's
@@ -562,7 +560,7 @@ rail_notch := Block(x0: box_x1 + dove_h - barb_h - slip, x1: box_x1 + dove_h + 1
 // the cable entries, in the bay's far end wall: a grommet for the thermostat's cable, low beside
 // the motor, and a window each on the RedBoard's barrel jack and its USB-C that a cable's moulded plug
 // passes through to mate
-grommet := BoreX(y: -14mm, z: lid_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm,
+grommet := BoreX(y: -14mm, z: base_z1 + 12mm, d: 8mm, x0: box_x0 - 1mm,
                  x1: box_x0 + wall + 1mm) in bot
 usb_slot := Block(x0: box_x0 - 1mm, x1: box_x0 + wall + 1mm,
                   y0: usb_y - redboard_dims.plug_w / 2 - gap, y1: usb_y + redboard_dims.plug_w / 2 + gap,
@@ -594,7 +592,7 @@ rail_notch.body cut frame_part
 // barb at the foot of a finger in the slot's floor, pushed out by the rail's lip in the last few
 // millimetres, snaps into the rail's notch, and holds the two together while the glue in the slot
 // sets.  The dovetail's flanks take the handle's reaction sideways and outward, the glue the rest.
-spine := Block(x0: box_x1 + slip, x1: spine_x1, y0: -spine_w / 2, y1: spine_w / 2, z0: lid_z1,
+spine := Block(x0: box_x1 + slip, x1: spine_x1, y0: -spine_w / 2, y1: spine_w / 2, z0: base_z1,
                z1: clamp_z1) in bot
 clamp_main := Block(x0: -clamp_reach, x1: -split / 2, y0: -clamp_w / 2, y1: clamp_w / 2,
                     z0: clamp_z0, z1: clamp_z1) in bot
@@ -635,9 +633,9 @@ repeat 2 as i {
     base_at := point hint((-by, bx)) in std.top
     std.origin distance(bx, along: bot.u) base_at
     std.origin distance(by, along: bot.v) base_at
-    base_screw := ScrewPost(base_at, r: base_post_r, z0: floor_z1, z1: lid_z1, hole_d: pilot,
+    base_screw := ScrewPost(base_at, r: base_post_r, z0: floor_z1, z1: base_z1, hole_d: pilot,
                             depth: 12mm)
-    lid_screw := Post(base_at, r: m3_clear / 2, z0: lid_z1 - 1mm, z1: case_z1 + 1mm)
+    lid_screw := Post(base_at, r: m3_clear / 2, z0: base_z1 - 1mm, z1: case_z1 + 1mm)
     base_head := Post(base_at, r: m3_head_d / 2, z0: case_z1, z1: case_z1 + m3_head_h)
     base_screw.post union base
     base_screw.hole cut base
@@ -652,7 +650,7 @@ repeat 2 as i {
 // The RedBoard's four M3s, self-tapping into posts on the frame's floor at its holes (boards.sv),
 // the Uno's.  The posts are 5 mm across, an M3 standoff's size: the one by the SCL socket stands
 // 3.6 mm off its SCL pin.  Each hole runs a millimetre on into the floor.
-board_posts := BoardPosts(z0: lid_z1 - board_z, depth: board_z - case_z1 + 1mm)
+board_posts := BoardPosts(z0: base_z1 - board_z, depth: board_z - case_z1 + 1mm)
 board_posts seats(turn: 0deg, up: std.z, east: bot.u) board_at
 board_posts.posts union frame_part
 board_posts.holes cut frame_part
@@ -671,7 +669,7 @@ repeat c in cover_screws {
   cover_at := point hint((-c.y, c.x)) in std.top
   std.origin distance(c.x, along: bot.u) cover_at
   std.origin distance(c.y, along: bot.v) cover_at
-  cover_screw := ScrewPost(cover_at, r: 4mm, z0: lid_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
+  cover_screw := ScrewPost(cover_at, r: 4mm, z0: base_z1, z1: bay_z1, hole_d: pilot, depth: 12mm)
   cover_screw.post union frame_part
   cover_screw.hole cut frame_part
   cover_hole := Post(cover_at, r: m3_clear / 2, z0: bay_z1 - 1mm, z1: bay_z1 + wall + 1mm)

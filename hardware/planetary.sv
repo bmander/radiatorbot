@@ -44,6 +44,7 @@ m_t := m_stack / cos(helix)                                  // the transverse m
 orbit := m_t * (sun_n + planet_n) / 2                        // the axis to each planet, 15.89 mm
 ring_pitch := m_t * ring_teeth / 2                           // 24.27 mm
 ring_tip_r := ring_pitch - m_stack                           // the barrel's bore, 23.47 mm
+sun_tip_r := m_t * sun_n / 2 + m_stack                       // a sun's tips, 8.30 mm
 ring_root_r := ring_pitch + 1.25 * m_stack                   // 25.27 mm
 ring_lead := 2 * pi * ring_pitch / tan(helix)                // a tooth's rise a turn: 327 mm
 ring_twist := planet_hand * 360deg / ring_lead               // its turn a millimetre up
@@ -108,14 +109,14 @@ component Phasing(ring_at: Angle, k: Int) {
   planet := bearing + 90deg - (90deg + sun + 180deg / sun_n - bearing) * sun_n / planet_n
 }
 
-// The carrier's plate, drawn as one outline on std.top, from `z0` up `plate_t`: one arm and the web after
-// it, turned round the axis for each planet.  The arm runs out to the pin (`pin`, the first on
-// std.x), a little narrower than the boss round the pin's end, its sides running into the boss
-// (as wide as the boss, they would meet it on a diameter, which the solve holds only by a double
-// root); the web runs from the arm's side to the next arm's, `carrier_web` from the axis, rounded
-// `carrier_fillet` into both.  Less the pins' holes, blind `pin_seat` down from its top.  One
-// outline and a prism, rather than bars and posts unioned and filleted, which solventc v0.1.14
-// builds slowly and meshes badly.
+// The carrier's plate, drawn as one outline on std.top, from `z0` up `plate_t`: one arm and the
+// web after it, turned round the axis for each planet.  The arm runs out to the pin (`pin`, the
+// first on std.x), a little narrower than the boss round the pin's end, its sides running into the
+// boss (as wide as the boss, they would meet it on a diameter, which the solve holds only by a
+// double root); the web runs from the arm's side to the next arm's, `carrier_web` from the axis,
+// rounded `carrier_fillet` into both.  Less the pins' holes, blind `pin_seat` down from its
+// top.  One outline and a prism, rather than bars and posts unioned and filleted, which solventc
+// v0.1.14 builds slowly and meshes badly.
 component CarrierPlate(z0: Length) {
   half := carrier_arm / 2
   hub_x := 2 * carrier_web - sqrt(3) * half       // seeds: where a web meets an arm, for three
@@ -173,13 +174,13 @@ component Flank(r: Length) {
 // == The stage ===================================================================================
 
 // One planetary stage at rest, and its planets turning, drawn up the frame's z from its carrier's
-// underside at `z0` (a number, not a seat: drawn in the frame of what holds it, the stage's
-// rows stay out of that frame's, which keeps the bot's follow of its handle quick).  Its
-// carrier turns `rate` turns a turn of `roll` about the frame's z, and each planet on its pin against it, ring_teeth / planet_n turns
-// the other way, carried round with it.  The carrier's plate with its pins' holes (`carrier`) and
-// the sun (`sun`, bored `sun_bore`) are drawn at rest, for the unit to make its compounds of: a
-// sun is printed with the carrier of the stage above it.  The pins (`pin`) and the planets
-// (`planet_shown`) are drawn turning; `pg[k].gear` is planet `k` at rest.
+// underside at `z0` (a number, not a seat: drawn in the frame of what holds it, the stage's rows
+// stay out of that frame's, which keeps the bot's follow of its handle quick).  Its carrier turns
+// `rate` turns a turn of `roll` about the frame's z, and each planet on its pin against it,
+// ring_teeth / planet_n turns the other way, carried round with it.  The carrier's plate with its
+// pins' holes (`carrier`) and the sun (`sun`, bored `sun_bore`) are drawn at rest, for the unit to
+// make its compounds of: a sun is printed with the carrier of the stage above it.  The pins (`pin`)
+// and the planets (`planet_shown`) are drawn turning; `pg[k].gear` is planet `k` at rest.
 component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
                          sun_bore: Length, shaped: Int) {
   claim ring_teeth == sun_n + 2 * planet_n
@@ -188,7 +189,7 @@ component PlanetaryStage(z0: Length, ring_at: Angle, roll: Angle, rate: Scalar,
   claim pin_wall >= 1.5mm                               // a planet's roots to its bore
   claim sun_wall >= 1.5mm                               // a sun's roots to a carrier's bore
   claim pin_len - pin_seat <= planet_face               // each pin's top under its planet's
-  claim carrier_web >= m_t * sun_n / 2 + m_stack        // the webs over the sun's tips
+  claim carrier_web >= sun_tip_r                         // the webs over the sun's tips
   claim carrier_web >= orbit - m_t * planet_n / 2 - m_stack + 1mm   // and the planets' rims
   claim carrier_arm < 2 * pin_boss_r                    // the arm's sides meet the boss aslant
 

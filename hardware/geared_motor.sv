@@ -36,14 +36,15 @@ use motor130 (Motor130, MotorCan, MotorSizes, motor130_dims)
 use fits (run, press, gap, bond, wall, snug, pilot, m3_clear, m3_head_d, m3_head_h)
 use parts (Post, Block, Countersink)
 use planetary (PlanetaryStage, ToothSpace, BarrelTeeth, stage_ratio, stage_h, stage_zb, plate_t)
-use planetary (planet_face, m_t, m_stack, sun_n)
+use planetary (planet_face, sun_tip_r)
 use planetary (ring_twist, ring_tip_r, ring_root_r, p_rod_d, p_bore)
 
 // == Heights, from the foot up P =================================================================
 // The floor, then each stage a carrier's plate, its planets and a print's clearance (stage_h),
 // the barrel's teeth up past the first stage's planets and on up past the lid's spigot, which
-// stands a print's clearance over them, and the lid on the barrel's top.  The motor stands on the lid on a pad, its shaft down through it to the first sun and on into the
-// first carrier's bore, over the top of P's rod.
+// stands a print's clearance over them, and the lid on the barrel's top.  The motor stands on the
+// lid on a pad, its shaft down through it to the first sun and on into the first carrier's bore,
+// over the top of P's rod.
 case_floor := 4mm               // the gearcase's floor, the output shaft's bearing
 c3_z0 := case_floor + gap       // the last carrier's plate, a print's clearance over the floor
 c2_z0 := c3_z0 + stage_h
@@ -51,9 +52,9 @@ c1_z0 := c2_z0 + stage_h
 zb3 := c3_z0 + stage_zb         // each stage's planets' undersides, and its sun's
 zb2 := c2_z0 + stage_zb
 zb1 := c1_z0 + stage_zb
-band_z1 := zb1 + planet_face + gap                          // the spigot's underside
+spigot_z0 := zb1 + planet_face + gap
 spigot_h := 2.5mm               // the lid's spigot, down into the barrel's bore
-unit_lid_z0 := band_z1 + spigot_h
+unit_lid_z0 := spigot_z0 + spigot_h
 unit_lid_z1 := unit_lid_z0 + 3mm
 unit_motor_z := unit_lid_z1 + 2.8mm                         // the motor's front face, on its pad
 unit_strap_top := unit_motor_z + motor130_dims.len + wall
@@ -76,11 +77,11 @@ teeth_z0 := case_floor - 1mm
 teeth_z1 := unit_lid_z0 + 0.5mm
 
 // == The lid's registration =======================================================================
-// The spigot is a disc pressed into the barrel's bore, `snug` all round inside its teeth's tips: a
+// The spigot is a ring pressed into the barrel's bore, `snug` all round inside its teeth's tips: a
 // light press, which centres the lid on the ring gear the stages run in.  Its middle is open round
 // the motor's sun, whose top stands up into it.
 spigot_r := ring_tip_r - snug
-spigot_in := m_t * sun_n / 2 + m_stack + 1mm                 // a millimetre round the sun's tips
+spigot_in := sun_tip_r + 1mm                                 // a millimetre round the sun's tips
 
 // == The gearcase and the strap ==================================================================
 // The barrel a wall round the teeth's roots; three ribs down its outside, one way of the unit's
@@ -358,14 +359,17 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
   // ear over each rib, the motor's pad and cradle on it, and its boss's recess (a light press)
   // and its shaft's hole through it.
   lid_disc := Post(std.top.origin, r: unit_barrel_r, z0: unit_lid_z0, z1: unit_lid_z1)
-  spigot := Post(std.top.origin, r: spigot_r, z0: band_z1, z1: unit_lid_z0 + bond)
-  spigot_hole := Post(std.top.origin, r: spigot_in, z0: band_z1 - 1mm, z1: unit_lid_z0 + bond)
+  in std.top {
+    spigot_rim := radius(spigot_r) circle(center: std.top.origin)
+    spigot_bore := radius(spigot_in) circle(center: std.top.origin)
+  }
+  spigot := solid(std.solids.Prism(face(spigot_rim, holes: spigot_bore), from: spigot_z0,
+                                   to: unit_lid_z0 + bond))
   motor_boss_room := Post(std.top.origin, r: motor130_dims.boss_d / 2 + snug,
                           z0: unit_motor_z - motor130_dims.boss_h - gap, z1: unit_motor_z + 1mm)
   motor_shaft_room := Post(std.top.origin, r: 2.5mm, z0: unit_lid_z0 - 1mm, z1: unit_motor_z)
   lid := solid(lid_disc.body)
-  spigot.body union lid
-  spigot_hole.body cut lid
+  spigot union lid
   cradle union lid
   motor_boss_room.body cut lid
   motor_shaft_room.body cut lid
@@ -413,9 +417,9 @@ component GearedMotor(roll: Angle, out_rate: Scalar, ear_z0: Length, hub_len: Le
     claim carrier_1 clear(0.5mm) motor.motor               // the shaft's end, in its bore
     claim planet clear(0.2mm) carrier3                    // on its carrier's plate
     claim planet clear(0.05mm) carrier2                   // in mesh with its sun
+    claim st1.pg[0].gear clear(0.2mm) lid                 // under the spigot, as every planet is
     repeat 3 as k {
       claim st1.pg[k].gear clear(0.05mm) gearcase         // in mesh with the barrel
-      claim st1.pg[k].gear clear(0.2mm) lid               // under the spigot
       claim st2.pg[k].gear clear(0.05mm) gearcase
       claim st3.pg[k].gear clear(0.05mm) gearcase
     }
