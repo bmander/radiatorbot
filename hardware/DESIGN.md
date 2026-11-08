@@ -65,7 +65,7 @@ stem. Its x runs out from the stem through the clamp's split, and the bot hangs 
   - **The unit's lid** sits on the gearcase's top, held by three countersunk M3s down through
     ears over the ribs, self-tapping into them. The motor stands face down on a 2.8 mm pad on it,
     in a cradle, the can's flats keying it against its torque.
-  - **The lid's registration.** A spigot 2.5 mm deep under the lid presses down into the barrel's
+  - **The lid's registration.** A spigot 1.5 mm deep under the lid presses down into the barrel's
     bore, 0.05 mm inside its teeth's tips all round (`snug`, a light press), so the lid stands
     concentric with the ring gear itself, the reference the stages run in. The spigot's underside
     stands 0.3 mm over the first stage's planets, keeping them on their pins, and its middle is
@@ -109,8 +109,13 @@ stem. Its x runs out from the stem through the clamp's split, and the bot hangs 
     shaft's top.
   - Each carrier holds its stage's planets on 3 × 10 mm steel dowel pins pressed 4 mm into its
     bosses. A planet runs 0.3 mm over its boss. The webs of the carrier over it stand 8.5 mm from P:
-    over the sun's tips, and 1.8 mm in over every planet's inner rim, 0.3 mm above it, however
+    over the sun's tips, and 1.8 mm in over every planet's inner rim, 0.8 mm above it, however
     the two carriers stand. So the planets can't climb off their pins.
+  - The pins' tops stand 0.3 mm under their planets' and 1.1 mm under the carrier over them, which
+    sweeps round over them: a pin pressed in up to half a millimetre proud still runs clear. The
+    sun under that carrier runs up past the planets to it, so it stands 0.5 mm longer than they
+    do. The two carriers' extra millimetre came out of the lid's spigot, so the gearcase kept
+    its height.
   - The ring is one internal gear, the barrel's: all three stages' planets run in its one band of
     teeth, so each carrier, its planets on, screws down the barrel into place from the top. Each
     stage is told how the ring's teeth stand at its planets' undersides, and stands its sun and

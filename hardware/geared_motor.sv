@@ -41,7 +41,7 @@ use planetary (planet_face, sun_tip_r)
 use planetary (ring_twist, ring_tip_r, ring_root_r, p_rod_d, p_bore)
 
 // == Heights, from the foot up P =================================================================
-// The floor, then each stage a carrier's plate, its planets and a print's clearance (stage_h),
+// The floor, then each stage a carrier's plate, its planets and the room over them (stage_h),
 // the barrel's teeth up past the first stage's planets and on up past the lid's spigot, which
 // stands a print's clearance over them, and the lid on the barrel's top.  The motor stands on the
 // lid on a pad, its shaft down through it to the first sun and on into the first carrier's bore,
@@ -54,7 +54,9 @@ zb3 := c3_z0 + stage_zb         // each stage's planets' undersides, and its sun
 zb2 := c2_z0 + stage_zb
 zb1 := c1_z0 + stage_zb
 spigot_z0 := zb1 + planet_face + gap
-spigot_h := 2.5mm               // the lid's spigot, down into the barrel's bore
+spigot_h := 1.5mm               // the lid's spigot, down into the barrel's bore: the room
+                                // over the lower stages' pins (pin_room) comes out of it, so
+                                // the gearcase keeps its height
 unit_lid_z0 := spigot_z0 + spigot_h
 unit_lid_z1 := unit_lid_z0 + 3mm
 unit_motor_z := unit_lid_z1 + 2.8mm                         // the motor's front face, on its pad
