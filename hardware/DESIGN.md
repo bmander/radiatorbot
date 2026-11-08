@@ -9,8 +9,9 @@ perfboard shield plugged into it. An INA219 current monitor in the driver's supp
 the motor stalls. A 9 V wall adapter in the RedBoard's barrel jack powers it all, and its Wi-Fi
 puts the bot on the home network, for a phone.
 
-Everything is FDM-printed except the drill rod the gears turn on, the planets' steel pins and the
-screws. The model is `radiatorbot.sv`, the assembly, drawn from modules:
+Everything is FDM-printed except A's drill rod, the geared motor's steel output shaft (the axle
+its carriers turn on), the planets' steel pins and the screws. The model is `radiatorbot.sv`, the
+assembly, drawn from modules:
 
 - `geared_motor.sv`, the geared motor: the motor and its planetary stack as one component, with
   an output shaft out of its foot and the posts it stands on;
@@ -72,16 +73,22 @@ stem. Its x runs out from the stem through the clamp's split, and the bot hangs 
   - The motor's front boss presses into a recess in the pad, 0.05 mm over its size (`snug`), so
     the motor's shaft, and the first sun on it, stand on the ring's axis as truly as the spigot
     stands in it.
-  - **The output shaft** is the last carrier's: an 8 mm round shaft printed under its plate, down
-    through the floor's bore (0.35 mm over it) to a shoulder 0.3 mm under the foot, and a 6 mm
-    hexagon (across the flats) 5 mm on down from there. The carrier's plate runs 0.3 mm over the
-    floor's top and the part on the shaft 0.3 mm under its underside, so the floor is the shaft's
-    bearing and its thrust faces both ways. Any part the unit drives is cut by the unit's
-    `out_socket`: the hexagon grown 0.05 mm, a light press, and an M3 up through the part into
-    the shaft's end, its pan head in a counterbore in the part's underside, drawing it up against
-    the shoulder.
+  - **The output shaft** is steel: a 6 mm shaft up P, 33.9 mm long, the stack's axle and its
+    output in one. A flat 1 mm deep (5 mm from it across to the far side) is milled up one side
+    from its foot for 14.1 mm, to the last carrier's top, and ended square there; an M3 is tapped
+    up into its foot. The last carrier is pressed onto the flat: its plate, and an 11 mm hub
+    printed under the plate, down through the floor's bore (0.35 mm over it) to the hub's end,
+    0.3 mm under the foot. The flat's square end stands on the carrier's top, so the shaft can't
+    drop through it. Over the last carrier the shaft is round, and the carriers above turn on it.
+    The carrier's plate runs 0.3 mm over the floor's top and the part on the shaft 0.3 mm under
+    its underside, so the floor is the hub's bearing and its thrust faces both ways.
+  - The flat runs 5 mm on down past the hub's end. Any part the unit drives is cut by the unit's
+    `out_socket`: the shaft's section 0.05 mm over it (a press), 0.5 mm past the shaft's foot,
+    and an M3 up through the part into the shaft's foot, its pan head in a counterbore in the
+    part's underside. The screw draws the part up against the hub's end and the flat's end down
+    onto the carrier, so the carrier, the shaft and the part are clamped together.
   - **The last pinion** is a print of its own outside the unit: the 12-tooth spur pinion
-    (module 1.5) on the output shaft's hexagon under the gearcase, in mesh with A's ring.
+    (module 1.5) on the output shaft's flat under the gearcase, in mesh with A's ring.
   - **Mounting.** The unit stands on three posts up from the base's floor, one under each rib
     (`Footprint`: the unit's module gives what it stands on), an M3 up through the floor and the
     post into the rib's foot, its head in a counterbore under the floor. The frame's floor bears
@@ -92,14 +99,14 @@ stem. Its x runs out from the stem through the clamp's split, and the bot hangs 
   17-tooth sun, three 19-tooth planets on pins in a carrier, and the 55-tooth ring round them,
   under the motor:
   - The first sun is pressed on the motor's shaft. Each carrier is a hub, with the next stage's sun
-    under it, one print; the last carrier has the output shaft under it instead.
+    under it, one print; the last carrier has the output shaft's hub under it instead.
   - A carrier is not a plate. It is one outline 4.5 mm thick: three arms 6.2 mm wide out to
     7.8 mm bosses round the planets' pins, and a straight web from each arm to the next, 8.5 mm
     from P and rounded 2 mm into the arms. It is drawn as one arm and the web after it, turned
     round P for the others.
-  - P's 4 mm rod is pressed into the last carrier, down into its output shaft, and the carriers
-    above turn on it. The motor's shaft runs on down into the first carrier's bore, a millimetre
-    past the rod's top.
+  - The 6 mm output shaft is pressed into the last carrier, and the carriers above turn on it.
+    The motor's shaft runs on down into the first carrier's bore, a millimetre past the output
+    shaft's top.
   - Each carrier holds its stage's planets on 3 × 10 mm steel dowel pins pressed 4 mm into its
     bosses. A planet runs 0.3 mm over its boss. The webs of the carrier over it stand 8.5 mm from P:
     over the sun's tips, and 1.8 mm in over every planet's inner rim, 0.3 mm above it, however
@@ -179,8 +186,9 @@ stem. Its x runs out from the stem through the clamp's split, and the bot hangs 
   held square over a length rather than pivoting in a thin wall:
   - A's axle is pressed up into the bridge, which runs from the upper collar all the way up to
     the base's top, 37.6 mm, the axle's top 0.5 mm under the frame's floor.
-  - P's rod is pressed into the last carrier, which turns in the gearcase's 4 mm floor. The
-    carriers find their own centres among their planets too, so the rod mostly takes their tilt.
+  - P's shaft is pressed through the last carrier and its hub, 9.1 mm of flat, and the hub turns
+    in the gearcase's 4 mm floor. The carriers find their own centres among their planets too, so
+    the shaft mostly takes their tilt.
 
 ## The drive
 
@@ -458,8 +466,8 @@ The fits are an FDM printer's. They're set in one table, `fits.sv`, which every 
 
 | fit | allowance |
 |---|---|
-| a gear's bore turning on drill rod or a pin | +0.35 mm |
-| a rod or a pin pressed into a print | +0.05 mm (drill or ream to fit) |
+| a gear's bore turning on drill rod, a steel shaft or a pin | +0.35 mm |
+| a rod, a shaft or a pin pressed into a print | +0.05 mm (drill or ream to fit); 0.025 mm at a flat |
 | printed faces that meet or pass | 0.3 mm |
 | a glued joint's faces (the mount's slot on the frame's rail) | 0.15 mm each side |
 | a printed part pressed into another (the geared motor's lid's spigot in its barrel) | 0.05 mm each side (sand to fit) |
@@ -477,11 +485,11 @@ The fits are an FDM printer's. They're set in one table, `fits.sv`, which every 
 - Print the socket, A's compound, the last carrier and the last pinion in PETG or ASA rather than
   PLA. A radiator
   is warm, and those parts carry the torque.
-- Each carrier prints as one part with the sun or the output shaft under it: upside down, its
-  webs and arms on the bed and the sun or the shaft standing up from it, so nothing overhangs,
+- Each carrier prints as one part with the sun or the output shaft's hub under it: upside down,
+  its webs and arms on the bed and the sun or the hub standing up from it, so nothing overhangs,
   the pins' blind holes opening on the bed and roofed by a short bridge.
-- The last pinion prints on its top face, the hexagon's socket opening on the bed and the screw's
-  counterbore at the top, over a short bridge.
+- The last pinion prints on its top face, the shaft's D-shaped socket opening on the bed and the
+  screw's counterbore at the top, over a short bridge.
 - The planets print flat; print all nine at once, so they come out alike.
 - The chamfers keep the first layer's squash (elephant's foot) and the top edge's burr out of the
   mesh.
@@ -537,8 +545,9 @@ gear and the socket as blanks while changing the layout.
     clears it by 3 mm, at the pivot pin's top. The socket clears the packing nut by 4.1 mm.
   - Every gear mesh runs clear between flanks: every planet against the barrel, and the last
     stage's first against its sun and its carrier.
-  - The carriers clear one another, the gearcase and the motor's sun; the output shaft clears its
-    bore in the floor; the motor's shaft's end clears the first carrier's bore.
+  - The carriers clear one another, the gearcase and the motor's sun; the last carrier's hub
+    clears its bore in the floor; the output shaft clears the carriers that turn on it; the
+    motor's shaft's end clears the first carrier's bore.
   - The last pinion clears A's ring in mesh, the base's floor and the unit's foot.
   - The geared motor clears the base; its ribs clear the base's walls by 1 mm (on every check),
     and its lid clears the base's corner posts. Its lid's spigot clears the first stage's planets
@@ -557,20 +566,26 @@ gear and the socket as blanks while changing the layout.
   cap, cover, socket, A's compound (its pinion and the ring), the stand, the upper collar
   (`collar_part`), the motor's sun (`motor_sun`), the three carriers (`carrier1`, `carrier2`,
   `carrier3`), nine planets (`planet`) and the last pinion (`pinion_part`).
-- **Drill rod:** ½ in × 93.8 mm (A's axle); 4 mm × 26.9 mm (P).
+- **Drill rod:** ½ in × 93.8 mm (A's axle).
+- **The output shaft:** 6 mm steel shaft (drill rod or ground shaft), 33.9 mm long, machined:
+  - a flat 1 mm deep, from the foot 14.1 mm up, ended square (mill it with an end mill's face,
+    so the flat's end is a square step, not a run-out);
+  - an M3 tapped up into the foot: drill 2.5 mm × 8 mm deep, tap to 7 mm;
+  - break the edges at both ends.
 - **Dowel pins:** 3 × 10 mm hardened steel, nine (the planets' pins).
 - **Screws:**
   - M4 × 50, four, with nuts (clamp);
   - M3 × 10 self-tapping, eight (the base to the frame, the cover);
   - M3 × 12 countersunk (flat head) self-tapping, two (the motor's strap), and three (the unit's
     lid to its gearcase);
-  - M3 × 20 pan head self-tapping, three (the unit up onto its posts), and M3 × 10, one (the last
-    pinion onto the output shaft);
+  - M3 × 20 pan head self-tapping, three (the unit up onto its posts);
+  - M3 × 8 pan head machine screw, one (the last pinion onto the output shaft's tapped foot);
   - M3 × 8 self-tapping, four (the RedBoard);
   - M3 set screws, two (the collar and the stand).
 - **Motor:** one 130 motor from the pile, as calipered in `motor130.sv`: a 24 mm can, 18.25 mm
   across the flats and 30.65 mm long. The first stage's sun is a press fit on the 2 mm shaft,
-  which runs on 3.2 mm past the sun, down into the first carrier's bore over the top of P's rod.
+  which runs on 3.2 mm past the sun, down into the first carrier's bore over the top of the
+  output shaft.
 - **Electronics** (no fabbed PCB); see *The electronics*:
   - a SparkFun IoT RedBoard ESP32 (WRL-19177, ~$30): the controller, its Wi-Fi, and the
     adapter's way in;
@@ -599,12 +614,14 @@ gear and the socket as blanks while changing the layout.
    what squeezes out at the slot's top, and let it set before going on.
 1. Press the ½ in axle into the base's bridge. Slide the upper collar up the axle from below,
    against the bridge, and tighten its set screw.
-2. Build the geared motor. Press P's rod down into the last carrier (the one with the output
-   shaft). Press three pins into each carrier's bosses, and put a planet on each. Drop the last
-   carrier down the barrel, its shaft into the floor's bore: its planets screw down the barrel's
-   teeth as it goes, so turn it gently. Then the second carrier, down over the rod, its sun turning
-   down in among the last carrier's planets, and the first. Press the last pinion onto the output
-   shaft's hexagon under the foot and screw it up against the shoulder.
+2. Build the geared motor. Press the output shaft's foot up through the last carrier (the one
+   with the hub), from its top down through the hub, the flat lined up with the D in its bore,
+   until the flat's square end meets the carrier's top. Press three pins into each carrier's
+   bosses, and put a planet on each. Drop the last carrier down the barrel, its hub into the
+   floor's bore: its planets screw down the barrel's teeth as it goes, so turn it gently. Then the
+   second carrier, down over the shaft, its sun turning down in among the last carrier's planets,
+   and the first. Press the last pinion onto the shaft's flat under the foot and screw it up
+   against the hub's end with the M3 × 8.
 3. Set the motor face down in the lid's cradle, its boss pressed into the pad's recess and its
    shaft down through the pad and the lid, and press the first sun onto the shaft under the lid.
    Lay the strap over its end bell, the boss up through its ring, and drive the two countersunk
@@ -665,9 +682,12 @@ gear and the socket as blanks while changing the layout.
   1.5 mm for the lid's spigot),
   so the bay and its cover stand that much higher. Check the radiator and whatever is over the
   valve leave it room.
-- **The output shaft.** The last pinion carries about 0.33 N·m at stall on a printed 6 mm hexagon
-  and an 8 mm shaft turning in the printed floor: well inside what PETG bears, but the floor is a
-  plain bearing. Grease it, and check it for wear with the planets' pins.
+- **The output shaft.** The last pinion carries about 0.33 N·m at stall on the steel shaft's flat
+  (5 mm of it in the pinion, 9.1 mm in the last carrier and its hub): about 7 MPa on the pinion's
+  flat, well inside what PETG bears. The hub still turns in the printed floor, a plain bearing:
+  grease it, and check it for wear with the planets' pins. The flat's length isn't critical: the
+  hub's printed length sets the floor's clearances, the screw clamps the pinion to the hub's end
+  whatever it is, and the shaft's foot has 0.5 mm of room before the pinion's ledge.
 - **The stack's planets and pins.** The first stage's planets spin at about 9 000 rpm on their
   pins when the motor runs free. Grease the pins (a PTFE or lithium grease), and the barrel's
   teeth lightly; listen after the first hours for a planet wearing its bore.
