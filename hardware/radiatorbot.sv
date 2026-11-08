@@ -445,8 +445,8 @@ motor_at raised(d: motor_z, along: std.z) p_c
 
 // == The last pinion =============================================================================
 // A spur pinion of its own under the geared motor, a tooth toward A's ring: pressed up onto the
-// output shaft's hexagon against its shoulder and screwed up into the shaft's end, its pan head in
-// a counterbore in the pinion's underside (the unit's `out_socket`).
+// steel output shaft's flat against the last carrier's hub and screwed up into the shaft's end,
+// its pan head in a counterbore in the pinion's underside (the unit's `out_socket`).
 fin_pin := Gear(p_c, mesh: p_mesh, z: fin_z0, drives: 1, N: fin_n, m: m_fin, face: fin_face,
                 bore: m3_clear)
 construction pinion_part := solid(fin_pin.gear)
