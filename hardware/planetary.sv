@@ -54,9 +54,11 @@ stage_ratio := 1 + ring_teeth / sun_n                        // sun turns a carr
 // The planets turn on 3 x 10 mm hardened dowel pins pressed `pin_seat` down into their carrier's
 // plate; the carriers turn on a 6 mm steel shaft up the axis (the geared motor's output shaft,
 // geared_motor.sv, round where they turn on it).  From the carrier's underside up: its
-// plate, then a print's clearance, the planets, and a print's clearance under the next stage's
-// plate.  The sun stands level with its planets and runs `bond` up into the plate over them, the
-// carrier it is printed with.
+// plate, then a print's clearance, the planets, and a print's clearance and `pin_room` more under
+// the next stage's plate: the pins' tops stand a print's clearance under the planets' and the
+// next plate sweeps round over them, so a pin pressed in a little proud still runs clear of it.
+// The sun stands level with its planets and runs up past them into the plate over them, `bond`
+// into the carrier it is printed with.
 pin_d := 3mm
 pin_len := 10mm
 pin_seat := 4mm
@@ -65,9 +67,10 @@ p_bore := p_rod_d + run         // a carrier's bore, turning on the shaft
 planet_bore := pin_d + run
 plate_t := 4.5mm
 planet_face := 6mm
+pin_room := 0.5mm               // over a print's clearance, between the pins and the next plate
 stage_zb := plate_t + gap                                  // the planets' and the sun's undersides
-stage_h := plate_t + gap + planet_face + gap               // 11.1 mm, carrier to carrier
-sun_face := planet_face + gap + bond
+stage_h := plate_t + gap + planet_face + gap + pin_room    // 11.6 mm, carrier to carrier
+sun_face := planet_face + gap + pin_room + bond
 pin_wall := m_stack * (planet_n / (2 * cos(helix)) - 1.25) - planet_bore / 2   // roots to bore
 sun_wall := m_stack * (sun_n / (2 * cos(helix)) - 1.25) - p_bore / 2
 
