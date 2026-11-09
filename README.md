@@ -6,6 +6,40 @@ valve under motor control.
 [Open in Solvent IDE](https://bmander.github.io/geomsolver/?github=bmander/radiatorbot/blob/main/hardware/radiatorbot.sv)
 — the `hardware/` models in the browser, opened on `radiatorbot.sv`, read from `main`.
 
+## Assembly pictures
+
+Rendered from the Solvent models with `solventc v0.1.15`, with the gears fully shaped.
+Colours distinguish parts; they do not specify materials.
+
+![Radiatorbot assembled around the valve, with the split pipe clamp above and the geared socket around the star handle below](hardware/images/assembly.png)
+
+The complete assembly: the clamp grips the inlet hex and supply pipe, while the geared
+socket turns the valve's star handle below the enclosure.
+
+| Electronics bay | Three-stage planetary drive |
+| --- | --- |
+| ![Assembly with the cover and electronics bay frame hidden, exposing the motor and stacked circuit boards](hardware/images/electronics.png) | ![Geared motor with its gearcase hidden, exposing the helical sun gears, planets and carriers](hardware/images/planetary-gears.png) |
+| Cover and bay frame hidden to show the 130 motor, RedBoard ESP32 and perfboard shield with its driver and current monitor. | The assembly's `geared_motor.sv` module on its own, with the gearcase hidden to reveal the three helical planetary stages. |
+
+### Sections
+
+Hatching marks material cut by the section plane; the remaining geometry is shown behind it.
+
+| Along the motor and output shaft | Across the lowest planetary stage |
+| --- | --- |
+| ![Longitudinal section through the geared motor's common shaft, showing the three stacked stages, gearcase and output hub](hardware/images/motor-section.png) | ![Transverse section through the lowest planetary stage, showing the sun, three planets and internal ring gear](hardware/images/planetary-section.png) |
+| `x = 0 mm` in the geared motor's coordinates: through the motor axis, planetary stack and output shaft. | `z = 12.1 mm` in the geared motor's coordinates: halfway up the lowest stage's teeth, viewed from above. |
+
+![Longitudinal assembly section through the valve stem and compound-gear axle, exposing the socket floor, support arm and enclosure](hardware/images/valve-section.png)
+
+`x = 0 mm` in the assembly's coordinates passes through the valve stem and the compound
+gear's axle, showing the socket's floor and support below the handle, and the surrounding
+enclosure. The bought valve and motor are simplified models; these sections show the
+modelled geometry, not their unmodelled internal mechanisms.
+
+Regenerate all six pictures with `sh hardware/render.sh` after installing Solvent below.
+The script accepts an output directory and uses `SOLVENTC` to select the executable.
+
 ## Layout
 
 - `hardware/` — mechanical models, written in [Solvent](https://github.com/bmander/geomsolver).
@@ -37,6 +71,8 @@ valve under motor control.
   - `DESIGN.md` — how the bot works, the drive's numbers, fits, bill of materials, assembly and
     open questions.
   - `export.sh` — writes every printed part as STL, and the whole bot as one STEP assembly.
+  - `render.sh` — renders the assembly, exposed gears and section views into `hardware/images/`
+    for this README.
 - `firmware/` — the RedBoard's firmware, a PlatformIO project: it opens the valve while an
   old dry-contact thermostat calls for heat and closes it after, finding each end of travel by the
   motor's current, with a console on USB and on Wi-Fi (telnet), and a page for a phone to turn the
